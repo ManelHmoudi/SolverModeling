@@ -50,7 +50,6 @@ p5        = 3.0     # refrigeration cost per unit time (currency/h)
 e_stock   = 0.1     # energy consumed per stored unit
 alpha_r   = 0.05    # energy coefficient (stock → consumption)
 
-# ── 2.5 Transport unit cost  c_ijk ───────────────────────────────────────────
 # ── 2.5 Transport unit cost c_ijk (currency/km) ──────────────────────────────
 c_ijk = {
     (i, j, k): (
@@ -80,9 +79,27 @@ h = {
 }
 
 # ── 2.8 CO2 (Bektas & Laporte 2011 CMEM) ────────────────────────────────────
-alpha_co2 = {(i, j): 0.01 for (i, j) in A}     # load-related energy coefficient
-beta_co2  = 0.002                                # speed-related energy coefficient
-e_co2     = 2.68                                 # CO2 conversion factor (kg/energy unit)
+
+# Paramètres physiques
+g    = 9.81     # gravité (m/s²)
+Cr   = 0.01     # résistance au roulement
+Cd   = 0.7      # coefficient de traînée
+A_f  = 5.0      # surface frontale (m²)
+rho  = 1.2041   # densité de l'air (kg/m³)
+a    = 0.0      # accélération (supposée nulle)
+w    = 2500     # poids camion vide (kg)
+
+v2 = {k: v[k]**2 for k in M}
+# Coefficients dérivés
+# alpha_ij = g*Cr*cos(0) + g*sin(0) + a = g*Cr  (pente=0, a=0)
+alpha_co2 = {(i, j): g * Cr for (i, j) in A}
+
+# beta = 0.5 * Cd * A * rho
+beta_co2  = 0.5 * Cd * A_f * rho
+
+# Facteur de conversion CO2 (kg CO2 / litre)
+e_co2 = 2.32
+
 
 # ── 2.9 Financial ─────────────────────────────────────────────────────────────
 BFR        = 3_000
@@ -223,7 +240,7 @@ for l in clients:
 for l in clients:
     for t in T:
         inbound = mdl.sum(f[i, l, t, k] for i in N if i != l for k in M)
-        mdl.add_constraint(inbound == q_prime[l, t], ctname=f"c7_{l}_t{t}")
+        mdl.add_constraint(inbound == q_prime[l, t], ctname=f"c7_{l}_t{t}")     
 
 # ── 4.3 Time & time windows ───────────────────────────────────────────────────
 
@@ -258,6 +275,8 @@ for l in clients:
         mdl.add_constraint(tau[l, t] <= LT[l, t], ctname=f"c11_LT_l{l}_t{t}")
 
 
+
+
 # =============================================================================
 # 5. OBJECTIVE FUNCTIONS
 # =============================================================================
@@ -289,10 +308,21 @@ y3 = mdl.sum(
 
 f1_expr = y1 + y2 + y3
 
+# ── f2 : Carbon cost (CMEM) — version linéaire ───────────────────────────────
+f2_expr = e_co2 * mdl.sum(
+    (
+        alpha_co2[i, j] * w * d[i, j] * x[i, j, t, k]
+      + alpha_co2[i, j] * d[i, j] * f[i, j, t, k]
+      + beta_co2 * v2[k] * d[i, j] * x[i, j, t, k]
+    )
+    for (i, j) in A for t in T for k in M
+)
+
 # (c12) Logistics cost budget
 mdl.add_constraint(f1_expr <= C_max, ctname="c12_logistics_budget")
 
-
+# (c13) CO2 budget
+#mdl.add_constraint(f2_expr <= E_max, ctname="c13_carbon_budget")
 # =============================================================================
 # 6. SUMMARY
 # =============================================================================
@@ -305,3 +335,17 @@ print(f"Periods      : {len(T)}")
 print(f"Vehicles     : {len(M)}")
 print(f"Variables    : {mdl.number_of_variables}")
 print(f"Constraints  : {mdl.number_of_constraints}")
+# =============================================================================
+# 7. TEST — Minimiser f2 seul
+# =============================================================================
+mdl.minimize(f2_expr)
+solution = mdl.solve(log_output=False)
+
+if solution:
+    f2_val = f2_expr.solution_value
+    E_max  = f2_val * 1.2
+    print(f"✅ f2 optimal = {f2_val:.2f}")
+    print(f"   E_max fixé à {E_max:.2f}")
+else:
+    print("❌ Pas de solution")
+    print(mdl.solve_details)
