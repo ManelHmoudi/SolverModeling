@@ -38,13 +38,15 @@ q_lt = {
 }
 
 # ── 2.2 Vehicles ──────────────────────────────────────────────────────────────
-v = {1: 80, 2: 60}          # speed (km/h)
+v = {1: 80, 2: 60}  
+v_ms = {k: v[k] / 3.6 for k in M}        # conversion km/h → m/s
+v2   = {k: v_ms[k]**2 for k in M}         # speed m²/s
 Q = {1: 100, 2: 80}         # capacity (units)
 
 # ── 2.3 Network ───────────────────────────────────────────────────────────────
-d = {(i, j): abs(i - j) * 10 for (i, j) in A}      # arc distances (km) — placeholder
+d   = {(i,j): abs(i-j) * 10   for (i,j) in A}  # km  — use for travel time and cost
+d_m = {(i,j): d[i,j]  * 1000  for (i,j) in A}  # metres — use only in CMEM (f2)
 c_route = {(i, j): 1.0      for (i, j) in A}        # base route cost (currency/km)
-
 # ── 2.4 Refrigeration (vehicle type k=1) ─────────────────────────────────────
 p5        = 3.0     # refrigeration cost per unit time (currency/h)
 e_stock   = 0.1     # energy consumed per stored unit
@@ -53,16 +55,16 @@ alpha_r   = 0.05    # energy coefficient (stock → consumption)
 # ── 2.5 Transport unit cost c_ijk (currency/km) ──────────────────────────────
 c_ijk = {
     (i, j, k): (
-        c_route[i, j] + p5 / v[1]   # k=1 : route + réfrigération/km
+        c_route[i, j] + p5 * d[i, j] / v[k]  # 
         if k == 1
-        else c_route[i, j]           # k=2 : route uniquement
+        else c_route[i, j]
     )
     for (i, j) in A for k in M
 }
 
 # ── 2.6 Time windows & service times ─────────────────────────────────────────
-ET      = {(l, t):  0.0 for l in clients for t in T}
-LT      = {(l, t): 99.0 for l in clients for t in T}
+ET      = {(l, t):  1.0 for l in clients for t in T}
+LT      = {(l, t): 3.0 for l in clients for t in T}
 tau_min = 0.0
 tau_max = 9_999.0
 s       = {i: 0.5 for i in N}      # service time at node i (hours)
@@ -89,7 +91,6 @@ rho  = 1.2041   # densité de l'air (kg/m³)
 a    = 0.0      # accélération (supposée nulle)
 w    = 2500     # poids camion vide (kg)
 
-v2 = {k: v[k]**2 for k in M}
 # Coefficients dérivés
 # alpha_ij = g*Cr*cos(0) + g*sin(0) + a = g*Cr  (pente=0, a=0)
 alpha_co2 = {(i, j): g * Cr for (i, j) in A}
@@ -184,6 +185,7 @@ for k in M:
     for t in T:
         mdl.add_constraint(x[O, D, t, k] == 0, ctname=f"c2b_k{k}_t{t}")
 
+
 # (c3) Flow conservation at each node
 #      net flow = -1 (O) | 0 (transit) | +1 (D)
 for k in M:
@@ -236,46 +238,34 @@ for l in clients:
         ctname=f"c6_l{l}"
     )
 
-# (c7) Inbound flow at customer l = quantity delivered q'_lt
+# (c7) Net flow at customer l = quantity delivered q'_lt
 for l in clients:
     for t in T:
-        inbound = mdl.sum(f[i, l, t, k] for i in N if i != l for k in M)
-        mdl.add_constraint(inbound == q_prime[l, t], ctname=f"c7_{l}_t{t}")     
-
+        inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l for k in M)
+        outbound = mdl.sum(f[l, j, t, k] for j in N if j != l for k in M)
+        mdl.add_constraint(
+            inbound - outbound == q_prime[l, t],
+            ctname=f"c7_{l}_t{t}"
+        )  
+"""
 # ── 4.3 Time & time windows ───────────────────────────────────────────────────
 
-# (c8) Travel time lower bound (Big-M inactive when arc not used)
-for k in M:
-    for (i, j) in A:
-        for t in T:
-            mdl.add_constraint(
-                tau[j, t] >= d[i, j] / v[k] - BIG_M * (1 - x[i, j, t, k]),
-                ctname=f"c8_{i}{j}_k{k}_t{t}"
-            )
-
-# (c9) Arrival time propagation: τ_j ≥ τ_i + s_i + d_ij / v^k
+# (c8) Arrival time propagation: τ_j ≥ τ_i + s_i + d_ij / v^k
 for k in M:
     for (i, j) in A:
         for t in T:
             mdl.add_constraint(
                 tau[j, t] >= tau[i, t] + s[i] + d[i, j] / v[k]
                              - BIG_M * (1 - x[i, j, t, k]),
-                ctname=f"c9_{i}{j}_k{k}_t{t}"
+                ctname=f"c8_{i}{j}_k{k}_t{t}"
             )
 
-# (c10) Global route time window: τ_min ≤ τ_D,t ≤ τ_max
+# (c9) Global route time window: τ_min ≤ τ_D,t ≤ τ_max
 for t in T:
-    mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c10_min_t{t}")
-    mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c10_max_t{t}")
+    mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c9_min_t{t}")
+    mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c9_max_t{t}")
 
-# (c11) Customer time windows: ET_lt ≤ τ_lt ≤ LT_lt
-for l in clients:
-    for t in T:
-        mdl.add_constraint(tau[l, t] >= ET[l, t], ctname=f"c11_ET_l{l}_t{t}")
-        mdl.add_constraint(tau[l, t] <= LT[l, t], ctname=f"c11_LT_l{l}_t{t}")
-
-
-
+"""
 
 # =============================================================================
 # 5. OBJECTIVE FUNCTIONS
@@ -293,16 +283,16 @@ y1 = mdl.sum(
 y2 = mdl.sum(h[i] * I_var[i, t] for i in stock_nodes for t in T)
 
 # y3 — time-window penalty (linearised via slack variables w1/w2)
-w1 = {(l, t): mdl.continuous_var(lb=0, name=f"w1_{l}_{t}") for l in clients for t in T}
-w2 = {(l, t): mdl.continuous_var(lb=0, name=f"w2_{l}_{t}") for l in clients for t in T}
+w1 = {(l,t): mdl.continuous_var(lb=0, name=f"w1_{l}_{t}") for l in clients for t in T}
+w2 = {(l,t): mdl.continuous_var(lb=0, name=f"w2_{l}_{t}") for l in clients for t in T}
 
 for l in clients:
     for t in T:
-        mdl.add_constraint(w1[l, t] >= ET[l, t] - tau[l, t], ctname=f"w1_{l}_t{t}")
-        mdl.add_constraint(w2[l, t] >= tau[l, t] - LT[l, t], ctname=f"w2_{l}_t{t}")
+        mdl.add_constraint(w1[l,t] >= ET[l,t] - tau[l,t], ctname=f"w1_{l}_t{t}")
+        mdl.add_constraint(w2[l,t] >= tau[l,t] - LT[l,t], ctname=f"w2_{l}_t{t}")
 
 y3 = mdl.sum(
-    q_lt[l, t] * (c1 * w1[l, t] + c2 * w2[l, t])
+     c1 * w1[l,t] + c2 * w2[l,t]
     for l in clients for t in T
 )
 
@@ -311,12 +301,23 @@ f1_expr = y1 + y2 + y3
 # ── f2 : Carbon cost (CMEM) — version linéaire ───────────────────────────────
 f2_expr = e_co2 * mdl.sum(
     (
-        alpha_co2[i, j] * w * d[i, j] * x[i, j, t, k]
-      + alpha_co2[i, j] * d[i, j] * f[i, j, t, k]
-      + beta_co2 * v2[k] * d[i, j] * x[i, j, t, k]
+        alpha_co2[i, j] * w * d_m[i, j] * x[i, j, t, k]
+      + alpha_co2[i, j] * d_m[i, j] * f[i, j, t, k]
+      + beta_co2 * v2[k] * d_m[i,j] * x[i, j, t, k]
     )
     for (i, j) in A for t in T for k in M
 )
+
+# ── f3 : Total travel time — sum of travel time on all used arcs
+#         x[i,j,t,k] * d[i,j]/v[k] gives travel time on arc (i,j)
+#         only when the arc is actually used (x=1), zero otherwise.
+#         Units: km / (km/h) = hours
+f3_expr = mdl.sum(
+    x[i, j, t, k] * d[i, j] / v[k]
+    for (i, j) in A for t in T for k in M
+)
+
+
 
 # (c12) Logistics cost budget
 mdl.add_constraint(f1_expr <= C_max, ctname="c12_logistics_budget")
@@ -335,17 +336,47 @@ print(f"Periods      : {len(T)}")
 print(f"Vehicles     : {len(M)}")
 print(f"Variables    : {mdl.number_of_variables}")
 print(f"Constraints  : {mdl.number_of_constraints}")
-# =============================================================================
-# 7. TEST — Minimiser f2 seul
-# =============================================================================
-mdl.minimize(f2_expr)
-solution = mdl.solve(log_output=False)
 
-if solution:
-    f2_val = f2_expr.solution_value
-    E_max  = f2_val * 1.2
-    print(f"✅ f2 optimal = {f2_val:.2f}")
-    print(f"   E_max fixé à {E_max:.2f}")
-else:
-    print("❌ Pas de solution")
-    print(mdl.solve_details)
+
+# =============================================================================
+# 7. CALIBRATION TESTS — solve each objective independently
+# =============================================================================
+
+def test_objective(name, expr):
+    mdl.minimize(expr)
+    sol = mdl.solve(log_output=False)
+    if sol:
+        print(f"✅ {name} = {expr.solution_value:.4f}")
+        # Print which arcs are used — confirms routing is sensible
+        used = [
+            (i, j, t, k)
+            for (i, j, t, k) in x
+            if x[i, j, t, k].solution_value > 0.5
+        ]
+        print(f"   Arcs used : {used}")
+        # Print deliveries
+        deliveries = {
+    (l,t): round(q_prime[l,t].solution_value, 6)
+    for (l,t) in q_prime
+         }
+        print(f"   Deliveries: {deliveries}")
+        return expr.solution_value
+    else:
+        print(f"❌ {name} : infeasible — {mdl.solve_details}")
+        return None
+
+
+print("\n── Test f2 (CO2) ──")
+f2_val = test_objective("f2", f2_expr)
+if f2_val:
+    print(f"   → E_max set to {f2_val * 1.2:.4f}")
+
+print("\n── Test f3 (travel time) ──")
+f3_val = test_objective("f3", f3_expr)
+if f3_val:
+    print(f"   → T_max set to {f3_val * 1.2:.4f}")
+
+print("\n── Test f1 (logistics cost) ──")
+f1_val = test_objective("f1", f1_expr)
+if f1_val:
+    print(f"   → C_max set to {f1_val * 1.2:.4f}")
