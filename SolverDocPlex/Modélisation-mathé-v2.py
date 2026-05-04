@@ -70,7 +70,7 @@ tau_max = 9_999.0
 s       = {i: 0.5 for i in N}      # service time at node i (hours)
 
 # ── 2.7 Inventory ────────────────────────────────────────────────────────────
-I_init = {i:  50 for i in stock_nodes}
+I_init = {i: (200 if i == O else 50) for i in stock_nodes}
 I_max  = {i: 200 for i in stock_nodes}
 I_min  = {i:  10 for i in stock_nodes}
 
@@ -163,45 +163,55 @@ I_var = {
 # =============================================================================
 
 # ── 4.1 Network flow ──────────────────────────────────────────────────────────
-
-# (c1) Each vehicle departs from O exactly once per period
+# Variable d'activation
+u = {
+    (k, t): mdl.binary_var(name=f"u_{k}_{t}")
+    for k in M for t in T
+}
+# (c1) départ de O
 for k in M:
     for t in T:
         mdl.add_constraint(
-            mdl.sum(x[O, j, t, k] for j in N if j != O) == 1,
+            mdl.sum(x[O, j, t, k] for j in N if j != O) == u[k, t],
             ctname=f"c1_k{k}_t{t}"
         )
 
-# (c2) Each vehicle arrives at D exactly once per period
+# (c2) arrivée à D
 for k in M:
     for t in T:
         mdl.add_constraint(
-            mdl.sum(x[i, D, t, k] for i in N if i != D) == 1,
+            mdl.sum(x[i, D, t, k] for i in N if i != D) == u[k, t],
             ctname=f"c2_k{k}_t{t}"
         )
 
-# (c2b) No direct arc O→D: vehicle must visit at least one customer
+# (c2b) pas d'arc direct O→D
 for k in M:
     for t in T:
         mdl.add_constraint(x[O, D, t, k] == 0, ctname=f"c2b_k{k}_t{t}")
 
-
-# (c3) Flow conservation at each node
-#      net flow = -1 (O) | 0 (transit) | +1 (D)
+# (c3) Flow conservation — CONDITIONNÉ à u[k,t]
 for k in M:
     for t in T:
         for j in N:
             inflow  = mdl.sum(x[i, j, t, k] for i in N if i != j)
             outflow = mdl.sum(x[j, i, t, k] for i in N if i != j)
-            rhs     = -1 if j == O else (1 if j == D else 0)
-            mdl.add_constraint(
-                inflow - outflow == rhs,
-                ctname=f"c3_{j}_k{k}_t{t}"
-            )
+            if j == O:
+                mdl.add_constraint(inflow - outflow == -u[k, t], ctname=f"c3_O_k{k}_t{t}")
+            elif j == D:
+                mdl.add_constraint(inflow - outflow ==  u[k, t], ctname=f"c3_D_k{k}_t{t}")
+            else:
+                mdl.add_constraint(inflow - outflow ==  0, ctname=f"c3_{j}_k{k}_t{t}")
+
+# (c_min) au moins 1 véhicule actif par période
+for t in T:
+    mdl.add_constraint(
+        mdl.sum(u[k, t] for k in M) >= 1,
+        ctname=f"min_vehicle_t{t}"
+    )
 
 # ── 4.2 Capacity & inventory ──────────────────────────────────────────────────
 
-# (c4) Load on arc (i,j) ≤ vehicle capacity  (active only when arc is used)
+# (c4)
 for k in M:
     for (i, j) in A:
         for t in T:
@@ -210,18 +220,16 @@ for k in M:
                 ctname=f"c4_{i}{j}_k{k}_t{t}"
             )
 
-# (c5a) Stock bounds: I_min ≤ I_it ≤ I_max  for all i ∈ N\{D}
+# (c5a)
 for i in stock_nodes:
     for t in T:
         mdl.add_constraint(I_var[i, t] >= I_min[i], ctname=f"c5a_min_{i}_t{t}")
         mdl.add_constraint(I_var[i, t] <= I_max[i], ctname=f"c5a_max_{i}_t{t}")
 
-# (c5b) Inventory balance
-#   depot  O : I_O,t  = I_O,t-1 − shipped_t
-#   client l : I_l,t  = I_l,t-1 + q'_lt − q_lt
+# (c5b) — FIX: shipped limité aux clients
 for t in T:
     prev_O  = I_var[O, t - 1] if t > 1 else I_init[O]
-    shipped = mdl.sum(f[O, j, t, k] for j in N if j != O for k in M)
+    shipped = mdl.sum(f[O, j, t, k] for j in clients for k in M)
     mdl.add_constraint(I_var[O, t] == prev_O - shipped, ctname=f"c5b_O_t{t}")
 
     for l in clients:
@@ -231,14 +239,14 @@ for t in T:
             ctname=f"c5b_{l}_t{t}"
         )
 
-# (c6) Total delivery = total demand over the horizon
+# (c6)
 for l in clients:
     mdl.add_constraint(
         mdl.sum(q_prime[l, t] for t in T) == mdl.sum(q_lt[l, t] for t in T),
         ctname=f"c6_l{l}"
     )
 
-# (c7) Net flow at customer l = quantity delivered q'_lt
+# (c7)
 for l in clients:
     for t in T:
         inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l for k in M)
@@ -246,11 +254,13 @@ for l in clients:
         mdl.add_constraint(
             inbound - outbound == q_prime[l, t],
             ctname=f"c7_{l}_t{t}"
-        )  
-"""
+        )
 # ── 4.3 Time & time windows ───────────────────────────────────────────────────
 
-# (c8) Arrival time propagation: τ_j ≥ τ_i + s_i + d_ij / v^k
+for t in T:
+    mdl.add_constraint(tau[O, t] == 0, ctname=f"tau_origin_t{t}")
+
+# (c8)
 for k in M:
     for (i, j) in A:
         for t in T:
@@ -260,12 +270,11 @@ for k in M:
                 ctname=f"c8_{i}{j}_k{k}_t{t}"
             )
 
-# (c9) Global route time window: τ_min ≤ τ_D,t ≤ τ_max
+# (c9)
 for t in T:
     mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c9_min_t{t}")
     mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c9_max_t{t}")
 
-"""
 
 # =============================================================================
 # 5. OBJECTIVE FUNCTIONS
