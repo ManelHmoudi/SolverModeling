@@ -107,17 +107,28 @@ BFR        = 3_000
 DSO        = 30                                 # customer payment delay (days)
 DPO        = 45                                 # supplier payment delay (days)
 V_val      = {i: 100 for i in N}
-P_sale     = 8.0
-P_purchase = 5.0
+P_sale = {
+    1: 8.0,   # client 1
+    2: 12.5,   # client 2
+    3: 7.8,   # client 3
+}
+
+P_purchase = {
+    0: 5.0,   # dépôt
+    1: 5.5,   # client 1
+    2: 6.0,   # client 2
+    3: 5.8,   # client 3
+}
 
 # ── 2.10 Penalty coefficients ────────────────────────────────────────────────
 c1 = 2.0    # early-arrival penalty coefficient
 c2 = 5.0    # late-arrival  penalty coefficient
 
 # ── 2.11 Upper bounds ────────────────────────────────────────────────────────
-C_max  = 8_000   # logistics cost budget   (c12)
-E_max  = 5_000   # CO2 emissions budget    (c13)
-B      = 10_000  # financial cost budget   (c14)
+C_max  = 4_000   # logistics cost budget   (c12)
+E_max  = 300_000_000   # CO2 emissions budget    (c13)
+T_max  = 1.2
+B      = 3_500  # financial cost budget   (c14)
 BIG_M  = 99_999
 
 
@@ -141,7 +152,7 @@ f = {
 
 # q_prime[l,t]    : quantity delivered to customer l in period t (units)
 q_prime = {
-    (l, t): mdl.continuous_var(lb=0, name=f"qprime_{l}_{t}")
+    (l, t): mdl.integer_var(lb=0, name=f"qprime_{l}_{t}")
     for l in clients for t in T
 }
 
@@ -326,13 +337,44 @@ f3_expr = mdl.sum(
     for (i, j) in A for t in T for k in M
 )
 
+# ── f4 : BFR (Besoin en Fonds de Roulement) ──────────────────────────────────
+
+# Composante 1 : valeur des stocks
+stock_value = mdl.sum(
+    I_var[i, t] * P_purchase[i] 
+    for i in stock_nodes for t in T
+)
+
+# Composante 2 : créances clients
+# Ventes_t = livraisons effectives valorisées au prix de vente
+receivables = mdl.sum(
+    q_prime[l, t] * P_sale[l] * (DSO / 365)
+    for l in clients for t in T
+)
+
+# Composante 3 : dettes fournisseurs (source de financement → soustraite)
+# Achats_t = mêmes livraisons valorisées au prix d'achat
+payables = mdl.sum(
+    q_prime[l, t] * P_purchase[l] * (DPO / 365)
+    for l in clients for t in T
+)
+
+f4_expr = stock_value + receivables 
 
 
 # (c12) Logistics cost budget
 mdl.add_constraint(f1_expr <= C_max, ctname="c12_logistics_budget")
 
 # (c13) CO2 budget
-#mdl.add_constraint(f2_expr <= E_max, ctname="c13_carbon_budget")
+mdl.add_constraint(f2_expr <= E_max, ctname="c13_carbon_budget")
+
+# (c14) Budget BFR maximal
+mdl.add_constraint(f4_expr <= B, ctname="c14_bfr_budget")
+
+#(c15) time minimization
+T_max = 1.2
+mdl.add_constraint(f3_expr <= T_max, ctname="c15_time_budget")
+
 # =============================================================================
 # 6. SUMMARY
 # =============================================================================
@@ -374,6 +416,10 @@ def test_objective(name, expr):
         print(f"❌ {name} : infeasible — {mdl.solve_details}")
         return None
 
+print("\n── Test f1 (logistics cost) ──")
+f1_val = test_objective("f1", f1_expr)
+if f1_val:
+    print(f"   → C_max set to {f1_val * 1.2:.4f}")
 
 print("\n── Test f2 (CO2) ──")
 f2_val = test_objective("f2", f2_expr)
@@ -385,7 +431,11 @@ f3_val = test_objective("f3", f3_expr)
 if f3_val:
     print(f"   → T_max set to {f3_val * 1.2:.4f}")
 
-print("\n── Test f1 (logistics cost) ──")
-f1_val = test_objective("f1", f1_expr)
-if f1_val:
-    print(f"   → C_max set to {f1_val * 1.2:.4f}")
+print("\n── Test f4 (BFR) ──")
+f4_val = test_objective("f4", f4_expr)
+if f4_val:
+    print(f"   → B set to {f4_val * 1.2:.4f}")
+    print(f"   Décomposition :")
+    print(f"     Stock value  = {stock_value.solution_value:.4f}")
+    print(f"     Receivables  = {receivables.solution_value:.4f}")
+    print(f"     Payables     = {payables.solution_value:.4f}")
