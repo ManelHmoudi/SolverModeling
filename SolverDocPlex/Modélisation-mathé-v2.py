@@ -339,41 +339,28 @@ f3_expr = mdl.sum(
 
 # ── f4 : BFR (Besoin en Fonds de Roulement) ──────────────────────────────────
 
-# Composante 1 : valeur des stocks
-stock_value = mdl.sum(
-    I_var[i, t] * P_purchase[i] 
-    for i in stock_nodes for t in T
-)
+# Composante 1 : valeur des stocks (argent immobilisé dans vos étagères)
+stock_value = mdl.sum(I_var[i, t] * P_purchase[i] for i in stock_nodes for t in T)
 
-# Composante 2 : créances clients
-# Ventes_t = livraisons effectives valorisées au prix de vente
-receivables = mdl.sum(
-    q_prime[l, t] * P_sale[l] * (DSO / 365)
-    for l in clients for t in T
-)
+# Composante 2 : créances clients (argent que les pharmacies/hôpitaux vous doivent)
+receivables = mdl.sum(q_prime[l, t] * P_sale[l] * (DSO / 365) for l in clients for t in T)
 
-# Composante 3 : dettes fournisseurs (source de financement → soustraite)
-# Achats_t = mêmes livraisons valorisées au prix d'achat
-payables = mdl.sum(
-    q_prime[l, t] * P_purchase[l] * (DPO / 365)
-    for l in clients for t in T
-)
-
-f4_expr = stock_value + receivables 
+# Le BFR total (sans dettes puisque vous gérez l'entrepôt en propre)
+f4_expr = stock_value + receivables
 
 
-# (c12) Logistics cost budget
-mdl.add_constraint(f1_expr <= C_max, ctname="c12_logistics_budget")
+# (c10) Logistics cost budget
+mdl.add_constraint(f1_expr <= C_max, ctname="c10_logistics_budget")
 
-# (c13) CO2 budget
-mdl.add_constraint(f2_expr <= E_max, ctname="c13_carbon_budget")
+# (c11) CO2 budget
+mdl.add_constraint(f2_expr <= E_max, ctname="c11_carbon_budget")
 
-# (c14) Budget BFR maximal
-mdl.add_constraint(f4_expr <= B, ctname="c14_bfr_budget")
+# (c12) Budget BFR maximal
+mdl.add_constraint(f4_expr <= B, ctname="c12_bfr_budget")
 
-#(c15) time minimization
+#(c13) time minimization
 T_max = 1.2
-mdl.add_constraint(f3_expr <= T_max, ctname="c15_time_budget")
+mdl.add_constraint(f3_expr <= T_max, ctname="c13_time_budget")
 
 # =============================================================================
 # 6. SUMMARY
@@ -438,4 +425,3 @@ if f4_val:
     print(f"   Décomposition :")
     print(f"     Stock value  = {stock_value.solution_value:.4f}")
     print(f"     Receivables  = {receivables.solution_value:.4f}")
-    print(f"     Payables     = {payables.solution_value:.4f}")
