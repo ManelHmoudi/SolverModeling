@@ -150,6 +150,12 @@ f = {
     for (i, j) in A for t in T for k in M
 }
 
+# Variable d'activation
+u = {
+    (k, t): mdl.binary_var(name=f"u_{k}_{t}")
+    for k in M for t in T
+}  
+
 # q_prime[l,t]    : quantity delivered to customer l in period t (units)
 q_prime = {
     (l, t): mdl.integer_var(lb=0, name=f"qprime_{l}_{t}")
@@ -168,17 +174,12 @@ I_var = {
     for i in stock_nodes for t in T
 }
 
-
 # =============================================================================
 # 4. CONSTRAINTS
 # =============================================================================
 
 # ── 4.1 Network flow ──────────────────────────────────────────────────────────
-# Variable d'activation
-u = {
-    (k, t): mdl.binary_var(name=f"u_{k}_{t}")
-    for k in M for t in T
-}
+
 # (c1) départ de O
 for k in M:
     for t in T:
