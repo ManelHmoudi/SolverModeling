@@ -375,7 +375,7 @@ print(f"Constraints  : {mdl.number_of_constraints}")
 # =============================================================================
 
 def test_objective(name, expr):
-    mdl.minimize(expr)
+    mdl.minimize(expr) #fix the objective function 
     sol = mdl.solve(log_output=False)
     if sol:
         print(f"✅ {name} = {expr.solution_value:.4f}")
