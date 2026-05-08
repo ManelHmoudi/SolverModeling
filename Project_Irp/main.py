@@ -21,7 +21,7 @@ from docplex.mp.model import Model
 # LOAD INSTANCE
 # =============================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(BASE_DIR, "instance_3_clients.json"), "r") as f:
+with open(os.path.join(BASE_DIR, "C:\\Users\\Mariem\\OneDrive\\Bureau\\SolverModeling\\Project_Irp\\data\\instance_3_clients.json"), "r") as f:
     data = json.load(f)
 
 sets   = data["sets"]
