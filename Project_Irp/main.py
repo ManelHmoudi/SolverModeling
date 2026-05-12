@@ -154,11 +154,6 @@ f = {
     for (i, j) in A for t in T for k in M
 }
 
-# u[k,t]        : 1 if vehicle k is active in period t
-u = {
-    (k, t): mdl.binary_var(name=f"u_{k}_{t}")
-    for k in M for t in T
-}
 
 # q_prime[l,t]  : quantity delivered to customer l in period t (units)
 q_prime = {
@@ -185,11 +180,11 @@ I_var = {
 
 # -- Network flow -------------------------------------------------------------
 
-# Each active vehicle departs exactly once from the depot
+# Each active vehicle can depart maximum once from the depot
 for k in M:
     for t in T:
         mdl.add_constraint(
-            mdl.sum(x[O, j, t, k] for j in N if j != O) == u[k, t],
+            mdl.sum(x[O, j, t, k] for j in N if j != O) <= 1,
             ctname=f"c1_k{k}_t{t}"
         )
 
@@ -197,7 +192,8 @@ for k in M:
 for k in M:
     for t in T:
         mdl.add_constraint(
-            mdl.sum(x[i, D, t, k] for i in N if i != D) == u[k, t],
+            mdl.sum(x[i, D, t, k] for i in N if i != D and i != O)
+            == mdl.sum(x[O, j, t, k] for j in N if j != O),
             ctname=f"c2_k{k}_t{t}"
         )
 
@@ -210,21 +206,14 @@ for k in M:
 for k in M:
     for t in T:
         for j in N:
-            inflow  = mdl.sum(x[i, j, t, k] for i in N if i != j)
-            outflow = mdl.sum(x[j, i, t, k] for i in N if i != j)
-            if j == O:
-                mdl.add_constraint(inflow - outflow == -u[k, t], ctname=f"c3_O_k{k}_t{t}")
-            elif j == D:
-                mdl.add_constraint(inflow - outflow ==  u[k, t], ctname=f"c3_D_k{k}_t{t}")
-            else:
-                mdl.add_constraint(inflow - outflow ==  0,       ctname=f"c3_{j}_k{k}_t{t}")
+            if j != O and j != D:
+                inflow  = mdl.sum(x[i, j, t, k] for i in N if i != j)
+                outflow = mdl.sum(x[j, i, t, k] for i in N if i != j)
+                mdl.add_constraint(
+                    inflow == outflow,
+                    ctname=f"c3_{j}_k{k}_t{t}"
+                )
 
-# At least one vehicle must be active per period
-for t in T:
-    mdl.add_constraint(
-        mdl.sum(u[k, t] for k in M) >= 1,
-        ctname=f"min_vehicle_t{t}"
-    )
 
 # -- Capacity & inventory -----------------------------------------------------
 
@@ -345,12 +334,13 @@ f3_expr = mdl.sum(
 # -- f4 : Working capital requirement (BFR) -----------------------------------
 
 # Inventory value: capital tied up in stock
-stock_value = mdl.sum(I_var[i, t] * P_purchase[i] for i in stock_nodes for t in T)
+stock_value = mdl.sum(I_var[O, t] * P_purchase[O] for t in T)
 
 # Accounts receivable: outstanding revenue from customers
 receivables = mdl.sum(q_prime[l, t] * P_sale[l] * (DSO / 365) for l in clients for t in T)
+payables = mdl.sum(q_prime[l, t] * P_purchase[O] * (DPO / 365) for l in clients for t in T)
 
-f4_expr = stock_value + receivables
+f4_expr = stock_value + receivables - payables
 
 # -- Budget constraints -------------------------------------------------------
 mdl.add_constraint(f1_expr <= C_max, ctname="c10_logistics_budget")
@@ -397,7 +387,7 @@ def test_objective(name, expr):
     else:
         print(f" {name} : infeasible — {mdl.solve_details}")
         return None
-
+    
 print("\n── Calibration f1 (logistics cost) ──")
 f1_val = test_objective("f1", f1_expr)
 if f1_val:
@@ -420,3 +410,4 @@ if f4_val:
     print(f"   Breakdown :")
     print(f"     Stock value  = {stock_value.solution_value:.4f}")
     print(f"     Receivables  = {receivables.solution_value:.4f}")
+    print(f"     Payables (-)  = {payables.solution_value:.4f}")
