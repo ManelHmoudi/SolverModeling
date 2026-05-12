@@ -381,7 +381,7 @@ def test_objective(name, expr):
     mdl.minimize(expr) #fix the objective function
     sol = mdl.solve(log_output=False)
     if sol:
-        print(f"✅ {name} = {expr.solution_value:.4f}")
+        print(f" {name} = {expr.solution_value:.4f}")
         used = [
             (i, j, t, k)
             for (i, j, t, k) in x
@@ -395,7 +395,7 @@ def test_objective(name, expr):
         print(f"   Deliveries : {deliveries}")
         return expr.solution_value
     else:
-        print(f"❌ {name} : infeasible — {mdl.solve_details}")
+        print(f" {name} : infeasible — {mdl.solve_details}")
         return None
 
 print("\n── Calibration f1 (logistics cost) ──")
