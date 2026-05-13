@@ -113,7 +113,7 @@ alpha_co2 = {(i, j): g * Cr for (i, j) in A}
 beta_co2  = 0.5 * Cd * A_f * rho
 
 e_co2 = params["e_co2"]    # CO2 conversion factor (kg CO2 / litre)
-
+kg_per_unit = params["kg_per_unit"]
 # -- Financial (BFR) ----------------------------------------------------------
 BFR    = params["BFR"]
 DSO    = params["DSO"]     # days sales outstanding (customer payment delay)
@@ -318,7 +318,7 @@ f1_expr = y1 + y2 + y3
 f2_expr = e_co2 * mdl.sum(
     (
         alpha_co2[i, j] * w * d_m[i, j] * x[i, j, t, k]
-      + alpha_co2[i, j] * d_m[i, j]     * f[i, j, t, k]
+      + alpha_co2[i, j] * d_m[i, j]    *kg_per_unit * f[i, j, t, k]
       + beta_co2  * v2[k] * d_m[i, j]   * x[i, j, t, k]
     )
     for (i, j) in A for t in T for k in M
