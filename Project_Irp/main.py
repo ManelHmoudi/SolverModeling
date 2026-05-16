@@ -21,9 +21,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import json
 from docplex.mp.model import Model
 
-from Model.variables   import build_variables
-from Model.objectives  import build_all_objectives
-from Model.constraints import add_all_constraints
+from models.variables   import build_variables
+from models.objectives  import build_all_objectives
+from models.constraints import add_all_constraints
 
 
 # =============================================================================
