@@ -1,0 +1,59 @@
+"""
+Many-Objective Inventory Routing Problem (IRP)
+===============================================
+Decision Variables
+------------------
+"""
+
+def build_variables(mdl, N, A, T, M, clients, stock_nodes):
+
+
+    # x[i,j,t,k] : binary -- 1 if vehicle k travels arc (i,j) in period t
+    x = {
+        (i, j, t, k): mdl.binary_var(name=f"x_{i}_{j}_{t}_{k}")
+        for (i, j) in A for t in T for k in M
+    }
+
+    # f[i,j,t,k] : continuous -- load (units) carried on arc (i,j) by vehicle k in period t
+    f = {
+        (i, j, t, k): mdl.continuous_var(lb=0, name=f"f_{i}_{j}_{t}_{k}")
+        for (i, j) in A for t in T for k in M
+    }
+
+    # q_prime[l,t] : integer -- quantity delivered to customer l in period t
+    q_prime = {
+        (l, t): mdl.integer_var(lb=0, name=f"qprime_{l}_{t}")
+        for l in clients for t in T
+    }
+
+    # tau[i,t] : continuous -- arrival time at node i in period t (hours)
+    tau = {
+        (i, t): mdl.continuous_var(lb=0, name=f"tau_{i}_{t}")
+        for i in N for t in T
+    }
+
+    # I_var[i,t] : continuous -- inventory level at node i at the end of period t (units)
+    I_var = {
+        (i, t): mdl.continuous_var(lb=0, name=f"I_{i}_{t}")
+        for i in stock_nodes for t in T
+    }
+
+    # Slack variables for early (w1) and late (w2) arrival penalties
+    w1 = {
+        (l, t): mdl.continuous_var(lb=0, name=f"w1_{l}_{t}")
+        for l in clients for t in T
+    }
+    w2 = {
+        (l, t): mdl.continuous_var(lb=0, name=f"w2_{l}_{t}")
+        for l in clients for t in T
+    }
+
+    return {
+        "x":       x,
+        "f":       f,
+        "q_prime": q_prime,
+        "tau":     tau,
+        "I_var":   I_var,
+        "w1":      w1,
+        "w2":      w2,
+    }
