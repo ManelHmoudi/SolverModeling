@@ -44,7 +44,10 @@ params = data["parameters"]
 N           = sets["N"]            # all nodes: depot + clients + destination
 clients     = sets["clients"]      # customer nodes
 stock_nodes = sets["stock_nodes"]  # nodes that hold inventory
-cold_nodes  = sets["cold_nodes"]   # nodes requiring refrigeration
+cold_nodes_by_period = {
+    1: [0, 1],     
+    2: [0, 2, 3]    
+}
 O, D        = sets["O"], sets["D"] # origin (depot) and destination nodes
 T           = sets["T"]            # planning periods
 M           = sets["M"]            # vehicle types (1 = refrigerated, 2 = standard)
@@ -83,7 +86,7 @@ alpha_r = params["alpha_r"]  # coefficient converting inventory to energy consum
 c_ijk = {
     (i, j, k): (
         c_route[i, j] + p5 / v[k]
-        if k == 2
+        if k == 1
         else c_route[i, j]
     )
     for (i, j) in A for k in M
@@ -104,10 +107,13 @@ I_min  = {int(k): val for k, val in params["I_min"].items()}   # minimum invento
 # Holding cost per unit per period:
 #   cold nodes add an energy-based refrigeration term on top of the space cost.
 h_space = {int(k): val for k, val in params["h_space"].items()}
-h = {
-    i: h_space[i] + alpha_r * e_stock if i in cold_nodes else h_space[i]
-    for i in stock_nodes
-}
+h = {}
+for i in stock_nodes:
+    for t in T:
+        if i in cold_nodes_by_period[t]:
+            h[i, t] = h_space[i] + alpha_r * e_stock
+        else:
+            h[i, t] = h_space[i]
 
 # --- CO2 emissions — Comprehensive Modal Emission Model (CMEM) ---------------
 # Reference: Bektas & Laporte (2011)
@@ -132,7 +138,7 @@ kg_per_unit = params["kg_per_unit"]  # weight of one inventory unit (kg)
 # --- Financial parameters (BFR) ----------------------------------------------
 DSO   = params["DSO"]   # days sales outstanding  (customer payment delay, days)
 DPO   = params["DPO"]   # days payable outstanding (supplier payment delay, days)
-
+DIO = params["DIO"]   = params["DIO"]   # days inventory outstanding (average inventory holding time, days)
 P_sale     = {int(k): val for k, val in params["P_sale"].items()}     # selling price per unit at client l
 P_purchase = {int(k): val for k, val in params["P_purchase"].items()} # purchase price per unit at depot
 
@@ -213,11 +219,6 @@ for k in M:
             ctname=f"c2_k{k}_t{t}"
         )
 
-# Direct arc from depot to destination is forbidden (must visit at least one client).
-for k in M:
-    for t in T:
-        mdl.add_constraint(x[O, D, t, k] == 0, ctname=f"c3_k{k}_t{t}")
-
 # --- Flow conservation at intermediate nodes ---------------------------------
 # For every non-depot, non-destination node: inflow equals outflow.
 for k in M:
@@ -228,7 +229,7 @@ for k in M:
                 outflow = mdl.sum(x[j, i, t, k] for i in N if i != j)
                 mdl.add_constraint(
                     inflow == outflow,
-                    ctname=f"c4_{j}_k{k}_t{t}"
+                    ctname=f"c3_{j}_k{k}_t{t}"
                 )
 
 # --- Vehicle capacity --------------------------------------------------------
@@ -238,15 +239,15 @@ for k in M:
         for t in T:
             mdl.add_constraint(
                 f[i, j, t, k] <= Q[k] * x[i, j, t, k],
-                ctname=f"c5_{i}{j}_k{k}_t{t}"
+                ctname=f"c4_{i}{j}_k{k}_t{t}"
             )
 
 # --- Inventory bounds --------------------------------------------------------
 # Inventory at each stock node must stay within [I_min, I_max].
 for i in stock_nodes:
     for t in T:
-        mdl.add_constraint(I_var[i, t] >= I_min[i], ctname=f"c6_min_{i}_t{t}")
-        mdl.add_constraint(I_var[i, t] <= I_max[i], ctname=f"c6_max_{i}_t{t}")
+        mdl.add_constraint(I_var[i, t] >= I_min[i], ctname=f"c5_min_{i}_t{t}")
+        mdl.add_constraint(I_var[i, t] <= I_max[i], ctname=f"c5_max_{i}_t{t}")
 
 # --- Inventory balance -------------------------------------------------------
 # Depot: inventory decreases by the total quantity shipped to clients.
@@ -254,37 +255,38 @@ for i in stock_nodes:
 for t in T:
     prev_O  = I_var[O, t - 1] if t > 1 else I_init[O]
     shipped = mdl.sum(f[O, j, t, k] for j in clients for k in M)
-    mdl.add_constraint(I_var[O, t] == prev_O - shipped, ctname=f"c7_a_{t}")
+    mdl.add_constraint(I_var[O, t] == prev_O - shipped, ctname=f"c6_a_{t}")
 
     for l in clients:
         prev_l = I_var[l, t - 1] if t > 1 else I_init[l]
         mdl.add_constraint(
             I_var[l, t] == prev_l + q_prime[l, t] - q_lt[l, t],
-            ctname=f"c7_b_{l}_t{t}"
+            ctname=f"c6_b_{l}_t{t}"
         )
 
 # --- Total delivery equals total demand over the horizon ---------------------
 for l in clients:
     mdl.add_constraint(
         mdl.sum(q_prime[l, t] for t in T) == mdl.sum(q_lt[l, t] for t in T),
-        ctname=f"c8_{l}"
+        ctname=f"c7_{l}"
     )
 
 # --- Freight flow balance at customer nodes ----------------------------------
 # Net inbound flow at each client equals the quantity delivered to that client.
 for l in clients:
     for t in T:
-        inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l for k in M)
-        outbound = mdl.sum(f[l, j, t, k] for j in N if j != l for k in M)
+        K_lt = requires_cold[l, t]   # véhicules compatibles avec client l à période t
+        inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l for k in K_lt)
+        outbound = mdl.sum(f[l, j, t, k] for j in N if j != l for k in K_lt)
         mdl.add_constraint(
             inbound - outbound == q_prime[l, t],
-            ctname=f"c9_{l}_t{t}"
+            ctname=f"c8_{l}_t{t}"
         )
 
 # --- Arrival time propagation (big-M linearisation) -------------------------
 # Departure from the depot is fixed at time zero.
 for t in T:
-    mdl.add_constraint(tau[O, t] == 0, ctname=f"c10_{t}")
+    mdl.add_constraint(tau[O, t] == 0, ctname=f"c9_{t}")
 
 # If vehicle k uses arc (i,j) in period t, arrival at j is at least
 # (arrival at i) + (service time at i) + (travel time on arc).
@@ -294,13 +296,13 @@ for k in M:
             mdl.add_constraint(
                 tau[j, t] >= tau[i, t] + s[i] + d[i, j] / v[k]
                              - BIG_M * (1 - x[i, j, t, k]),
-                ctname=f"c11_{i}{j}_k{k}_t{t}"
+                ctname=f"c10_{i}{j}_k{k}_t{t}"
             )
 
 # --- Destination arrival window ----------------------------------------------
 for t in T:
-    mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c12_min_t{t}")
-    mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c12_max_t{t}")
+    mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c11_min_t{t}")
+    mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c11_max_t{t}")
 # --- Vehicle type compatibility ----------------------------------------------
 for l in clients:
     for t in T:
@@ -308,12 +310,12 @@ for l in clients:
         if 1 not in types_requis:
             mdl.add_constraint(
                 mdl.sum(x[i, l, t, 1] for i in N if i != l) == 0,
-                ctname=f"c13_no_frigo_{l}_t{t}"
+                ctname=f"c12_no_frigo_{l}_t{t}"
             )
         if 2 not in types_requis:
             mdl.add_constraint(
                 mdl.sum(x[i, l, t, 2] for i in N if i != l) == 0,
-                ctname=f"c13_no_standard_{l}_t{t}"
+                ctname=f"c12_no_standard_{l}_t{t}"
             )
 
 
@@ -332,7 +334,7 @@ y1 = mdl.sum(
     for (i, j) in A for t in T for k in M
 )
 
-y2 = mdl.sum(h[i] * I_var[i, t] for i in stock_nodes for t in T)
+y2 = mdl.sum(h[i, t] * I_var[i, t] for i in stock_nodes for t in T)
 
 # Slack variables for early (w1) and late (w2) arrival penalties
 w1 = {(l, t): mdl.continuous_var(lb=0, name=f"w1_{l}_{t}") for l in clients for t in T}
@@ -356,10 +358,9 @@ f1_expr = y1 + y2 + y3
 fuel_to_joules = params["fuel_to_joules"]
 
 f2_expr = (e_co2 / fuel_to_joules) * mdl.sum(
-    (
-        alpha_co2[i, j] * w           * d_m[i, j] * x[i, j, t, k]   # weight component
-      + alpha_co2[i, j] * kg_per_unit * d_m[i, j] * f[i, j, t, k]   # payload component
-      + beta_co2         * v2[k]       * d_m[i, j] * x[i, j, t, k]   # aerodynamic component
+    d_m[i, j] * (
+        alpha_co2[i, j] * (w * x[i, j, t, k] + kg_per_unit * f[i, j, t, k])
+      + beta_co2         *  v2[k]              * x[i, j, t, k]
     )
     for (i, j) in A for t in T for k in M
 )
@@ -373,7 +374,7 @@ f3_expr = mdl.sum(
 
 # --- f4: Working capital requirement (BFR) -----------------------------------
 # BFR = inventory value + accounts receivable - accounts payable
-stock_value = mdl.sum(I_var[O, t] * P_purchase[O] for t in T)
+stock_value = mdl.sum(I_var[O, t] * P_purchase[O] * (DIO / 365) for t in T)
 
 receivables = mdl.sum(
     q_prime[l, t] * P_sale[l] * (DSO / 365)
@@ -388,10 +389,10 @@ payables = mdl.sum(
 f4_expr = stock_value + receivables - payables
 
 # --- Budget constraints (feasibility bounds on each objective) ---------------
-mdl.add_constraint(f1_expr <= C_max, ctname="c14_logistics_budget")
-mdl.add_constraint(f2_expr <= E_max, ctname="c15_carbon_budget")
-mdl.add_constraint(f4_expr <= B,     ctname="c16_bfr_budget")
-mdl.add_constraint(f3_expr <= T_max, ctname="c17_time_budget")
+mdl.add_constraint(f1_expr <= C_max, ctname="c13_logistics_budget")
+mdl.add_constraint(f2_expr <= E_max, ctname="c14_carbon_budget")
+mdl.add_constraint(f4_expr <= B,     ctname="c15_bfr_budget")
+mdl.add_constraint(f3_expr <= T_max, ctname="c16_time_budget")
 
 
 # =============================================================================
