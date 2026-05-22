@@ -25,7 +25,6 @@ from models.variables   import build_variables
 from models.objectives  import build_all_objectives
 from models.constraints import add_all_constraints
 
-
 # =============================================================================
 # LOAD INSTANCE DATA
 # =============================================================================
@@ -244,64 +243,90 @@ add_all_constraints(mdl, vars_, sets_, params_)
 # MODEL SUMMARY
 # =============================================================================
 
-print(f"Model        : {mdl.name}")
-print(f"Nodes        : {len(N)}  (depot + {len(clients)} customers + destination)")
-print(f"Stock nodes  : {stock_nodes}")
-print(f"Arcs         : {len(A)}")
-print(f"Periods      : {len(T)}")
-print(f"Vehicles     : {len(M)}")
-print(f"Variables    : {mdl.number_of_variables}")
-print(f"Constraints  : {mdl.number_of_constraints}")
+print(f"\n{'─'*52}")
+print(f"  {mdl.name}")
+print(f"{'─'*52}")
+print(f"  Nodes {len(N)} (depot+{len(clients)} clients+dest) | Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
+print(f"  Variables {mdl.number_of_variables} | Constraints {mdl.number_of_constraints}")
+print(f"{'─'*52}")
 
 
 # =====================================================================================================
 # CALIBRATION — solve each objective independently to suggest bound values _ mono-objectif calibration
 # =====================================================================================================
 
+def _reconstruct_path(arcs):
+    """Build an ordered path string like '0->1->3->4' from a list of (i, j) arc tuples."""
+    if not arcs:
+        return "(no arcs)"
+    next_node = {i: j for (i, j) in arcs}
+    destinations = {j for (_, j) in arcs}
+    starts = [i for (i, _) in arcs if i not in destinations]
+    current = starts[0] if starts else arcs[0][0]
+    path = [current]
+    while current in next_node:
+        current = next_node[current]
+        path.append(current)
+    return "->".join(str(n) for n in path)
+
+
 def test_objective(name, expr):
-    """Minimise a single objective and report the optimal value with routing details."""
     mdl.minimize(expr)
     sol = mdl.solve(log_output=False)
-    if sol:
-        print(f"  {name} = {expr.solution_value:.4f}")
-        used = [
-            (i, j, t, k)
-            for (i, j, t, k) in vars_["x"]
-            if vars_["x"][i, j, t, k].solution_value > 0.5
-        ]
-        print(f"    Arcs used  : {used}")
-        deliveries = {
-            (l, t): round(vars_["q_prime"][l, t].solution_value, 6)
-            for (l, t) in vars_["q_prime"]
-        }
-        print(f"    Deliveries : {deliveries}")
-        return expr.solution_value
-    else:
-        print(f"  {name} : infeasible -- {mdl.solve_details}")
+    if not sol:
+        print(f"  {name}: INFEASIBLE  ({mdl.solve_details})")
         return None
 
+    val = expr.solution_value
+    print(f"  {name} = {val:.4f}")
 
-print("\n── Calibration f1 (logistics cost) ──")
+    arcs_by_tk = {}
+    for (i, j, t, k) in vars_["x"]:
+        if vars_["x"][i, j, t, k].solution_value > 0.5:
+            arcs_by_tk.setdefault((t, k), []).append((i, j))
+
+    if arcs_by_tk:
+        routes = "  ".join(
+            f"t{t}·k{k}: {_reconstruct_path(arcs_by_tk[t, k])}"
+            for (t, k) in sorted(arcs_by_tk)
+        )
+        print(f"    Routes  : {routes}")
+    else:
+        print(f"    Routes  : (none)")
+
+    nonzero = {
+        (l, t, td): round(vars_["q_prime"][l, t, td].solution_value, 2)
+        for (l, t, td) in vars_["q_prime"]
+        if vars_["q_prime"][l, t, td].solution_value > 1e-6
+    }
+    if nonzero:
+        deliv_str = "  ".join(f"l{l} t{t} td{td} = {q}" for (l, t, td), q in nonzero.items())
+        print(f"    Deliver : {deliv_str}")
+
+    return val
+
+
+print("\n── Calibration ─────────────────────────────────────")
+
+print("\n  f1  Logistics cost")
 f1_val = test_objective("f1", objectives["f1"])
-if f1_val:
-    print(f"    → Suggested C_max : {f1_val * 1.2:.4f}")
+if f1_val: print(f"    → C_max = {f1_val * 1.2:.4f}")
 
-print("\n── Calibration f2 (CO2 emissions) ──")
+print("\n  f2  CO2 emissions")
 f2_val = test_objective("f2", objectives["f2"])
-if f2_val:
-    print(f"    → Suggested E_max : {f2_val * 1.2:.4f}")
+if f2_val: print(f"    → E_max = {f2_val * 1.2:.4f}")
 
-print("\n── Calibration f3 (travel time) ──")
+print("\n  f3  Travel time")
 f3_val = test_objective("f3", objectives["f3"])
-if f3_val:
-    print(f"    → Suggested T_max : {f3_val * 1.2:.4f}")
+if f3_val: print(f"    → T_max = {f3_val * 1.2:.4f}")
 
-print("\n── Calibration f4 (BFR) ──")
+print("\n  f4  BFR (working capital)")
 f4_val = test_objective("f4", objectives["f4"])
 if f4_val:
     sub = objectives["f4_sub"]
-    print(f"    → Suggested B     : {f4_val * 1.2:.4f}")
-    print(f"    Breakdown :")
-    print(f"      Stock value   = {sub['stock_value'].solution_value:.4f}")
-    print(f"      Receivables   = {sub['receivables'].solution_value:.4f}")
-    print(f"      Payables (-)  = {sub['payables'].solution_value:.4f}")
+    print(f"    → B     = {f4_val * 1.2:.4f}  "
+          f"(stock {sub['stock_value'].solution_value:.2f}  "
+          f"recv {sub['receivables'].solution_value:.2f}  "
+          f"pay -{sub['payables'].solution_value:.2f})")
+
+print(f"\n{'─'*52}")

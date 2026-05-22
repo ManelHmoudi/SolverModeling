@@ -20,10 +20,13 @@ def build_variables(mdl, N, A, T, M, clients, stock_nodes):
         for (i, j) in A for t in T for k in M
     }
 
-    # q_prime[l,t] : integer -- quantity delivered to customer l in period t
+    # q_prime[l,t,td] : quantity delivered to customer l dispatched in period t for demand period td
     q_prime = {
-        (l, t): mdl.continuous_var(lb=0, name=f"qprime_{l}_{t}")
-        for l in clients for t in T
+        (l, t, td): mdl.continuous_var(lb=0, name=f"qprime_{l}_{t}_{td}")
+        for l in clients
+        for t in T
+        for td in T
+        if t <= td
     }
 
     # tau[i,t] : continuous -- arrival time at node i in period t (hours)

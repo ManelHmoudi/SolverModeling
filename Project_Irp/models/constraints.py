@@ -66,19 +66,25 @@ def add_inventory_constraints(mdl, I_var, q_prime, f, stock_nodes, clients, T, M
         shipped = mdl.sum(f[O, j, t, k] for j in clients for k in M)
         mdl.add_constraint(I_var[O, t] == prev_O - shipped, ctname=f"c6_a_{t}")
 
-        for l in clients:
+        for t in T:
+          for l in clients:
             prev_l = I_var[l, t - 1] if t > 1 else I_init[l]
-            mdl.add_constraint(
-                I_var[l, t] == prev_l + q_prime[l, t] - q_lt[l, t],
-                ctname=f"c6_b_{l}_t{t}"
+            livré_en_t = mdl.sum(
+              q_prime[l, t, td]
+              for td in T if td >= t
             )
+            mdl.add_constraint(
+              I_var[l, t] == prev_l + livré_en_t - q_lt[l, t],
+              ctname=f"c6_b_{l}_t{t}"
+           )
 
     # C7 -- total delivery equals total demand
     for l in clients:
-        mdl.add_constraint(
-            mdl.sum(q_prime[l, t] for t in T) == mdl.sum(q_lt[l, t] for t in T),
-            ctname=f"c7_{l}"
-        )
+        for td in T:
+            mdl.add_constraint(
+                mdl.sum(q_prime[l, t, td] for t in T if t <= td) == q_lt[l, td],
+                ctname=f"c7_{l}_td{td}"
+            )
 
 
 def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, requires_cold):
@@ -87,13 +93,19 @@ def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, requires_cold):
     """
     for l in clients:
         for t in T:
-            K_lt     = requires_cold[l, t]   # vehicle types compatible with client l at period t
-            inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l for k in K_lt)
-            outbound = mdl.sum(f[l, j, t, k] for j in N if j != l for k in K_lt)
-            mdl.add_constraint(
-                inbound - outbound == q_prime[l, t],
-                ctname=f"c8_{l}_t{t}"
-            )
+            for td in T:
+              if t <= td:
+                    K_ltd = requires_cold[l, td]
+                    inbound  = mdl.sum(
+                        f[i, l, t, k] for i in N if i != l for k in K_ltd
+                    )
+                    outbound = mdl.sum(
+                        f[l, j, t, k] for j in N if j != l for k in K_ltd
+                    )
+                    mdl.add_constraint(
+                        inbound - outbound == q_prime[l, t, td],
+                        ctname=f"c8_{l}_tl{t}_td{td}"
+                    )
 
 
 def add_time_constraints(mdl, x, tau, N, A, T, M, O, D,
@@ -130,18 +142,23 @@ def add_vehicle_compatibility_constraints(mdl, x, N, T, clients, requires_cold):
           cannot serve that client.
     """
     for l in clients:
-        for t in T:
-            types_requis = requires_cold[l, t]
-            if 1 not in types_requis:
-                mdl.add_constraint(
-                    mdl.sum(x[i, l, t, 1] for i in N if i != l) == 0,
-                    ctname=f"c12_no_frigo_{l}_t{t}"
-                )
-            if 2 not in types_requis:
-                mdl.add_constraint(
-                    mdl.sum(x[i, l, t, 2] for i in N if i != l) == 0,
-                    ctname=f"c12_no_standard_{l}_t{t}"
-                )
+      for t in T:
+        types_requis_tl = set()
+        for td in T:
+            if td >= t:
+                for k in requires_cold[l, td]:
+                    types_requis_tl.add(k)
+
+        if 1 not in types_requis_tl:
+            mdl.add_constraint(
+                mdl.sum(x[i, l, t, 1] for i in N if i != l) == 0,
+                ctname=f"c12_no_frigo_{l}_tl{t}"
+            )
+        if 2 not in types_requis_tl:
+            mdl.add_constraint(
+                mdl.sum(x[i, l, t, 2] for i in N if i != l) == 0,
+                ctname=f"c12_no_standard_{l}_tl{t}"
+            )
 
 
 def add_time_window_slacks(mdl, tau, w1, w2, clients, T, ET, LT):

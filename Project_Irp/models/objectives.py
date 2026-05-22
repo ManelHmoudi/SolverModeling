@@ -144,13 +144,13 @@ def build_f4_working_capital(mdl, vars_, sets_, params_):
     stock_value = mdl.sum(I_var[O, t] * P_purchase[O] * (DIO / 365) for t in T)
 
     receivables = mdl.sum(
-        q_prime[l, t] * P_sale[l] * (DSO / 365)
-        for l in clients for t in T
+        q_prime[l, t, td] * P_sale[l] * (DSO / 365)
+        for l in clients for t in T for td in T if t <= td
     )
 
     payables = mdl.sum(
-        q_prime[l, t] * P_purchase[O] * (DPO / 365)
-        for l in clients for t in T
+        q_prime[l, t, td] * P_purchase[O] * (DPO / 365)
+        for l in clients for t in T for td in T if t <= td
     )
 
     f4_expr = stock_value + receivables - payables
