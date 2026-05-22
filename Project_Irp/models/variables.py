@@ -22,7 +22,7 @@ def build_variables(mdl, N, A, T, M, clients, stock_nodes):
 
     # q_prime[l,t] : integer -- quantity delivered to customer l in period t
     q_prime = {
-        (l, t): mdl.integer_var(lb=0, name=f"qprime_{l}_{t}")
+        (l, t): mdl.continuous_var(lb=0, name=f"qprime_{l}_{t}")
         for l in clients for t in T
     }
 
