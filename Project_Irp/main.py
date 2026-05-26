@@ -11,7 +11,6 @@ Network:
     G = (N, A)
     Depot       = node 0
     Clients     = {1, 2, 3}
-    Destination = node 4
 """
 
 import sys
@@ -37,18 +36,15 @@ def _tmap(key): return {(int(k.split(",")[0]), int(k.split(",")[1])): v for k, v
 
 
 # ── Sets ─────────────────────────────────────────────────────────────────────
-N           = sets_raw["N"]
-clients     = sets_raw["clients"]
-stock_nodes = sets_raw["stock_nodes"]
-O, D        = sets_raw["O"], sets_raw["D"]
-T, M        = sets_raw["T"], sets_raw["M"]
-A           = [(i, j) for i in N for j in N if i != j]
-
-cold_nodes_by_period = {1: [0, 1], 2: [0, 2, 3]}
+N       = sets_raw["N"]
+clients = sets_raw["clients"]
+O       = sets_raw["O"]
+T, M    = sets_raw["T"], sets_raw["M"]
+A       = [(i, j) for i in N for j in N if i != j]
 
 sets_ = {
     "N": N, "A": A, "T": T, "M": M,
-    "O": O, "D": D, "clients": clients, "stock_nodes": stock_nodes,
+    "O": O, "clients": clients,
 }
 
 
@@ -75,13 +71,13 @@ ET = {(l, t): params_raw["ET_value"] for l in clients for t in T}
 LT = {(l, t): params_raw["LT_value"] for l in clients for t in T}
 s  = {i: params_raw["s_value"] for i in N}
 
-I_init, I_max, I_min = _imap("I_init"), _imap("I_max"), _imap("I_min")
-h_space = _imap("h_space")
+I_O_init = params_raw["I_O_init"]
+I_O_max  = params_raw["I_O_max"]
+I_O_min  = params_raw["I_O_min"]
+# hO = hO_space + alpha_r * e_stock (refrigeration energy component)
+h_O      = params_raw["h_O_space"] + alpha_r * e_stock
 
-h = {
-    (i, t): h_space[i] + (alpha_r * e_stock if i in cold_nodes_by_period[t] else 0)
-    for i in stock_nodes for t in T
-}
+R = {int(k): val for k, val in params_raw["R"].items()}
 
 # CMEM — Bektas & Laporte (2011)
 g, Cr        = params_raw["g"],  params_raw["Cr"]
@@ -100,8 +96,8 @@ params_ = {
     "ET": ET,               "LT": LT,               "s": s,
     "tau_min":        params_raw["tau_min"],
     "tau_max":        params_raw["tau_max"],
-    "I_init": I_init,       "I_max": I_max,         "I_min": I_min,
-    "h": h,
+    "I_O_init": I_O_init,   "I_O_max": I_O_max,     "I_O_min": I_O_min,
+    "h_O": h_O,             "R": R,
     "alpha_co2": alpha_co2, "beta_co2": beta_co2,   "w": w,
     "kg_per_unit":    params_raw["kg_per_unit"],
     "e_co2":          params_raw["e_co2"],
@@ -117,7 +113,7 @@ params_ = {
 
 # ── Model ────────────────────────────────────────────────────────────────────
 mdl   = Model(name="IRP_ManyObjective")
-vars_ = build_variables(mdl, N, A, T, M, clients, stock_nodes)
+vars_ = build_variables(mdl, N, A, T, M, clients)
 
 objectives = build_all_objectives(mdl, vars_, sets_, params_)
 params_["objectives"] = objectives  # needed by budget constraints
@@ -128,7 +124,7 @@ SEP = "─" * 52
 print(f"\n{SEP}")
 print(f"  {mdl.name}")
 print(f"{SEP}")
-print(f"  Nodes {len(N)} (depot+{len(clients)} clients+dest) | Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
+print(f"  Nodes {len(N)} (depot+{len(clients)} clients) | Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
 print(f"  Variables {mdl.number_of_variables} | Constraints {mdl.number_of_constraints}")
 print(f"{SEP}")
 

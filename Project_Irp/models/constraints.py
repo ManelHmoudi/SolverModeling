@@ -6,7 +6,7 @@ Constraints
 """
 
 
-def add_routing_constraints(mdl, x, N, A, T, M, O, D):
+def add_routing_constraints(mdl, x, N, A, T, M, O):
     """
     C1 : each vehicle departs at most once from the depot per period.
     C2 : each vehicle that departs the depot must arrive at the destination exactly once.
@@ -19,15 +19,14 @@ def add_routing_constraints(mdl, x, N, A, T, M, O, D):
                 mdl.sum(x[O, j, t, k] for j in N if j != O) <= 1,
                 ctname=f"c1_k{k}_t{t}"
             )
-            # C2 -- arrival at destination equals departure from depot
+            # C2 -- if vehicle leaves depot, it must return to same depot.
             mdl.add_constraint(
-                mdl.sum(x[i, D, t, k] for i in N if i != D and i != O)
-                == mdl.sum(x[O, j, t, k] for j in N if j != O),
-                ctname=f"c2_k{k}_t{t}"
-            )
+             mdl.sum(x[i, O, t, k] for i in N if i != O) == mdl.sum(x[O, j, t, k] for j in N if j != O),
+             ctname=f"c2_k{k}_t{t}"
+           )
             # C3 -- flow conservation at intermediate nodes
             for j in N:
-                if j != O and j != D:
+                if j != O :
                     inflow  = mdl.sum(x[i, j, t, k] for i in N if i != j)
                     outflow = mdl.sum(x[j, i, t, k] for i in N if i != j)
                     mdl.add_constraint(inflow == outflow, ctname=f"c3_{j}_k{k}_t{t}")
@@ -46,8 +45,8 @@ def add_capacity_constraints(mdl, x, f, A, T, M, Q):
                 )
 
 
-def add_inventory_constraints(mdl, I_var, q_prime, f, stock_nodes, clients, T, M,
-                               I_min, I_max, I_init, q_lt, O):
+def add_inventory_constraints(mdl, I_O, q_prime, f, clients, T, M,
+                               I_O_min, I_O_max, I_O_init, q_lt, R,O):
     """
     C5 : inventory at each stock node must stay within [I_min, I_max].
     C6 : depot inventory decreases by the total quantity shipped to clients;
@@ -55,28 +54,30 @@ def add_inventory_constraints(mdl, I_var, q_prime, f, stock_nodes, clients, T, M
     C7 : total delivery equals total demand over the horizon.
     """
     # C5 -- inventory bounds
-    for i in stock_nodes:
-        for t in T:
-            mdl.add_constraint(I_var[i, t] >= I_min[i], ctname=f"c5_min_{i}_t{t}")
-            mdl.add_constraint(I_var[i, t] <= I_max[i], ctname=f"c5_max_{i}_t{t}")
-
-    # C6 -- inventory balance
     for t in T:
-        prev_O  = I_var[O, t - 1] if t > 1 else I_init[O]
-        shipped = mdl.sum(f[O, j, t, k] for j in clients for k in M)
-        mdl.add_constraint(I_var[O, t] == prev_O - shipped, ctname=f"c6_a_{t}")
+        mdl.add_constraint(
+            I_O[t] >= I_O_min,
+            ctname=f"c5_min_t{t}"
+        )
+        mdl.add_constraint(
+            I_O[t] <= I_O_max,
+            ctname=f"c5_max_t{t}"
+        )    
 
-        for t in T:
-          for l in clients:
-            prev_l = I_var[l, t - 1] if t > 1 else I_init[l]
-            livré_en_t = mdl.sum(
-              q_prime[l, t, td]
-              for td in T if td >= t
-            )
-            mdl.add_constraint(
-              I_var[l, t] == prev_l + livré_en_t - q_lt[l, t],
-              ctname=f"c6_b_{l}_t{t}"
-           )
+    # C6 -- inventory balance at depot
+    for t in T:
+
+        prev_stock = I_O[t - 1] if t > 1 else I_O_init
+        shipped = mdl.sum(
+            f[O, j, t, k]
+            for j in clients
+            for k in M
+        )
+
+        mdl.add_constraint(
+            I_O[t] == prev_stock + R[t] - shipped,
+            ctname=f"c6_t{t}"
+        )
 
     # C7 -- total delivery equals total demand
     for l in clients:
@@ -87,7 +88,7 @@ def add_inventory_constraints(mdl, I_var, q_prime, f, stock_nodes, clients, T, M
             )
 
 
-def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, requires_cold):
+def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients,M):
     """
     C8 : net inbound flow at each client equals the quantity delivered to that client.
     """
@@ -95,26 +96,27 @@ def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, requires_cold):
         for t in T:
             for td in T:
               if t <= td:
-                    K_ltd = requires_cold[l, td]
-                    inbound  = mdl.sum(
-                        f[i, l, t, k] for i in N if i != l for k in K_ltd
+                    inbound = mdl.sum(
+                        f[i, l, t, k]
+                        for i in N if i != l
+                        for k in M
                     )
                     outbound = mdl.sum(
-                        f[l, j, t, k] for j in N if j != l for k in K_ltd
+                        f[l, j, t, k]
+                        for j in N if j != l
+                        for k in M
                     )
-                    mdl.add_constraint(
-                        inbound - outbound == q_prime[l, t, td],
-                        ctname=f"c8_{l}_tl{t}_td{td}"
+                    mdl.add_constraint(inbound - outbound == q_prime[l, t, td],ctname=f"c8_{l}_tl{t}_td{td}"
                     )
 
 
-def add_time_constraints(mdl, x, tau, N, A, T, M, O, D,
+def add_time_constraints(mdl, x, tau, A, T, M, O,
                          s, d, v, tau_min, tau_max, BIG_M):
     """
     C9  : departure from the depot is fixed at time zero.
     C10 : if vehicle k uses arc (i,j) in period t, arrival at j is at least
           (arrival at i) + (service time at i) + (travel time on arc).
-    C11 : destination arrival must lie within [tau_min, tau_max].
+    C12 : depot time must stay within [tau_min, tau_max].
     """
     # C9 -- departure from depot fixed at time zero
     for t in T:
@@ -129,36 +131,32 @@ def add_time_constraints(mdl, x, tau, N, A, T, M, O, D,
                                  - BIG_M * (1 - x[i, j, t, k]),
                     ctname=f"c10_{i}{j}_k{k}_t{t}"
                 )
-
-    # C11 -- destination arrival window
+    # C12 -- global tour time window: depot time must stay within [tau_min, tau_max]
     for t in T:
-        mdl.add_constraint(tau[D, t] >= tau_min, ctname=f"c11_min_t{t}")
-        mdl.add_constraint(tau[D, t] <= tau_max, ctname=f"c11_max_t{t}")
+        mdl.add_constraint(tau[O, t] >= tau_min, ctname=f"c12_min_t{t}")
+        mdl.add_constraint(tau[O, t] <= tau_max, ctname=f"c12_max_t{t}")
 
 
-def add_vehicle_compatibility_constraints(mdl, x, N, T, clients, requires_cold):
+def add_vehicle_compatibility_constraints(mdl, x, N, T, clients, requires_cold,M):
     """
-    C12 : a vehicle type incompatible with client l at period t
+    C13 : a vehicle type incompatible with client l at period t
           cannot serve that client.
     """
     for l in clients:
-      for t in T:
-        types_requis_tl = set()
-        for td in T:
-            if td >= t:
-                for k in requires_cold[l, td]:
-                    types_requis_tl.add(k)
+        for t in T:
 
-        if 1 not in types_requis_tl:
-            mdl.add_constraint(
-                mdl.sum(x[i, l, t, 1] for i in N if i != l) == 0,
-                ctname=f"c12_no_frigo_{l}_tl{t}"
-            )
-        if 2 not in types_requis_tl:
-            mdl.add_constraint(
-                mdl.sum(x[i, l, t, 2] for i in N if i != l) == 0,
-                ctname=f"c12_no_standard_{l}_tl{t}"
-            )
+            # refrigeration required
+            if requires_cold[l, t] == 1:
+
+                mdl.add_constraint(
+                    mdl.sum(
+                        x[i, l, t, k]
+                        for i in N if i != l
+                        for k in M if k != 1
+                    ) == 0,
+
+                    ctname=f"c13_cold_l{l}_t{t}"
+                )
 
 
 def add_time_window_slacks(mdl, tau, w1, w2, clients, T, ET, LT):
@@ -200,33 +198,31 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     f       = vars_["f"]
     q_prime = vars_["q_prime"]
     tau     = vars_["tau"]
-    I_var   = vars_["I_var"]
     w1      = vars_["w1"]
     w2      = vars_["w2"]
+    I_O     = vars_["I_O"]
 
     N           = sets_["N"]
     A           = sets_["A"]
     T           = sets_["T"]
     M           = sets_["M"]
     O           = sets_["O"]
-    D           = sets_["D"]
     clients     = sets_["clients"]
-    stock_nodes = sets_["stock_nodes"]
 
-    add_routing_constraints(mdl, x, N, A, T, M, O, D)
+    add_routing_constraints(mdl, x, N, A, T, M, O)
     add_capacity_constraints(mdl, x, f, A, T, M, params_["Q"])
     add_inventory_constraints(
-        mdl, I_var, q_prime, f, stock_nodes, clients, T, M,
-        params_["I_min"], params_["I_max"], params_["I_init"],
-        params_["q_lt"], O
+        mdl, I_O, q_prime, f, clients, T, M,
+        params_["I_O_min"], params_["I_O_max"], params_["I_O_init"],
+        params_["q_lt"],params_["R"], O
     )
-    add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, params_["requires_cold"])
+    add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, M)
     add_time_constraints(
-        mdl, x, tau, N, A, T, M, O, D,
+        mdl, x, tau, N, A, T, M, O, 
         params_["s"], params_["d"], params_["v"],
         params_["tau_min"], params_["tau_max"], params_["BIG_M"]
     )
-    add_vehicle_compatibility_constraints(mdl, x, N, T, clients, params_["requires_cold"])
+    add_vehicle_compatibility_constraints(mdl, x, N, T, clients, params_["requires_cold"],M)
     add_time_window_slacks(mdl, tau, w1, w2, clients, T, params_["ET"], params_["LT"])
 
     # Budget constraints require pre-built objective expressions

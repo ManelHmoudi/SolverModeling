@@ -5,7 +5,7 @@ Decision Variables
 ------------------
 """
 
-def build_variables(mdl, N, A, T, M, clients, depot):
+def build_variables(mdl, N, A, T, M, clients):
 
 
     # x[i,j,t,k] : binary -- 1 if vehicle k travels arc (i,j) in period t
