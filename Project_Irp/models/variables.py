@@ -5,7 +5,7 @@ Decision Variables
 ------------------
 """
 
-def build_variables(mdl, N, A, T, M, clients, stock_nodes):
+def build_variables(mdl, N, A, T, M, clients, depot):
 
 
     # x[i,j,t,k] : binary -- 1 if vehicle k travels arc (i,j) in period t
@@ -35,10 +35,10 @@ def build_variables(mdl, N, A, T, M, clients, stock_nodes):
         for i in N for t in T
     }
 
-    # I_var[i,t] : continuous -- inventory level at node i at the end of period t (units)
-    I_var = {
-        (i, t): mdl.continuous_var(lb=0, name=f"I_{i}_{t}")
-        for i in stock_nodes for t in T
+    # I_O[t] : inventory level at depot O at end of period t
+    I_O = {
+    t: mdl.continuous_var( lb=0, name=f"I_O_{t}")
+    for t in T
     }
 
     # Slack variables for early (w1) and late (w2) arrival penalties
@@ -56,7 +56,7 @@ def build_variables(mdl, N, A, T, M, clients, stock_nodes):
         "f":       f,
         "q_prime": q_prime,
         "tau":     tau,
-        "I_var":   I_var,
+        "I_O": I_O,
         "w1":      w1,
         "w2":      w2,
     }

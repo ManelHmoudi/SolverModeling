@@ -21,17 +21,11 @@ params_raw = data["parameters"]
 
 N           = sets_raw["N"]
 clients     = sets_raw["clients"]
-stock_nodes = sets_raw["stock_nodes"]
 O           = sets_raw["O"]
-D           = sets_raw["D"]
 T           = sets_raw["T"]
 M           = sets_raw["M"]
 A           = [(i, j) for i in N for j in N if i != j]
 
-cold_nodes_by_period = {
-    1: [0, 1],
-    2: [0, 2, 3]
-}
 
 sets_ = {
     "N":           N,
@@ -39,9 +33,7 @@ sets_ = {
     "T":           T,
     "M":           M,
     "O":           O,
-    "D":           D,
     "clients":     clients,
-    "stock_nodes": stock_nodes,
 }
 
 
@@ -87,18 +79,17 @@ tau_min = params_raw["tau_min"]
 tau_max = params_raw["tau_max"]
 s       = {i: params_raw["s_value"] for i in N}
 
-I_init  = {int(k): val for k, val in params_raw["I_init"].items()}
-I_max   = {int(k): val for k, val in params_raw["I_max"].items()}
-I_min   = {int(k): val for k, val in params_raw["I_min"].items()}
-h_space = {int(k): val for k, val in params_raw["h_space"].items()}
+I_O_init = params_raw["I_O_init"]
+I_O_max  = params_raw["I_O_max"]
+I_O_min  = params_raw["I_O_min"]
+h_O_space = params_raw["h_O_space"]
 
-h = {}
-for i in stock_nodes:
-    for t in T:
-        if i in cold_nodes_by_period[t]:
-            h[i, t] = h_space[i] + alpha_r * e_stock
-        else:
-            h[i, t] = h_space[i]
+h_O = h_O_space + alpha_r * e_stock
+
+R = {
+    int(k): val
+    for k, val in params_raw["R"].items()
+}
 
 g    = params_raw["g"]
 Cr   = params_raw["Cr"]
@@ -142,10 +133,11 @@ params_ = {
     "tau_min":       tau_min,
     "tau_max":       tau_max,
     "s":             s,
-    "I_init":        I_init,
-    "I_max":         I_max,
-    "I_min":         I_min,
-    "h":             h,
+    "I_O_init": I_O_init,
+    "I_O_max": I_O_max,
+    "I_O_min": I_O_min,
+    "h_O": h_O,
+    "R": R,
     "alpha_co2":     alpha_co2,
     "beta_co2":      beta_co2,
     "w":             w,
