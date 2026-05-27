@@ -114,7 +114,7 @@ def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, M):
 
 # ── 6.3  Time & time windows ─────────────────────────────────────────────────
 
-def add_time_constraints(mdl, x, tau, w1, w2, N, A, T, M, O,
+def add_time_constraints(mdl, x, tau, tau_return, w1, w2, N, A, T, M, O,
                          s, d, v, ET, LT, tau_min, tau_max, BIG_M):
     # C9 — vehicles depart the depot at time 0 in every period
     for t in T:
@@ -134,7 +134,17 @@ def add_time_constraints(mdl, x, tau, w1, w2, N, A, T, M, O,
                                  - BIG_M * (1 - x[i, j, t, k]),
                     ctname=f"c10_{i}{j}_k{k}_t{t}"
                 )
-
+    # C10b — arrival time propagation back to the depot → tau_return[t]
+    for k in M:
+        for i in N:
+            if i == O:
+                continue
+            for t in T:
+                mdl.add_constraint(
+                    tau_return[t] >= tau[i, t] + s[i] + d[i, O] / v[k]
+                                     - BIG_M * (1 - x[i, O, t, k]),
+                    ctname=f"c10b_{i}0_k{k}_t{t}"
+                )
     # C11 — soft time window: ET[l,t] <= tau[l,t] <= LT[l,t]
     #       implemented via non-negative slack variables w1 (early) and w2 (late)
     #       penalised in objective f1 by c1*w1 + c2*w2
@@ -199,6 +209,7 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     tau     = vars_["tau"]
     w1      = vars_["w1"]
     w2      = vars_["w2"]
+    tau_return = vars_["tau_return"]
     I_O     = vars_["I_O"]
 
     N       = sets_["N"]
@@ -226,7 +237,7 @@ def add_all_constraints(mdl, vars_, sets_, params_):
 
     # C9 – C12
     add_time_constraints(
-        mdl, x, tau, w1, w2, N, A, T, M, O,
+        mdl, x, tau,vars_["tau_return"], w1, w2, N, A, T, M, O,
         params_["s"], params_["d"], params_["v"],
         params_["ET"], params_["LT"],
         params_["tau_min"], params_["tau_max"], params_["BIG_M"]
@@ -235,6 +246,4 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     # C13
     add_vehicle_compatibility_constraints(mdl, x, N, T, clients, params_["K_lt"], M)
 
-    # C14 – C17 are NOT added here.
-    # They require calibrated bounds and are added separately in main.py
-    # after the mono-objective calibration runs (see add_budget_constraints).
+    

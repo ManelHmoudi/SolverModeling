@@ -33,6 +33,11 @@ def build_variables(mdl, N, A, T, M, clients):
     tau = {
         (i, t): mdl.continuous_var(lb=0, name=f"tau_{i}_{t}")
         for i in N for t in T
+    }   
+    # tau_return[t] : effective depot return time in period t (hours)
+    tau_return = {
+    t: mdl.continuous_var(lb=0, name=f"tau_ret_{t}")
+    for t in T
     }
 
     # I_O[t] : inventory level at depot O at end of period t
@@ -56,6 +61,7 @@ def build_variables(mdl, N, A, T, M, clients):
         "f":       f,
         "q_prime": q_prime,
         "tau":     tau,
+        "tau_return": tau_return,
         "I_O": I_O,
         "w1":      w1,
         "w2":      w2,
