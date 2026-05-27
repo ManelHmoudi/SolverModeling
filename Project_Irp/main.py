@@ -33,6 +33,11 @@ sets_raw, params_raw = data["sets"], data["parameters"]
 
 def _imap(key): return {int(k): v for k, v in params_raw[key].items()}
 def _tmap(key): return {(int(k.split(",")[0]), int(k.split(",")[1])): v for k, v in params_raw[key].items()}
+def _ltmap_list(key):
+    return {
+        (int(k.split(",")[0]), int(k.split(",")[1])): v
+        for k, v in params_raw[key].items()
+    }
 
 
 # ── Sets ─────────────────────────────────────────────────────────────────────
@@ -51,6 +56,7 @@ sets_ = {
 # ── Parameters ───────────────────────────────────────────────────────────────
 q_lt          = _tmap("q_lt")
 requires_cold = _tmap("requires_cold")
+K_lt = _ltmap_list("K_lt")
 
 v  = _imap("v")
 v2 = {k: (v[k] / 3.6) ** 2 for k in M}
@@ -77,7 +83,7 @@ I_O_min  = params_raw["I_O_min"]
 # hO = hO_space + alpha_r * e_stock (refrigeration energy component)
 h_O      = params_raw["h_O_space"] + alpha_r * e_stock
 
-R = {int(k): val for k, val in params_raw["R"].items()}
+R = {t: sum(q_lt[l, t] for l in clients) for t in T}
 
 # CMEM — Bektas & Laporte (2011)
 g, Cr        = params_raw["g"],  params_raw["Cr"]
@@ -108,6 +114,7 @@ params_ = {
     "C_max": params_raw["C_max"], "E_max": params_raw["E_max"],
     "T_max": params_raw["T_max"], "B":     params_raw["B"],
     "BIG_M": params_raw["BIG_M"],
+    "K_lt": K_lt,
 }
 
 
