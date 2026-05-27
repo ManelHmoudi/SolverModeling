@@ -126,6 +126,8 @@ def add_time_constraints(mdl, x, tau, w1, w2, N, A, T, M, O,
     #       Big-M term deactivates the constraint when x[i,j,t,k] = 0
     for k in M:
         for (i, j) in A:
+            if j == O:          
+                continue
             for t in T:
                 mdl.add_constraint(
                     tau[j, t] >= tau[i, t] + s[i] + d[i, j] / v[k]
@@ -233,10 +235,6 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     # C13
     add_vehicle_compatibility_constraints(mdl, x, N, T, clients, params_["K_lt"], M)
 
-    # C14 – C17  (require pre-built objective expressions)
-    obj = params_["objectives"]
-    add_budget_constraints(
-        mdl,
-        obj["f1"], obj["f2"], obj["f3"], obj["f4"],
-        params_["C_max"], params_["E_max"], params_["T_max"], params_["B"]
-    )
+    # C14 – C17 are NOT added here.
+    # They require calibrated bounds and are added separately in main.py
+    # after the mono-objective calibration runs (see add_budget_constraints).
