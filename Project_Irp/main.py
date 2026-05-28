@@ -152,7 +152,6 @@ def _get_ordered_path(arcs):
 
 
 def _solve_single(label, expr):
-    """Solves the objective and outputs a clean, structured tour view."""
     mdl.minimize(expr)
     sol = mdl.solve(log_output=False)
     if not sol:
@@ -162,41 +161,49 @@ def _solve_single(label, expr):
     val = expr.solution_value
     print(f"\n  >> {label.upper()} = {val:.4f}")
 
-    # Process metrics period by period
+    # ── Affichage routes ─────────────────────────────────
     for t in T:
         print(f"    [Période t={t}]")
         has_activity = False
-        
         for k in M:
-            # Gather arcs used by vehicle k in period t
-            arcs_k = [(i, j) for (i, j) in A if vars_["x"][i, j, t, k].solution_value > 0.5]
+            arcs_k = [(i, j) for (i, j) in A
+                      if vars_["x"][i, j, t, k].solution_value > 0.5]
             if not arcs_k:
                 continue
-                
             has_activity = True
             path = _get_ordered_path(arcs_k)
-            
-            # Build string showing nodes and quantities
             steps = []
-            for idx, node in enumerate(path):
+            for node in path:
                 if node == 0:
                     steps.append("0")
                 else:
-                    # FIX INDENTATION: Calcul et évaluation de la quantité à l'intérieur de la boucle des nœuds
-                    qty_attribuee = sum(vars_["q_prime"][node, t, td].solution_value for td in T if t <= td)
-                    
-                    if qty_attribuee > 1e-4:
-                        steps.append(f"{node} (Livré: {qty_attribuee:.1f})")
-                    else:
-                        steps.append(f"{node} (Transit)")
-            
-            route_flow = " -> ".join(steps)
+                    inflow  = sum(vars_["f"][i, node, t, k].solution_value
+                                  for i in N if i != node)
+                    outflow = sum(vars_["f"][node, j, t, k].solution_value
+                                  for j in N if j != node)
+                    qty = inflow - outflow
+                    steps.append(f"{node}({'✓' if qty > 1e-4 else 'transit'}:{qty:.1f})")
             ret_time = vars_["tau_return"][t].solution_value
-            print(f"      Camion k={k} : {route_flow} | Retour Dépôt: {ret_time:.2f}h")
-            
+            print(f"      k={k} : {' → '.join(steps)} | retour {ret_time:.2f}h")
         if not has_activity:
-            print("      Aucun camion en mouvement.")
-            
+            print("      Aucun camion.")
+
+    # ── Résumé par client ────────────────────────────────
+    print(f"\n    {'Client':<8} {'Période':<10} {'Camion':<8} {'Reçu':>8} {'Demande':>9} ")
+    print(f"    {'─'*6:<8} {'─'*7:<10} {'─'*6:<8} {'─'*6:>8} {'─'*7:>9} ")
+
+    for l in clients:
+        for t in T:
+            for k in M:
+                inflow  = sum(vars_["f"][i, l, t, k].solution_value
+                              for i in N if i != l)
+                outflow = sum(vars_["f"][l, j, t, k].solution_value
+                              for j in N if j != l)
+                qty = inflow - outflow
+                if qty > 1e-4:
+                    demande = q_lt.get((l, t), 0)
+                    print(f"    {l:<8} {t:<10} {k:<8} {qty:>8.1f} {demande:>9.1f} ")
+
     return val
 
 
