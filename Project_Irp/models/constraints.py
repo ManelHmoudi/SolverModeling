@@ -108,7 +108,25 @@ def add_inventory_constraints(mdl, I_O, q_prime, f, clients, T, M,
                 ctname=f"c8_l{l}_td{td}"
             )
 
-
+def add_no_empty_visits_constraints(mdl, x, f, N, T, M, clients):
+    """
+    RÈGLE STRICTE : Un camion ne peut pas rendre visite à un client (x=1) 
+    sans lui décharger physiquement de la marchandise (Flux net >= 1).
+    Élimine radicalement le transit à vide.
+    """
+    for l in clients:
+        for t in T:
+            for k in M:
+                visited_by_k = mdl.sum(x[i, l, t, k] for i in N if i != l)
+                inbound_f  = mdl.sum(f[i, l, t, k] for i in N if i != l)
+                outbound_f = mdl.sum(f[l, j, t, k] for j in N if j != l)
+                net_delivery = inbound_f - outbound_f
+                
+                mdl.add_constraint(
+                    net_delivery >= visited_by_k,
+                    ctname=f"force_real_delivery_l{l}_t{t}_k{k}"
+                )
+                
 def add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, requires_cold):
     # C9 — net inbound flow at client l in period t equals total quantity delivered
     for l in clients:
@@ -263,6 +281,7 @@ def add_all_constraints(mdl, vars_, sets_, params_):
         params_["q_lt"], params_["R"], O
     )
 
+    add_no_empty_visits_constraints(mdl, x, f, N, T, M, clients)
     # C9
     add_flow_balance_constraints(mdl, f, q_prime, N, T, clients, params_["requires_cold"])
 

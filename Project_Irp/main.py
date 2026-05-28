@@ -176,15 +176,19 @@ def _solve_single(label, expr):
             has_activity = True
             path = _get_ordered_path(arcs_k)
             
-            # Build string showing nodes and quantities: 0 -> 1 (Qty: X) -> 2 (Qty: Y) -> 0
+            # Build string showing nodes and quantities
             steps = []
             for idx, node in enumerate(path):
                 if node == 0:
                     steps.append("0")
                 else:
-                    # Calculate total quantity delivered to this client during period t
-                    qty = sum(vars_["q_prime"][node, t, td].solution_value for td in T if t <= td)
-                    steps.append(f"{node} (Livré: {qty:.1f})")
+                    # FIX INDENTATION: Calcul et évaluation de la quantité à l'intérieur de la boucle des nœuds
+                    qty_attribuee = sum(vars_["q_prime"][node, t, td].solution_value for td in T if t <= td)
+                    
+                    if qty_attribuee > 1e-4:
+                        steps.append(f"{node} (Livré: {qty_attribuee:.1f})")
+                    else:
+                        steps.append(f"{node} (Transit)")
             
             route_flow = " -> ".join(steps)
             ret_time = vars_["tau_return"][t].solution_value
