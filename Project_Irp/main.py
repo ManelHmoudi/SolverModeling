@@ -2,9 +2,9 @@
 Many-Objective Inventory Routing Problem (IRP)
 ===============================================
 Objectives:
-    f1 - Logistics cost        (transport + storage + time-window penalties)
-    f2 - CO2 emissions         (CMEM model, Bektas & Laporte 2011)
-    f3 - Total travel time     (sum of arc travel times)
+    f1 - Logistics cost         (transport + storage + time-window penalties)
+    f2 - CO2 emissions          (CMEM model, Bektas & Laporte 2011)
+    f3 - Total travel time      (sum of arc travel times)
     f4 - Working capital (BFR) (stock value + receivables - payables)
 
 Network:
@@ -58,7 +58,7 @@ sets_ = {"N": N, "A": A, "T": T, "M": M, "O": O, "clients": clients}
 # ── Parameters ───────────────────────────────────────────────────────────────
 q_lt = _tmap("q_lt")
 K_lt = _tmap_list("K_lt")
-
+requires_cold = _tmap_list("requires_cold")
 v  = _imap("v")
 v2 = {k: (v[k] / 3.6) ** 2 for k in M}
 Q  = _imap("Q")
@@ -111,6 +111,7 @@ params_ = {
     "DIO": params_raw["DIO"], "DSO": params_raw["DSO"], "DPO": params_raw["DPO"],
     "c1": params_raw["c1"], "c2": params_raw["c2"],
     "BIG_M": params_raw["BIG_M"],
+    "requires_cold": requires_cold,
 }
 
 
@@ -121,75 +122,77 @@ vars_ = build_variables(mdl, N, A, T, M, clients)
 objectives = build_all_objectives(mdl, vars_, sets_, params_)
 add_all_constraints(mdl, vars_, sets_, params_)
 
-SEP = "─" * 52
+SEP = "─" * 60
 print(f"\n{SEP}")
 print(f"  {mdl.name}")
 print(f"{SEP}")
-print(f"  Nodes {len(N)} (depot + {len(clients)} clients) | "
-      f"Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
-print(f"  Variables {mdl.number_of_variables} | "
-      f"Constraints {mdl.number_of_constraints}  (before budget constraints)")
+print(f"  Nodes {len(N)} (depot 0 + {len(clients)} clients) | Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
+print(f"  Variables {mdl.number_of_variables} | Constraints {mdl.number_of_constraints} (structural)")
 print(f"{SEP}")
 
 
-# ── Calibration — solves each objective independently, without budget constraints ─
+# ── Calibration ──────────────────────────────────────────────────────────────
 
-def _reconstruct_path(arcs):
-    """Reconstruct the ordered path from a list of arcs (i, j)."""
+def _get_ordered_path(arcs):
+    """Reconstructs the precise sequence of nodes from a list of active arcs."""
     if not arcs:
-        return "(no arc)"
-    next_node    = {i: j for (i, j) in arcs}
+        return []
+    next_node = {i: j for (i, j) in arcs}
     destinations = {j for (_, j) in arcs}
-    starts       = [i for (i, _) in arcs if i not in destinations]
-    current      = starts[0] if starts else arcs[0][0]
-    path, visited = [current], {current}
+    starts = [i for i in next_node if i not in destinations]
+    current = starts[0] if starts else 0  # Default to depot
+    
+    path = [current]
+    visited = {current}
     while current in next_node and next_node[current] not in visited:
         current = next_node[current]
         path.append(current)
         visited.add(current)
-    return "->".join(str(n) for n in path)
+    return path
 
 
 def _solve_single(label, expr):
-    """Solve the model for a single objective and print the solution."""
+    """Solves the objective and outputs a clean, structured tour view."""
     mdl.minimize(expr)
     sol = mdl.solve(log_output=False)
     if not sol:
-        print(f"  {label}: INFEASIBLE  ({mdl.solve_details.status})")
+        print(f"  {label}: INFEASIBLE")
         return None
 
     val = expr.solution_value
-    print(f"  {label} = {val:.4f}")
+    print(f"\n  >> {label.upper()} = {val:.4f}")
 
-    # Active routes
-    arcs_used = {
-        (t, k): [(i, j) for (i, j) in A
-                 if vars_["x"][i, j, t, k].solution_value > 0.5]
-        for t in T for k in M
-    }
-    route_str = "  ".join(
-        f"t{t}·k{k}: {_reconstruct_path(arcs_used[t, k])}"
-        for (t, k) in sorted(arcs_used)
-        if arcs_used[t, k]
-    )
-    print(f"    Routes        : {route_str or '(none)'}")
-
-    # Depot return time
+    # Process metrics period by period
     for t in T:
-        ret = vars_["tau_return"][t].solution_value
-        print(f"    Depot return t={t} : {ret:.3f} h")
-
-    # Effective deliveries
-    deliveries = {
-        (l, t, td): round(vars_["q_prime"][l, t, td].solution_value, 2)
-        for (l, t, td) in vars_["q_prime"]
-        if vars_["q_prime"][l, t, td].solution_value > 1e-6
-    }
-    if deliveries:
-        print("    Deliveries : " + "  ".join(
-            f"l{l} t{t} td{td}={q}" for (l, t, td), q in deliveries.items()
-        ))
-
+        print(f"    [Période t={t}]")
+        has_activity = False
+        
+        for k in M:
+            # Gather arcs used by vehicle k in period t
+            arcs_k = [(i, j) for (i, j) in A if vars_["x"][i, j, t, k].solution_value > 0.5]
+            if not arcs_k:
+                continue
+                
+            has_activity = True
+            path = _get_ordered_path(arcs_k)
+            
+            # Build string showing nodes and quantities: 0 -> 1 (Qty: X) -> 2 (Qty: Y) -> 0
+            steps = []
+            for idx, node in enumerate(path):
+                if node == 0:
+                    steps.append("0")
+                else:
+                    # Calculate total quantity delivered to this client during period t
+                    qty = sum(vars_["q_prime"][node, t, td].solution_value for td in T if t <= td)
+                    steps.append(f"{node} (Livré: {qty:.1f})")
+            
+            route_flow = " -> ".join(steps)
+            ret_time = vars_["tau_return"][t].solution_value
+            print(f"      Camion k={k} : {route_flow} | Retour Dépôt: {ret_time:.2f}h")
+            
+        if not has_activity:
+            print("      Aucun camion en mouvement.")
+            
     return val
 
 
@@ -204,18 +207,14 @@ calibration = [
 
 calib_results = {}
 for label, expr, param_name in calibration:
-    print(f"\n  {label}")
     val = _solve_single(label, expr)
     if val is not None:
         budget = val * 1.2
         calib_results[param_name] = budget
-        extra = ""
         if "f4" in label:
             sub = objectives["f4_sub"]
-            extra = (f"  (stock {sub['stock_value'].solution_value:.2f}  "
-                     f"recv {sub['receivables'].solution_value:.2f}  "
-                     f"pay -{sub['payables'].solution_value:.2f})")
-        print(f"    → {param_name:<5} = {budget:.4f}{extra}")
+            print(f"    → Financement : Stock={sub['stock_value'].solution_value:.2f} | Créances={sub['receivables'].solution_value:.2f} | Dettes={sub['payables'].solution_value:.2f}")
+        print(f"    → Borne Budget ({param_name}) = {budget:.4f}")
 
 
 # ── Adding budget constraints C14–C17 ────────────────────────────────────────
@@ -230,12 +229,10 @@ if len(calib_results) == 4:
         calib_results["T_max"], calib_results["B"],
     )
     print(f"  Total constraints   : {mdl.number_of_constraints}")
-    print(f"  C_max = {calib_results['C_max']:.4f}")
-    print(f"  E_max = {calib_results['E_max']:.4f}")
-    print(f"  T_max = {calib_results['T_max']:.4f}")
-    print(f"  B     = {calib_results['B']:.4f}")
+    print(f"  C_max = {calib_results['C_max']:.4f} | E_max = {calib_results['E_max']:.4f}")
+    print(f"  T_max = {calib_results['T_max']:.4f} | B     = {calib_results['B']:.4f}")
     print("  Model ready for Pareto-front exploration ✓")
 else:
-    print(f"    Calibration incomplete ({len(calib_results)}/4) — budget constraints not added.")
+    print(f"    Calibration incomplete — budget constraints not added.")
 
 print(f"{SEP}\n")
