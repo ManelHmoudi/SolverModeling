@@ -493,12 +493,23 @@ def _open_chrome(url):
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
-def generate_and_open(data, output_path):
+def render_report_html(data):
     html = _TEMPLATE.replace(
         "/*DATA_PLACEHOLDER*/null",
         json.dumps(data, ensure_ascii=False),
     )
+    return html
+
+
+def write_report(data, output_path):
+    html = render_report_html(data)
     with open(output_path, "w", encoding="utf-8") as fh:
         fh.write(html)
+    return os.path.abspath(output_path)
+
+
+def generate_and_open(data, output_path):
+    report_path = write_report(data, output_path)
     abs_path = os.path.abspath(output_path).replace("\\", "/")
     _open_chrome(f"file:///{abs_path}")
+    return report_path
