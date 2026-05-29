@@ -6,7 +6,7 @@ import json
 import os
 
 BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(BASE_DIR, "data", "instance_3_clients.json")
+DATA_PATH = os.path.join(BASE_DIR, "data", "instance_5_clients.json")
 
 with open(DATA_PATH, "r") as f:
     data = json.load(f)
@@ -67,7 +67,7 @@ alpha_r = params_raw["alpha_r"]
 c_ijk = {
     (i, j, k): (
         c_route[i, j] + p5 / v[k]
-        if k == 1
+        if k in [1, 2]
         else c_route[i, j]
     )
     for (i, j) in A for k in M

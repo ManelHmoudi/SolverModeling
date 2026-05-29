@@ -25,7 +25,8 @@ except ImportError:
 
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "irp_calibration_report.html")
-DATA_PATH = os.path.join(PROJECT_DIR, "data", "instance_3_clients.json")
+
+DATA_PATH = os.path.join(PROJECT_DIR, "data", "instance_5_clients.json")
 
 
 def _imap(params_raw, key):
@@ -77,7 +78,7 @@ def _load_problem_data(data_path=DATA_PATH):
     holding_cost = params_raw["h_O_space"] + params_raw["alpha_r"] * params_raw["e_stock"]
 
     c_ijk = {
-        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k == 1 else route_cost)
+        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k in [1, 2] else route_cost)
         for (i, j) in arcs
         for k in vehicles
     }

@@ -169,6 +169,15 @@ var OC    = ["#534ab7","#3b6d11","#185fa5","#854f0b"];
 var TC    = ["#2e9e5a","#d07c20","#3b7dd8","#a040c0"];
 var BK    = ["C_max","E_max","T_max","B"];
 
+if(!OBJS||!OBJS.length){
+  document.getElementById('meta-line').textContent=
+    META.n_nodes+' nœuds · '+META.n_periods+' périodes · '+META.n_vehicles+' véhicules · '+META.n_obj+' objectifs';
+  document.getElementById('kpi-grid').innerHTML=
+    '<div style="grid-column:1/-1;color:#a32d2d;font-weight:600;padding:.5rem 0">'+
+    'Aucune solution trouvée — le modèle est infaisable ou le solveur a échoué.</div>';
+  throw new Error('No solutions');
+}
+
 // ── Theme ────────────────────────────────────────────────────────────────────
 function toggleTheme(){
   var d=document.documentElement;
@@ -226,9 +235,9 @@ buildTabs('g-per',PL,0,'period',function(i){curPer=periods[i];document.getElemen
 
 // ── SVG ──────────────────────────────────────────────────────────────────────
 var NP=META.node_positions;
-var SW=400, SH=330;
+var SW=480, SH=290;
 
-function getR(n){return n===0?24:20;}
+function getR(n){return n===0?22:18;}
 
 // Compute outward direction from depot for node label placement
 function labelPos(n){
@@ -269,11 +278,11 @@ function drawArc(nA,nB,off,curve,color,mid,dashed,load){
   // Load label at bezier midpoint
   if(!dashed&&load>0){
     var mx=x0/4+cx/2+x2/4, my=y0/4+cy/2+y2/4;
-    var txt=load+'u', lw=txt.length*6+12;
-    r+='<rect x="'+(mx-lw/2).toFixed(1)+'" y="'+(my-8).toFixed(1)+
-       '" width="'+lw+'" height="15" rx="5" fill="var(--surface)" opacity="0.82"/>'+
-       '<text x="'+mx.toFixed(1)+'" y="'+(my+3).toFixed(1)+
-       '" text-anchor="middle" font-size="9" font-weight="700" fill="'+color+'">'+txt+'</text>';
+    var txt=load+'u', lw=txt.length*7+14;
+    r+='<rect x="'+(mx-lw/2).toFixed(1)+'" y="'+(my-9).toFixed(1)+
+       '" width="'+lw+'" height="17" rx="6" fill="var(--surface)" opacity="0.92" stroke="'+color+'" stroke-width="0.8"/>'+
+       '<text x="'+mx.toFixed(1)+'" y="'+(my+4).toFixed(1)+
+       '" text-anchor="middle" font-size="10" font-weight="700" fill="'+color+'">'+txt+'</text>';
   }
   return r;
 }
@@ -296,15 +305,15 @@ function renderGraph(){
   nodes.forEach(function(i){nodes.forEach(function(j){
     if(i>=j)return;
     var a=NP[i],b=NP[j];
-    svg+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="var(--mesh)" stroke-width="1"/>';
+    svg+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="var(--mesh)" stroke-width="0.8" opacity="0.55"/>';
   });});
 
   // Active arcs
   if(pr&&pr.trucks){
     pr.trucks.forEach(function(tr){
       var ki=(tr.k-1)%TC.length, color=TC[ki];
-      var off=(ki-(nT-1)/2)*14;
-      var curve=30+off*0.4;
+      var off=(ki-(nT-1)/2)*9;
+      var curve=26+off*0.5;
       var loads=arcLoads(tr.path,tr.qty);
       for(var s=0;s<tr.path.length-1;s++)
         svg+=drawArc(tr.path[s],tr.path[s+1],off,curve,color,'ah'+ki,false,loads[s]);
@@ -317,51 +326,57 @@ function renderGraph(){
   nodes.forEach(function(n){
     var cx=NP[n][0],cy=NP[n][1],r=getR(n);
     var isD=(n===0);
-    var fill=isD?'#534ab7':'#185fa5';
-    var lbl=isD?'D':String(n);
 
-    // Quantity delivered
+    // Quantity delivered this period
+    var q=0;
+    if(!isD&&pr&&pr.trucks)
+      q=pr.trucks.reduce(function(s,tr){return s+(tr.qty[String(n)]||0);},0);
+
+    var fill=isD?'#534ab7':(q>0?'#185fa5':'#8cafd4');
+
+    // Delivery amount label — positioned outward from depot
     var qt='';
-    if(!isD&&pr&&pr.trucks){
-      var q=pr.trucks.reduce(function(s,tr){return s+(tr.qty[String(n)]||0);},0);
-      if(q>0){
-        var lp=labelPos(n);
-        qt='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+4).toFixed(1)+
-           '" text-anchor="middle" font-size="10" font-weight="700" fill="'+fill+'">'+q+'u</text>';
-      }
+    if(!isD&&q>0){
+      var lp=labelPos(n);
+      qt='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+4).toFixed(1)+
+         '" text-anchor="middle" font-size="10" font-weight="700" fill="'+fill+'">'+q+'u</text>';
     }
-    // Node label (client name, on the other side from qty)
-    var nl='';
-    if(!isD){
-      var lp2=labelPos(n);
-      // Use same outward direction but smaller offset for a "C1" tag
-      nl='<text x="'+NP[n][0]+'" y="'+NP[n][1]+
-         '" text-anchor="middle" dominant-baseline="middle" fill="#fff"'+
-         ' font-size="12" font-weight="700">'+n+'</text>';
-    }
+
+    var innerTxt=isD
+      ?'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="12" font-weight="700">D</text>'
+      :'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="11" font-weight="700">'+n+'</text>';
 
     svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+
-         '" fill="'+fill+'" stroke="var(--node-surf)" stroke-width="3"/>'+
-         (isD?'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="13" font-weight="700">D</text>':nl)+
-         qt;
+         '" fill="'+fill+'" stroke="var(--surface)" stroke-width="2.5"/>'+
+         innerTxt+qt;
   });
 
-  // Legend
+  svg+='</svg>';
+
+  // Legend as responsive HTML pills below the SVG (avoids SVG clipping with 4+ trucks)
+  var lgd='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;align-items:center">';
   if(pr&&pr.trucks&&pr.trucks.length>0){
-    var lx=8;
     pr.trucks.forEach(function(tr){
       var c=TC[(tr.k-1)%TC.length];
-      svg+='<rect x="'+lx+'" y="'+(SH-22)+'" width="12" height="9" rx="2" fill="'+c+'"/>'+
-           '<text x="'+(lx+16)+'" y="'+(SH-14)+'" fill="var(--text-2)" font-size="10">k='+tr.k+' – retour '+tr.ret.toFixed(2)+'h</text>';
-      lx+=130;
+      lgd+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;'+
+           'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;font-size:11px;white-space:nowrap">'+
+           '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+
+           '<b style="color:var(--text)">k='+tr.k+'</b>'+
+           '<span style="color:var(--text-2)">'+tr.ret.toFixed(2)+'h</span>'+
+           '</span>';
     });
-    svg+='<line x1="'+lx+'" y1="'+(SH-18)+'" x2="'+(lx+16)+'" y2="'+(SH-18)+'" stroke="#999" stroke-width="2.2"/>'+
-         '<text x="'+(lx+20)+'" y="'+(SH-14)+'" fill="var(--text-2)" font-size="10">livraison</text>'+
-         '<line x1="'+lx+'" y1="'+(SH-9)+'" x2="'+(lx+16)+'" y2="'+(SH-9)+'" stroke="#999" stroke-width="1.4" stroke-dasharray="4,3"/>'+
-         '<text x="'+(lx+20)+'" y="'+(SH-5)+'" fill="var(--text-2)" font-size="10">retour dépôt</text>';
+    lgd+='<span style="flex:1;min-width:8px"></span>';
+    lgd+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);white-space:nowrap">'+
+         '<svg width="24" height="10" style="flex-shrink:0;overflow:visible">'+
+         '<line x1="1" y1="5" x2="16" y2="5" stroke="#888" stroke-width="2.2" stroke-linecap="round"/>'+
+         '<polygon points="14,2 23,5 14,8" fill="#888"/></svg>livraison</span>';
+    lgd+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);white-space:nowrap">'+
+         '<svg width="24" height="10" style="flex-shrink:0;overflow:visible">'+
+         '<line x1="1" y1="5" x2="16" y2="5" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4,3"/>'+
+         '<polygon points="14,2 23,5 14,8" fill="#aaa" opacity="0.5"/></svg>retour dépôt</span>';
   }
-  svg+='</svg>';
-  document.getElementById('graph').innerHTML=svg;
+  lgd+='</div>';
+  document.getElementById('graph').innerHTML=svg+lgd;
 }
 
 // ── Depot stock ───────────────────────────────────────────────────────────────
@@ -421,7 +436,7 @@ renderAll();
 
 
 # ── Node layout — fan/triangle spread ─────────────────────────────────────────
-def compute_node_positions(N, svg_w=400, svg_h=330):
+def compute_node_positions(N, svg_w=480, svg_h=290):
     """
     Depot on the far left; clients spread in a triangular fan.
     No two clients share the same column, so inter-client arcs are visible.
@@ -431,7 +446,7 @@ def compute_node_positions(N, svg_w=400, svg_h=330):
     pos     = {}
 
     # Depot: vertically centered, pushed left
-    pos[0] = [int(svg_w * 0.14), svg_h // 2]
+    pos[0] = [int(svg_w * 0.13), svg_h // 2]
 
     if nc == 0:
         pass
@@ -445,6 +460,12 @@ def compute_node_positions(N, svg_w=400, svg_h=330):
         pos[clients[0]] = [int(svg_w * 0.55), int(svg_h * 0.13)]   # top
         pos[clients[1]] = [int(svg_w * 0.84), int(svg_h * 0.52)]   # right
         pos[clients[2]] = [int(svg_w * 0.52), int(svg_h * 0.87)]   # bottom
+    elif nc == 5:
+        # Pentagon layout: depot left, 5 clients well-spread on the right half
+        xs = [0.40, 0.84, 0.91, 0.76, 0.38]
+        ys = [0.12, 0.17, 0.53, 0.87, 0.84]
+        for i, c in enumerate(clients):
+            pos[c] = [int(svg_w * xs[i]), int(svg_h * ys[i])]
     else:
         # General: semicircle on the right half
         cx  = svg_w * 0.62

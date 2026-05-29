@@ -3,7 +3,10 @@
     "allow": [
       "Bash(dir \"c:\\\\Users\\\\Mariem\\\\OneDrive\\\\Bureau\\\\SolverModeling\")",
       "Bash(mkdir -p \"c:\\\\Users\\\\Mariem\\\\OneDrive\\\\Bureau\\\\SolverModeling\\\\docs\\\\plans\")",
-      "PowerShell(Get-Command python3, py -ErrorAction SilentlyContinue | Select-Object Name, Source; \\(Get-Command python -ErrorAction SilentlyContinue\\).Source)"
+      "PowerShell(Get-Command python3, py -ErrorAction SilentlyContinue | Select-Object Name, Source; \\(Get-Command python -ErrorAction SilentlyContinue\\).Source)",
+      "Read(//c/Program Files/IBM/ILOG/CPLEX_Studio222/cplex/bin/**)",
+      "Bash(Select-String \"cplex\")",
+      "Bash(docplex config *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Mariem\\OneDrive\\Bureau\\SolverModeling\\docs"
