@@ -6,18 +6,6 @@ Objectives:
     f2 - CO2 emissions          (CMEM model, Bektas & Laporte 2011)
     f3 - Total travel time      (sum of arc travel times)
     f4 - Working capital (BFR) (stock value + receivables - payables)
-
-Network:
-    G = (N, A)
-    Depot   = node 0
-    Clients = {1, 2, 3}
-
-Workflow:
-    1. Build model with structural constraints only (C1–C13)
-    2. Calibration — solve each objective independently (no budget constraints)
-       to find unconstrained optima f1*, f2*, f3*, f4*
-    3. Set budget constraints C14–C17 at 1.2 × each optimum
-    4. The model is now ready for Pareto-front exploration
 """
 
 import sys
@@ -31,6 +19,7 @@ sys.path.insert(0, BASE_DIR)
 from models.variables   import build_variables
 from models.objectives  import build_all_objectives
 from models.constraints import add_all_constraints, add_budget_constraints
+from report             import generate_and_open, compute_node_positions
 
 DATA_PATH = os.path.join(BASE_DIR, "data", "instance_3_clients.json")
 with open(DATA_PATH) as fh:
@@ -44,7 +33,6 @@ def _tmap(key):      return {(int(k.split(",")[0]), int(k.split(",")[1])): v
 def _tmap_list(key): return {(int(k.split(",")[0]), int(k.split(",")[1])): v
                              for k, v in params_raw[key].items()}
 
-
 # ── Sets ─────────────────────────────────────────────────────────────────────
 N       = sets_raw["N"]
 clients = sets_raw["clients"]
@@ -53,7 +41,6 @@ T, M    = sets_raw["T"], sets_raw["M"]
 A       = [(i, j) for i in N for j in N if i != j]
 
 sets_ = {"N": N, "A": A, "T": T, "M": M, "O": O, "clients": clients}
-
 
 # ── Parameters ───────────────────────────────────────────────────────────────
 q_lt = _tmap("q_lt")
@@ -86,7 +73,7 @@ h_O      = params_raw["h_O_space"] + alpha_r * e_stock
 R = {t: sum(q_lt[l, t] for l in clients) for t in T}
 
 g, Cr        = params_raw["g"],  params_raw["Cr"]
-Cd, A_f, rho = params_raw["Cd"], params_raw["A_f"], params_raw["rho"]        
+Cd, A_f, rho = params_raw["Cd"], params_raw["A_f"], params_raw["rho"]
 w            = params_raw["w"]
 
 alpha_co2 = {(i, j): g * Cr for (i, j) in A}
@@ -114,103 +101,96 @@ params_ = {
     "requires_cold": requires_cold,
 }
 
-
-# ── Model — structural constraints only (C1–C13) ─────────────────────────────
+# ── Model ─────────────────────────────────────────────────────────────────────
 mdl   = Model(name="IRP_ManyObjective")
 vars_ = build_variables(mdl, N, A, T, M, clients)
 
 objectives = build_all_objectives(mdl, vars_, sets_, params_)
 add_all_constraints(mdl, vars_, sets_, params_)
 
-SEP = "─" * 60
-print(f"\n{SEP}")
-print(f"  {mdl.name}")
-print(f"{SEP}")
-print(f"  Nodes {len(N)} (depot 0 + {len(clients)} clients) | Arcs {len(A)} | Periods {len(T)} | Vehicles {len(M)}")
-print(f"  Variables {mdl.number_of_variables} | Constraints {mdl.number_of_constraints} (structural)")
-print(f"{SEP}")
-
-
-# ── Calibration ──────────────────────────────────────────────────────────────
-
+# ── Path reconstruction ───────────────────────────────────────────────────────
 def _get_ordered_path(arcs):
-    """Reconstructs the precise sequence of nodes from a list of active arcs."""
     if not arcs:
         return []
-    next_node = {i: j for (i, j) in arcs}
+    next_node    = {i: j for (i, j) in arcs}
     destinations = {j for (_, j) in arcs}
-    starts = [i for i in next_node if i not in destinations]
-    current = starts[0] if starts else 0  # Default to depot
-    
-    path = [current]
-    visited = {current}
+    starts       = [i for i in next_node if i not in destinations]
+    current      = starts[0] if starts else 0
+    path, visited = [current], {current}
     while current in next_node and next_node[current] not in visited:
         current = next_node[current]
         path.append(current)
         visited.add(current)
     return path
 
-
+# ── Solve one objective ───────────────────────────────────────────────────────
 def _solve_single(label, expr):
     mdl.minimize(expr)
     sol = mdl.solve(log_output=False)
     if not sol:
-        print(f"  {label}: INFEASIBLE")
-        return None
+        return None, None
 
     val = expr.solution_value
-    print(f"\n  >> {label.upper()} = {val:.4f}")
 
-    # ── Affichage routes ─────────────────────────────────
+    routes = {}
     for t in T:
-        # Extraction de la valeur de réapprovisionnement pour la période t
-        replenishment_val = R.get(t, 0.0)
-        print(f"    [Période t={t}] (Approvisionnement Dépôt R = {replenishment_val:.1f})")
-        has_activity = False
+        trucks = []
         for k in M:
             arcs_k = [(i, j) for (i, j) in A
                       if vars_["x"][i, j, t, k].solution_value > 0.5]
             if not arcs_k:
                 continue
-            has_activity = True
             path = _get_ordered_path(arcs_k)
-            steps = []
+            qty  = {}
             for node in path:
-                if node == 0:
-                    steps.append("0")
-                else:
-                    inflow  = sum(vars_["f"][i, node, t, k].solution_value
-                                  for i in N if i != node)
-                    outflow = sum(vars_["f"][node, j, t, k].solution_value
-                                  for j in N if j != node)
-                    qty = inflow - outflow
-                    steps.append(f"{node}({'✓' if qty > 1e-4 else 'transit'}:{qty:.1f})")
+                if node != 0:
+                    inf  = sum(vars_["f"][i, node, t, k].solution_value
+                               for i in N if i != node)
+                    outf = sum(vars_["f"][node, j, t, k].solution_value
+                               for j in N if j != node)
+                    q = round(inf - outf, 4)
+                    if q > 1e-4:
+                        qty[str(node)] = q
             ret_time = vars_["tau_return"][t].solution_value
-            print(f"      k={k} : {' → '.join(steps)} | retour {ret_time:.2f}h")
-        if not has_activity:
-            print("      Aucun camion.")
+            trucks.append({"k": k, "path": path, "qty": qty,
+                           "ret": round(ret_time, 4)})
+        routes[str(t)] = {"R": R.get(t, 0.0), "trucks": trucks}
 
-    # ── Résumé par client ────────────────────────────────
-    print(f"\n    {'Client':<8} {'Période':<10} {'Camion':<8} {'Reçu':>8} {'Demande':>9} ")
-    print(f"    {'─'*6:<8} {'─'*7:<10} {'─'*6:<8} {'─'*6:>8} {'─'*7:>9} ")
-
+    deliveries = []
     for l in clients:
         for t in T:
             for k in M:
-                inflow  = sum(vars_["f"][i, l, t, k].solution_value
-                              for i in N if i != l)
-                outflow = sum(vars_["f"][l, j, t, k].solution_value
-                              for j in N if j != l)
-                qty = inflow - outflow
-                if qty > 1e-4:
-                    demande = q_lt.get((l, t), 0)
-                    print(f"    {l:<8} {t:<10} {k:<8} {qty:>8.1f} {demande:>9.1f} ")
+                inf  = sum(vars_["f"][i, l, t, k].solution_value
+                           for i in N if i != l)
+                outf = sum(vars_["f"][l, j, t, k].solution_value
+                           for j in N if j != l)
+                q = round(inf - outf, 4)
+                if q > 1e-4:
+                    deliveries.append({"l": l, "t": t, "k": k,
+                                       "recu": q,
+                                       "dem": q_lt.get((l, t), 0)})
 
-    return val
+    depot_stock = {str(t): round(vars_["I_O"][t].solution_value, 4) for t in T}
 
+    bfr_sub = None
+    if "f4" in label:
+        sub = objectives["f4_sub"]
+        bfr_sub = {
+            "stock":       round(sub["stock_value"].solution_value, 4),
+            "receivables": round(sub["receivables"].solution_value, 4),
+            "payables":    round(sub["payables"].solution_value, 4),
+        }
 
-print("\n── Calibration (without budget constraints) ────────")
+    return val, {
+        "label":       label,
+        "value":       round(val, 4),
+        "routes":      routes,
+        "deliveries":  deliveries,
+        "depot_stock": depot_stock,
+        "bfr_sub":     bfr_sub,
+    }
 
+# ── Calibration ───────────────────────────────────────────────────────────────
 calibration = [
     ("f1  Logistics cost",        objectives["f1"], "C_max"),
     ("f2  CO2 emissions",         objectives["f2"], "E_max"),
@@ -219,21 +199,16 @@ calibration = [
 ]
 
 calib_results = {}
+objs_data     = []
+
 for label, expr, param_name in calibration:
-    val = _solve_single(label, expr)
+    val, obj_data = _solve_single(label, expr)
     if val is not None:
-        budget = val * 1.2
-        calib_results[param_name] = budget
-        if "f4" in label:
-            sub = objectives["f4_sub"]
-            print(f"    → Financement : Stock={sub['stock_value'].solution_value:.2f} | Créances={sub['receivables'].solution_value:.2f} | Dettes={sub['payables'].solution_value:.2f}")
-        print(f"    → Borne Budget ({param_name}) = {budget:.4f}")
+        calib_results[param_name] = round(val * 1.2, 4)
+        objs_data.append(obj_data)
 
-
-# ── Adding budget constraints C14–C17 ────────────────────────────────────────
-print(f"\n{SEP}")
+# ── Budget constraints C14–C17 ────────────────────────────────────────────────
 if len(calib_results) == 4:
-    print("── Adding budget constraints (C14–C17) ─────────────")
     add_budget_constraints(
         mdl,
         objectives["f1"], objectives["f2"],
@@ -241,11 +216,21 @@ if len(calib_results) == 4:
         calib_results["C_max"], calib_results["E_max"],
         calib_results["T_max"], calib_results["B"],
     )
-    print(f"  Total constraints   : {mdl.number_of_constraints}")
-    print(f"  C_max = {calib_results['C_max']:.4f} | E_max = {calib_results['E_max']:.4f}")
-    print(f"  T_max = {calib_results['T_max']:.4f} | B     = {calib_results['B']:.4f}")
-    print("  Model ready for Pareto-front exploration ✓")
-else:
-    print(f"    Calibration incomplete — budget constraints not added.")
 
-print(f"{SEP}\n")
+# ── HTML report ───────────────────────────────────────────────────────────────
+report_data = {
+    "meta": {
+        "model_name":     mdl.name,
+        "n_nodes":        len(N),
+        "n_periods":      len(T),
+        "n_vehicles":     len(M),
+        "n_obj":          len(calibration),
+        "I_O_init":       I_O_init,
+        "node_positions": compute_node_positions(N),
+    },
+    "objs":   objs_data,
+    "bounds": calib_results,
+}
+
+output_path = os.path.join(BASE_DIR, "irp_calibration_report.html")
+generate_and_open(report_data, output_path)
