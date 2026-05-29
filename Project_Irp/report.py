@@ -367,13 +367,13 @@ function renderGraph(){
 // ── Depot stock ───────────────────────────────────────────────────────────────
 function renderDepot(){
   var stocks=OBJS[curObj].depot_stock;
-  var delivs=OBJS[curObj].deliveries;
   var prev=META.I_O_init;
   document.getElementById('depot').innerHTML=periods.map(function(t){
     var R=(OBJS[curObj].routes[t])?OBJS[curObj].routes[t].R:0;
     var fin=(stocks[t]!==undefined)?stocks[t]:'?';
-    var tot=delivs.filter(function(d){return d.t===t;}).reduce(function(s,d){return s+d.recu;},0);
-    tot=Math.round(tot*100)/100;
+    // Livraisons = f[dépôt→j,t,k] summed — exactement ce que C7 utilise
+    var rdata=OBJS[curObj].routes[t];
+    var tot=(rdata&&rdata.shipped!==undefined)?rdata.shipped:0;
     var html='<div class="sb"><div class="sp">Période '+t+'</div>'+
       '<div class="seq">'+
         '<div class="sc si"><span class="sl">Stock initial</span><span class="sv">'+prev+'</span></div>'+

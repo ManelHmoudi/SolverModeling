@@ -60,9 +60,12 @@ def add_inventory_constraints(mdl, I_O, q_prime, f, clients, T, M,
     # C7 — depot inventory balance
     for t in T:
         prev_stock = I_O[t - 1] if t > 1 else I_O_init
-        shipped    = mdl.sum(f[O, j, t, k] for j in clients for k in M)
+        
+        # Sum of all quantities structurally delivered to any client during period t
+        total_shipped_t = mdl.sum(q_prime[l, t, td] for l in clients for td in T if t <= td)
+        
         mdl.add_constraint(
-            I_O[t] == prev_stock + R[t] - shipped,
+            I_O[t] == prev_stock + R[t] - total_shipped_t,
             ctname=f"c7_t{t}"
         )
 

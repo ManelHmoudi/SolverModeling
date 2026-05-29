@@ -154,7 +154,13 @@ def _solve_single(label, expr):
             ret_time = vars_["tau_return"][t].solution_value
             trucks.append({"k": k, "path": path, "qty": qty,
                            "ret": round(ret_time, 4)})
-        routes[str(t)] = {"R": R.get(t, 0.0), "trucks": trucks}
+        # shipped_t = exact value used in constraint C7:
+        # I_O[t] = I_O[t-1] + R[t] - shipped_t
+        shipped_t = round(
+            sum(vars_["f"][0, j, t, k].solution_value for j in clients for k in M),
+            4,
+        )
+        routes[str(t)] = {"R": R.get(t, 0.0), "trucks": trucks, "shipped": shipped_t}
 
     deliveries = []
     for l in clients:
