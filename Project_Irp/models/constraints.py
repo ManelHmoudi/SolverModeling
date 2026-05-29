@@ -219,7 +219,6 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     tau     = vars_["tau"]
     w1      = vars_["w1"]
     w2      = vars_["w2"]
-    tau_return = vars_["tau_return"]
     I_O     = vars_["I_O"]
 
     N       = sets_["N"]

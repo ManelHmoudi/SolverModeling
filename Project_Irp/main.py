@@ -86,7 +86,7 @@ h_O      = params_raw["h_O_space"] + alpha_r * e_stock
 R = {t: sum(q_lt[l, t] for l in clients) for t in T}
 
 g, Cr        = params_raw["g"],  params_raw["Cr"]
-Cd, A_f, rho = params_raw["Cd"], params_raw["A_f"], params_raw["rho"]
+Cd, A_f, rho = params_raw["Cd"], params_raw["A_f"], params_raw["rho"]        
 w            = params_raw["w"]
 
 alpha_co2 = {(i, j): g * Cr for (i, j) in A}
@@ -163,7 +163,9 @@ def _solve_single(label, expr):
 
     # ── Affichage routes ─────────────────────────────────
     for t in T:
-        print(f"    [Période t={t}]")
+        # Extraction de la valeur de réapprovisionnement pour la période t
+        replenishment_val = R.get(t, 0.0)
+        print(f"    [Période t={t}] (Approvisionnement Dépôt R = {replenishment_val:.1f})")
         has_activity = False
         for k in M:
             arcs_k = [(i, j) for (i, j) in A
