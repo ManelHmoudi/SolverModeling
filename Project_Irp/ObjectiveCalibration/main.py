@@ -26,7 +26,7 @@ except ImportError:
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "irp_calibration_report.html")
 
-DATA_PATH = os.path.join(PROJECT_DIR, "data", "instance_5_clients.json")
+DATA_PATH = os.path.join(PROJECT_DIR, "data", "instance_3_clients.json")
 
 
 def _imap(params_raw, key):
@@ -77,13 +77,13 @@ def _load_problem_data(data_path=DATA_PATH):
     refrigeration_cost = params_raw["p5"]
     holding_cost = params_raw["h_O_space"] + params_raw["alpha_r"] * params_raw["e_stock"]
 
+    frigo_trucks = set(params_raw["frigo_trucks"])
+
     c_ijk = {
-        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k in [1, 2] else route_cost)
+        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k in frigo_trucks else route_cost)
         for (i, j) in arcs
         for k in vehicles
     }
-
-    frigo_trucks = set(params_raw["frigo_trucks"])
 
     # Réapprovisionnement par type : basé sur le camion assigné (requires_cold) en période t
     R_frigo    = {}
