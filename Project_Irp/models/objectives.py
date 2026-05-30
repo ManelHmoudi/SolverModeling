@@ -20,11 +20,12 @@ def build_f1_logistics_cost(mdl, vars_, sets_, params_):
         y3 -- time-window penalty: linearised via non-negative slack variables
 
     """
-    x       = vars_["x"]
-    f_var   = vars_["f"]
-    I_O     = vars_["I_O"]
-    w1      = vars_["w1"]
-    w2      = vars_["w2"]
+    x            = vars_["x"]
+    f_var        = vars_["f"]
+    I_O_frigo    = vars_["I_O_frigo"]
+    I_O_nonfrigo = vars_["I_O_nonfrigo"]
+    w1           = vars_["w1"]
+    w2           = vars_["w2"]
 
     A           = sets_["A"]
     T           = sets_["T"]
@@ -43,8 +44,8 @@ def build_f1_logistics_cost(mdl, vars_, sets_, params_):
         for (i, j) in A for t in T for k in M
     )
 
-    # y2 -- storage cost: holding cost per unit per period
-    y2 = mdl.sum(h_O * I_O[t] for t in T )
+    # y2 -- coût de stockage : frigo + non-frigo
+    y2 = mdl.sum(h_O * (I_O_frigo[t] + I_O_nonfrigo[t]) for t in T)
 
     # y3 -- time-window penalty: linearised via non-negative slack variables
     y3 = mdl.sum(c1 * w1[l, t] + c2 * w2[l, t] for l in clients for t in T)
@@ -127,8 +128,9 @@ def build_f4_working_capital(mdl, vars_, sets_, params_):
     f4_expr : docplex linear expression for f4
     sub     : dict with the three sub-expressions for calibration reporting
     """
-    I_O     = vars_["I_O"]
-    q_prime = vars_["q_prime"]
+    I_O_frigo    = vars_["I_O_frigo"]
+    I_O_nonfrigo = vars_["I_O_nonfrigo"]
+    q_prime      = vars_["q_prime"]
 
     T       = sets_["T"]
     clients = sets_["clients"]
@@ -140,7 +142,10 @@ def build_f4_working_capital(mdl, vars_, sets_, params_):
     DSO        = params_["DSO"]
     DPO        = params_["DPO"]
 
-    stock_value = mdl.sum(I_O[t] * P_purchase[O] * (DIO / 365) for t in T)
+    stock_value = mdl.sum(
+        (I_O_frigo[t] + I_O_nonfrigo[t]) * P_purchase[O] * (DIO / 365)
+        for t in T
+    )
 
     receivables = mdl.sum(
         q_prime[l, t, td] * P_sale[l] * (DSO / 365)

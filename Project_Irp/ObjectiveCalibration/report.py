@@ -229,7 +229,11 @@ function syncObj(idx){
 }
 
 var OL=OBJS.map(function(o){return o.label;});
-var PL=periods.map(function(p){var R=(OBJS[0].routes[p])?OBJS[0].routes[p].R:0;return 'Période '+p+' (R='+R+')';});
+var PL=periods.map(function(p){
+  var rd=OBJS[0].routes[p];
+  var Rf=(rd)?rd.R_frigo:0, Rnf=(rd)?rd.R_nonfrigo:0;
+  return 'Période '+p+' (❄️'+Rf+' 📦'+Rnf+')';
+});
 ['g-obj','d-obj'].forEach(function(id){buildTabs(id,OL,0,'',function(i){syncObj(i);});});
 buildTabs('g-per',PL,0,'period',function(i){curPer=periods[i];document.getElementById('g-per').querySelectorAll('.tab').forEach(function(t,j){t.classList.toggle('active',j===i)});renderGraph();renderDepot();});
 
@@ -382,24 +386,37 @@ function renderGraph(){
 // ── Depot stock ───────────────────────────────────────────────────────────────
 function renderDepot(){
   var stocks=OBJS[curObj].depot_stock;
-  var prev=META.I_O_init;
-  document.getElementById('depot').innerHTML=periods.map(function(t){
-    var R=(OBJS[curObj].routes[t])?OBJS[curObj].routes[t].R:0;
-    var fin=(stocks[t]!==undefined)?stocks[t]:'?';
-    // Livraisons = f[dépôt→j,t,k] summed — exactement ce que C7 utilise
-    var rdata=OBJS[curObj].routes[t];
-    var tot=(rdata&&rdata.shipped!==undefined)?rdata.shipped:0;
-    var html='<div class="sb"><div class="sp">Période '+t+'</div>'+
+  var prev_f=META.I_O_init_frigo, prev_nf=META.I_O_init_nonfrigo;
+
+  function stockRow(label, color, prev, R, fin){
+    var livr=(typeof prev==='number'&&typeof R==='number'&&typeof fin==='number')
+      ? Math.round((prev+R-fin)*100)/100 : '?';
+    return '<div style="margin-bottom:6px">'+
+      '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-2);margin-bottom:3px">'+label+'</div>'+
       '<div class="seq">'+
-        '<div class="sc si"><span class="sl">Stock initial</span><span class="sv">'+prev+'</span></div>'+
+        '<div class="sc si"><span class="sl">Init.</span><span class="sv" style="font-size:16px">'+prev+'</span></div>'+
         '<div class="sop">+</div>'+
-        '<div class="sc sr"><span class="sl">R&#233;appro (R)</span><span class="sv">'+R+'</span></div>'+
+        '<div class="sc sr"><span class="sl">R&#233;appro</span><span class="sv" style="font-size:16px">'+R+'</span></div>'+
         '<div class="sop">&#8722;</div>'+
-        '<div class="sc sd"><span class="sl">Livraisons</span><span class="sv">'+tot+'</span></div>'+
+        '<div class="sc sd"><span class="sl">Livr&#233;</span><span class="sv" style="font-size:16px">'+livr+'</span></div>'+
         '<div class="sop">=</div>'+
-        '<div class="sc sf"><span class="sl">Stock final</span><span class="sv">'+fin+'</span></div>'+
+        '<div class="sc sf" style="background:'+color+'"><span class="sl">Stock fin.</span><span class="sv" style="font-size:16px">'+fin+'</span></div>'+
       '</div></div>';
-    prev=fin; return html;
+  }
+
+  document.getElementById('depot').innerHTML=periods.map(function(t){
+    var rdata=OBJS[curObj].routes[t];
+    var R_f =(rdata)?rdata.R_frigo:0;
+    var R_nf=(rdata)?rdata.R_nonfrigo:0;
+    var fin_f =(stocks[t])?stocks[t].frigo:'?';
+    var fin_nf=(stocks[t])?stocks[t].nonfrigo:'?';
+
+    var html='<div class="sb"><div class="sp">P&#233;riode '+t+'</div>'+
+      stockRow('&#10052;&#65039; Frigo',   'var(--si-bg)', prev_f,  R_f,  fin_f)+
+      stockRow('&#128230; Non-frigo', '#f0f0ea',      prev_nf, R_nf, fin_nf)+
+      '</div>';
+
+    prev_f=fin_f; prev_nf=fin_nf; return html;
   }).join('');
 }
 

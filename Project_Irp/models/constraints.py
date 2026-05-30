@@ -50,26 +50,45 @@ def add_capacity_constraints(mdl, x, f, A, T, M, Q):
                 )
 
 
-def add_inventory_constraints(mdl, I_O, q_prime, f, clients, T, M,
-                               I_O_min, I_O_max, I_O_init, q_lt, R, O):
-    # C6 — depot inventory must stay within safety stock and storage capacity
+def add_inventory_constraints(mdl, I_O_frigo, I_O_nonfrigo, q_prime, clients, T,
+                               I_O_min_frigo, I_O_max_frigo, I_O_init_frigo,
+                               I_O_min_nonfrigo, I_O_max_nonfrigo, I_O_init_nonfrigo,
+                               q_lt, R_frigo, R_nonfrigo, requires_cold, frigo_trucks):
+    # C6 — bornes de stock par type de produit
     for t in T:
-        mdl.add_constraint(I_O[t] >= I_O_min, ctname=f"c6_min_t{t}")
-        mdl.add_constraint(I_O[t] <= I_O_max, ctname=f"c6_max_t{t}")
+        mdl.add_constraint(I_O_frigo[t]    >= I_O_min_frigo,    ctname=f"c6f_min_t{t}")
+        mdl.add_constraint(I_O_frigo[t]    <= I_O_max_frigo,    ctname=f"c6f_max_t{t}")
+        mdl.add_constraint(I_O_nonfrigo[t] >= I_O_min_nonfrigo, ctname=f"c6nf_min_t{t}")
+        mdl.add_constraint(I_O_nonfrigo[t] <= I_O_max_nonfrigo, ctname=f"c6nf_max_t{t}")
 
-    # C7 — depot inventory balance
+    # C7 — bilan stock dépôt par type (frigo / non-frigo)
+    # L'appartenance au type est déterminée par requires_cold[l, td] :
+    # si le camion assigné est dans frigo_trucks → frigo, sinon → non-frigo
     for t in T:
-        prev_stock = I_O[t - 1] if t > 1 else I_O_init
-        
-        # Sum of all quantities structurally delivered to any client during period t
-        total_shipped_t = mdl.sum(q_prime[l, t, td] for l in clients for td in T if t <= td)
-        
-        mdl.add_constraint(
-            I_O[t] == prev_stock + R[t] - total_shipped_t,
-            ctname=f"c7_t{t}"
+        prev_frigo    = I_O_frigo[t - 1]    if t > 1 else I_O_init_frigo
+        prev_nonfrigo = I_O_nonfrigo[t - 1] if t > 1 else I_O_init_nonfrigo
+
+        shipped_frigo = mdl.sum(
+            q_prime[l, t, td]
+            for l in clients for td in T if t <= td
+            and requires_cold[l, td][0] in frigo_trucks
+        )
+        shipped_nonfrigo = mdl.sum(
+            q_prime[l, t, td]
+            for l in clients for td in T if t <= td
+            and requires_cold[l, td][0] not in frigo_trucks
         )
 
-    # C8 — total quantity delivered to client l for demand period td = demand q_lt[l,td]
+        mdl.add_constraint(
+            I_O_frigo[t] == prev_frigo + R_frigo[t] - shipped_frigo,
+            ctname=f"c7f_t{t}"
+        )
+        mdl.add_constraint(
+            I_O_nonfrigo[t] == prev_nonfrigo + R_nonfrigo[t] - shipped_nonfrigo,
+            ctname=f"c7nf_t{t}"
+        )
+
+    # C8 — total livré au client l pour la période td = demande q_lt[l,td]
     for l in clients:
         for td in T:
             mdl.add_constraint(
@@ -222,7 +241,8 @@ def add_all_constraints(mdl, vars_, sets_, params_):
     tau     = vars_["tau"]
     w1      = vars_["w1"]
     w2      = vars_["w2"]
-    I_O     = vars_["I_O"]
+    I_O_frigo    = vars_["I_O_frigo"]
+    I_O_nonfrigo = vars_["I_O_nonfrigo"]
 
     N       = sets_["N"]
     A       = sets_["A"]
@@ -239,9 +259,11 @@ def add_all_constraints(mdl, vars_, sets_, params_):
 
     # C6 – C8
     add_inventory_constraints(
-        mdl, I_O, q_prime, f, clients, T, M,
-        params_["I_O_min"], params_["I_O_max"], params_["I_O_init"],
-        params_["q_lt"], params_["R"], O
+        mdl, I_O_frigo, I_O_nonfrigo, q_prime, clients, T,
+        params_["I_O_min_frigo"],    params_["I_O_max_frigo"],    params_["I_O_init_frigo"],
+        params_["I_O_min_nonfrigo"], params_["I_O_max_nonfrigo"], params_["I_O_init_nonfrigo"],
+        params_["q_lt"], params_["R_frigo"], params_["R_nonfrigo"],
+        params_["requires_cold"], params_["frigo_trucks"],
     )
 
     # Empty visits restriction
