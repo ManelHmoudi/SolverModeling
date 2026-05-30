@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run IRP menu",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/Project_Irp/main.py",
+      "cwd": "${workspaceFolder}/Project_Irp",
+      "python": "${workspaceFolder}/Project_Irp/.venv/Scripts/python.exe",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

@@ -25,6 +25,7 @@ except ImportError:
 
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "irp_calibration_report.html")
+
 DATA_PATH = os.path.join(PROJECT_DIR, "data", "instance_3_clients.json")
 
 
@@ -76,13 +77,29 @@ def _load_problem_data(data_path=DATA_PATH):
     refrigeration_cost = params_raw["p5"]
     holding_cost = params_raw["h_O_space"] + params_raw["alpha_r"] * params_raw["e_stock"]
 
+    frigo_trucks = set(params_raw["frigo_trucks"])
+
     c_ijk = {
-        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k == 1 else route_cost)
+        (i, j, k): (route_cost + refrigeration_cost / speed[k] if k in frigo_trucks else route_cost)
         for (i, j) in arcs
         for k in vehicles
     }
 
-    replenishment = {t: sum(q_lt[l, t] for l in clients) for t in periods}
+    # Réapprovisionnement par type : basé sur le camion assigné (requires_cold) en période t
+    R_frigo    = {}
+    R_nonfrigo = {}
+    for t in periods:
+        rf, rnf = 0, 0
+        for l in clients:
+            truck = requires_cold[l, t][0]
+            if truck in frigo_trucks:
+                rf  += q_lt[l, t]
+            else:
+                rnf += q_lt[l, t]
+        R_frigo[t]    = rf
+        R_nonfrigo[t] = rnf
+
+    replenishment = {t: R_frigo[t] + R_nonfrigo[t] for t in periods}
 
     alpha_co2 = {(i, j): params_raw["g"] * params_raw["Cr"] for (i, j) in arcs}
     beta_co2 = 0.5 * params_raw["Cd"] * params_raw["A_f"] * params_raw["rho"]
@@ -101,11 +118,17 @@ def _load_problem_data(data_path=DATA_PATH):
         "s": {i: params_raw["s_value"] for i in n_nodes},
         "tau_min": params_raw["tau_min"],
         "tau_max": params_raw["tau_max"],
-        "I_O_init": params_raw["I_O_init"],
-        "I_O_max": params_raw["I_O_max"],
-        "I_O_min": params_raw["I_O_min"],
+        "I_O_init_frigo":    params_raw["I_O_init_frigo"],
+        "I_O_init_nonfrigo": params_raw["I_O_init_nonfrigo"],
+        "I_O_max_frigo":     params_raw["I_O_max_frigo"],
+        "I_O_max_nonfrigo":  params_raw["I_O_max_nonfrigo"],
+        "I_O_min_frigo":     params_raw["I_O_min_frigo"],
+        "I_O_min_nonfrigo":  params_raw["I_O_min_nonfrigo"],
+        "frigo_trucks":      frigo_trucks,
         "h_O": holding_cost,
-        "R": replenishment,
+        "R":         replenishment,
+        "R_frigo":   R_frigo,
+        "R_nonfrigo": R_nonfrigo,
         "alpha_co2": alpha_co2,
         "beta_co2": beta_co2,
         "w": params_raw["w"],
@@ -220,9 +243,11 @@ def _solve_single(label, expr, mdl, vars_, sets_, params_, objectives):
             4,
         )
         routes[str(t)] = {
-            "R": replenishment.get(t, 0.0),
-            "trucks": trucks,
-            "shipped": shipped_t,
+            "R":         replenishment.get(t, 0.0),
+            "R_frigo":   params_["R_frigo"].get(t, 0.0),
+            "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
+            "trucks":    trucks,
+            "shipped":   shipped_t,
         }
 
     deliveries = []
@@ -252,7 +277,10 @@ def _solve_single(label, expr, mdl, vars_, sets_, params_, objectives):
                     )
 
     depot_stock = {
-        str(t): round(vars_["I_O"][t].solution_value, 4)
+        str(t): {
+            "frigo":    round(vars_["I_O_frigo"][t].solution_value, 4),
+            "nonfrigo": round(vars_["I_O_nonfrigo"][t].solution_value, 4),
+        }
         for t in periods
     }
 
@@ -314,7 +342,8 @@ def build_report_data(data_path=DATA_PATH):
             "n_periods": len(sets_["T"]),
             "n_vehicles": len(sets_["M"]),
             "n_obj": len(calibration),
-            "I_O_init": params_["I_O_init"],
+            "I_O_init_frigo":    params_["I_O_init_frigo"],
+            "I_O_init_nonfrigo": params_["I_O_init_nonfrigo"],
             "node_positions": compute_node_positions(sets_["N"]),
         },
         "objs": objs_data,

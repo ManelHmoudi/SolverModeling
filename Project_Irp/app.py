@@ -5,6 +5,7 @@ import socket
 import threading
 import traceback
 import webbrowser
+import time
 from html import escape
 
 from flask import Flask, redirect, render_template_string, send_file, url_for
@@ -205,7 +206,9 @@ def run_objective_calibration_route():
         run_objective_calibration()
         return redirect(url_for("objective_calibration_report"))
     except Exception:
-        return render_error(traceback.format_exc()), 500
+        tb = traceback.format_exc()
+        print(tb, flush=True)
+        return render_error(tb), 500
 
 
 @app.route("/objective-calibration/report")
@@ -277,12 +280,31 @@ def _find_port(start_port=5000):
     raise RuntimeError("No free local port found.")
 
 
+def _open_browser_when_ready(url, port):
+    browser_url = f"{url}?session={int(time.time())}"
+    for _ in range(50):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.2)
+            try:
+                sock.connect(("127.0.0.1", port))
+            except OSError:
+                threading.Event().wait(0.1)
+                continue
+        webbrowser.open_new_tab(browser_url)
+        return
+    print(f"Open this URL in your browser: {url}", flush=True)
+
+
 def main():
     port = _find_port()
     url = f"http://127.0.0.1:{port}/"
-    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    print(f"IRP menu: {url}")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    print(f"IRP menu: {url}", flush=True)
+    threading.Thread(
+        target=_open_browser_when_ready,
+        args=(url, port),
+        daemon=True,
+    ).start()
+    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
 
 
 if __name__ == "__main__":

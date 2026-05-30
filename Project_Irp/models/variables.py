@@ -40,10 +40,16 @@ def build_variables(mdl, N, A, T, M, clients):
     for t in T
     }
 
-    # I_O[t] : inventory level at depot O at end of period t
-    I_O = {
-    t: mdl.continuous_var( lb=0, name=f"I_O_{t}")
-    for t in T
+    # I_O_frigo[t] : stock de produits réfrigérés au dépôt, fin de période t
+    I_O_frigo = {
+        t: mdl.continuous_var(lb=0, name=f"I_O_frigo_{t}")
+        for t in T
+    }
+
+    # I_O_nonfrigo[t] : stock de produits non réfrigérés au dépôt, fin de période t
+    I_O_nonfrigo = {
+        t: mdl.continuous_var(lb=0, name=f"I_O_nonfrigo_{t}")
+        for t in T
     }
 
     # Slack variables for early (w1) and late (w2) arrival penalties
@@ -61,8 +67,9 @@ def build_variables(mdl, N, A, T, M, clients):
         "f":       f,
         "q_prime": q_prime,
         "tau":     tau,
-        "tau_return": tau_return,
-        "I_O": I_O,
+        "tau_return":    tau_return,
+        "I_O_frigo":     I_O_frigo,
+        "I_O_nonfrigo":  I_O_nonfrigo,
         "w1":      w1,
         "w2":      w2,
     }
