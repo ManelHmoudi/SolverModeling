@@ -63,6 +63,8 @@ def _build_model():
 
 def _solve_single(label, expr, mdl, vars_, objectives):
     mdl.minimize(expr)
+    mdl.parameters.timelimit = 120          # max 2 min par objectif
+    mdl.parameters.mip.tolerances.mipgap = 0.05   # gap 5% acceptable pour la calibration
     solution = mdl.solve(log_output=False)
     if not solution:
         return None, None
@@ -101,7 +103,6 @@ def _solve_single(label, expr, mdl, vars_, objectives):
                 "k":    k,
                 "path": path,
                 "qty":  qty,
-                "ret":  round(vars_["tau_return"][t].solution_value, 4),
             })
 
         shipped_t = round(
@@ -109,11 +110,12 @@ def _solve_single(label, expr, mdl, vars_, objectives):
             4,
         )
         routes[str(t)] = {
-            "R":         params_["R"].get(t, 0.0),
-            "R_frigo":   params_["R_frigo"].get(t, 0.0),
+            "R":          params_["R"].get(t, 0.0),
+            "R_frigo":    params_["R_frigo"].get(t, 0.0),
             "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
-            "trucks":    trucks,
-            "shipped":   shipped_t,
+            "tau_return": round(vars_["tau_return"][t].solution_value, 4),
+            "trucks":     trucks,
+            "shipped":    shipped_t,
         }
 
     deliveries = []

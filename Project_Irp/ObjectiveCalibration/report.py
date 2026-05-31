@@ -72,6 +72,7 @@ body{
 .kb{font-size:11px;color:var(--text-2)}
 /* ── Split row (network | depot) ── */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem}
+.split.stacked{grid-template-columns:1fr}
 @media(max-width:860px){.split{grid-template-columns:1fr}}
 /* ── Tabs ── */
 .tabs{display:flex;gap:5px;margin-bottom:.85rem;flex-wrap:wrap}
@@ -84,7 +85,7 @@ body{
 [data-dark] .tab.active{background:#2e2b52;border-color:#534ab7;color:#9f9cf5}
 [data-dark] .tab.period.active{background:#1a2a3d;border-color:#185fa5;color:#6aaae8}
 /* ── SVG ── */
-.nsvg{width:100%;display:block}
+.nsvg{width:100%;display:block;min-height:360px;border-radius:8px}
 /* ── Delivery table ── */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:7px 9px;color:var(--text-2);font-weight:700;font-size:11px;
@@ -239,14 +240,22 @@ buildTabs('g-per',PL,0,'period',function(i){curPer=periods[i];document.getElemen
 
 // ── SVG ──────────────────────────────────────────────────────────────────────
 var NP=META.node_positions;
-var SW=480, SH=290;
+var isLarge = META.n_nodes > 6;
+var SW = isLarge ? 1120 : 480;
+var SH = isLarge ? 680 : 290;
+
+// Stacked layout for large instances
+if (isLarge) {
+  var splitEl = document.querySelector('.split');
+  if (splitEl) splitEl.classList.add('stacked');
+}
 
 function getR(n){return n===0?22:18;}
 
 // Compute outward direction from depot for node label placement
 function labelPos(n){
   var cx=NP[n][0], cy=NP[n][1];
-  var r=getR(n);
+  var r=isLarge?20:getR(n);
   var d0=NP[0];
   var dx=cx-d0[0], dy=cy-d0[1];
   var len=Math.sqrt(dx*dx+dy*dy);
@@ -264,29 +273,32 @@ function arcLoads(path,qty){
   return out;
 }
 
-// Draw one bezier arc
+// Draw one bezier arc with glow track
 function drawArc(nA,nB,off,curve,color,mid,dashed,load){
   var p1=NP[nA],p2=NP[nB];
   var dx=p2[0]-p1[0],dy=p2[1]-p1[1];
   var len=Math.sqrt(dx*dx+dy*dy); if(len<1)return '';
   var ux=dx/len,uy=dy/len,px=-uy,py=ux;
   var rA=getR(nA),rB=getR(nB);
-  var x0=p1[0]+ux*(rA+3)+px*off, y0=p1[1]+uy*(rA+3)+py*off;
-  var x2=p2[0]-ux*(rB+14)+px*off, y2=p2[1]-uy*(rB+14)+py*off;
-  var cx=(x0+x2)/2+px*curve, cy=(y0+y2)/2+py*curve;
-  var sw=dashed?1.5:Math.max(2,Math.min(5,1.5+load/22));
+  var x0=p1[0]+ux*(rA+3), y0=p1[1]+uy*(rA+3);
+  var x2=p2[0]-ux*(rB+14), y2=p2[1]-uy*(rB+14);
+  var cx=(x0+x2)/2+px*(curve+off), cy=(y0+y2)/2+py*(curve+off);
+  var sw=dashed?(isLarge?1.1:1.5):Math.max(isLarge?1.35:2,Math.min(isLarge?3.1:5,(isLarge?1.05:1.5)+load/(isLarge?34:22)));
   var d='M'+x0.toFixed(1)+','+y0.toFixed(1)+' Q'+cx.toFixed(1)+','+cy.toFixed(1)+' '+x2.toFixed(1)+','+y2.toFixed(1);
-  var r='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+sw.toFixed(1)+'"'+
-        (dashed?' stroke-dasharray="6,4" opacity="0.45"':'')+
-        ' marker-end="url(#'+mid+')" stroke-linecap="round"/>';
-  // Load label at bezier midpoint
+  var r='';
+  if(!dashed){
+    r+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+(sw*3.8).toFixed(1)+'" opacity="0.14" stroke-linecap="round"/>';
+  }
+  r+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+sw.toFixed(1)+'"'+
+     (dashed?' stroke-dasharray="6,4" opacity="0.38"':' opacity="0.93"')+
+     ' marker-end="url(#'+mid+')" stroke-linecap="round"/>';
   if(!dashed&&load>0){
     var mx=x0/4+cx/2+x2/4, my=y0/4+cy/2+y2/4;
-    var txt=load+'u', lw=txt.length*7+14;
-    r+='<rect x="'+(mx-lw/2).toFixed(1)+'" y="'+(my-9).toFixed(1)+
-       '" width="'+lw+'" height="17" rx="6" fill="var(--surface)" opacity="0.92" stroke="'+color+'" stroke-width="0.8"/>'+
-       '<text x="'+mx.toFixed(1)+'" y="'+(my+4).toFixed(1)+
-       '" text-anchor="middle" font-size="10" font-weight="700" fill="'+color+'">'+txt+'</text>';
+    var txt=load+'u', lw=txt.length*(isLarge?6:7)+16;
+    r+='<rect x="'+(mx-lw/2).toFixed(1)+'" y="'+(my-9.5).toFixed(1)+
+       '" width="'+lw+'" height="19" rx="9.5" fill="var(--surface)" stroke="'+color+'" stroke-width="1.2"/>'+
+       '<text x="'+mx.toFixed(1)+'" y="'+(my+5).toFixed(1)+
+       '" text-anchor="middle" font-size="'+(isLarge?9:10)+'" font-weight="700" fill="'+color+'">'+txt+'</text>';
   }
   return r;
 }
@@ -296,28 +308,38 @@ function renderGraph(){
   var nodes=Object.keys(NP).map(Number);
   var nT=(pr&&pr.trucks)?pr.trucks.length:1;
 
-  var defs=TC.map(function(c,i){
-    return '<marker id="ah'+i+'" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
-           '<path d="M0,0 L11,4 L0,8 Z" fill="'+c+'"/></marker>'+
-           '<marker id="ahd'+i+'" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
-           '<path d="M0,0 L11,4 L0,8 Z" fill="'+c+'" opacity="0.38"/></marker>';
-  }).join('');
+  var nodeR = isLarge ? 16 : 18;
+  function getNodeR(n){ return n===0 ? 22 : nodeR; }
 
-  var svg='<svg viewBox="0 0 '+SW+' '+SH+'" class="nsvg"><defs>'+defs+'</defs>';
+  var defs='<defs>';
+  defs+='<pattern id="dotgrid" x="0" y="0" width="'+(isLarge?40:30)+'" height="'+(isLarge?40:28)+'" patternUnits="userSpaceOnUse">'+
+    '<circle cx="1" cy="1" r="1.1" fill="var(--mesh)" opacity="0.9"/></pattern>';
+  defs+='<filter id="nshadow" x="-50%" y="-50%" width="200%" height="200%">'+
+    '<feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="rgba(0,0,0,0.18)"/></filter>';
+  defs+='<radialGradient id="gd-depot" cx="38%" cy="35%" r="65%">'+
+    '<stop offset="0%" stop-color="#7b72e3"/><stop offset="100%" stop-color="#3d34a8"/></radialGradient>';
+  defs+='<radialGradient id="gd-active" cx="38%" cy="35%" r="65%">'+
+    '<stop offset="0%" stop-color="#4daef5"/><stop offset="100%" stop-color="#1254a0"/></radialGradient>';
+  defs+='<radialGradient id="gd-idle" cx="38%" cy="35%" r="65%">'+
+    '<stop offset="0%" stop-color="#c5d9ed"/><stop offset="100%" stop-color="#7096b8"/></radialGradient>';
+  TC.forEach(function(c,i){
+    defs+='<marker id="ah'+i+'" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
+      '<path d="M0,1 L10,4 L0,7 Z" fill="'+c+'"/></marker>';
+    defs+='<marker id="ahd'+i+'" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
+      '<path d="M0,1 L10,4 L0,7 Z" fill="'+c+'" opacity="0.35"/></marker>';
+  });
+  defs+='</defs>';
 
-  // Background mesh
-  nodes.forEach(function(i){nodes.forEach(function(j){
-    if(i>=j)return;
-    var a=NP[i],b=NP[j];
-    svg+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="var(--mesh)" stroke-width="0.8" opacity="0.55"/>';
-  });});
+  var svg='<svg viewBox="0 0 '+SW+' '+SH+'" class="nsvg">'+defs;
+  svg+='<rect width="'+SW+'" height="'+SH+'" fill="url(#dotgrid)"/>';
 
-  // Active arcs
   if(pr&&pr.trucks){
-    pr.trucks.forEach(function(tr){
+    pr.trucks.forEach(function(tr, tIdx){
       var ki=(tr.k-1)%TC.length, color=TC[ki];
-      var off=(ki-(nT-1)/2)*9;
-      var curve=26+off*0.5;
+      var offIdx = isLarge ? tIdx : ki;
+      var offMul = isLarge ? 8 : 9;
+      var off=(offIdx-(nT-1)/2)*offMul;
+      var curve=(isLarge?36:26)+off*0.45;
       var loads=arcLoads(tr.path,tr.qty);
       for(var s=0;s<tr.path.length-1;s++)
         svg+=drawArc(tr.path[s],tr.path[s+1],off,curve,color,'ah'+ki,false,loads[s]);
@@ -326,47 +348,57 @@ function renderGraph(){
     });
   }
 
-  // Node circles
+  // Nodes drawn last so they sit above arcs
   nodes.forEach(function(n){
-    var cx=NP[n][0],cy=NP[n][1],r=getR(n);
+    var cx=NP[n][0],cy=NP[n][1],r=getNodeR(n);
     var isD=(n===0);
 
-    // Quantity delivered this period
     var q=0;
     if(!isD&&pr&&pr.trucks)
       q=pr.trucks.reduce(function(s,tr){return s+(tr.qty[String(n)]||0);},0);
 
-    var fill=isD?'#534ab7':(q>0?'#185fa5':'#8cafd4');
+    var fillId=isD?'url(#gd-depot)':(q>0?'url(#gd-active)':'url(#gd-idle)');
+    var fillColor=isD?'#534ab7':(q>0?'#185fa5':'#8cafd4');
 
-    // Delivery amount label — positioned outward from depot
     var qt='';
     if(!isD&&q>0){
       var lp=labelPos(n);
       qt='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+4).toFixed(1)+
-         '" text-anchor="middle" font-size="10" font-weight="700" fill="'+fill+'">'+q+'u</text>';
+         '" text-anchor="middle" font-size="'+(isLarge?9:10)+'" font-weight="700" fill="'+fillColor+'">'+q+'u</text>';
     }
 
+    if(isD){
+      svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+8)+'" fill="none" stroke="#534ab7" stroke-width="1.2" opacity="0.22"/>';
+      svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+16)+'" fill="none" stroke="#534ab7" stroke-width="0.7" opacity="0.1"/>';
+    }
+
+    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+3.5)+'" fill="var(--surface)" opacity="0.88" filter="url(#nshadow)"/>';
+
+    var fs=isD?(isLarge?13:12):(isLarge?11:11);
     var innerTxt=isD
-      ?'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="12" font-weight="700">D</text>'
-      :'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="11" font-weight="700">'+n+'</text>';
+      ?'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="'+fs+'" font-weight="800">D</text>'
+      :'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="'+fs+'" font-weight="700">'+n+'</text>';
 
     svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+
-         '" fill="'+fill+'" stroke="var(--surface)" stroke-width="2.5"/>'+
+         '" fill="'+fillId+'" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>'+
          innerTxt+qt;
   });
 
   svg+='</svg>';
 
-  // Legend as responsive HTML pills below the SVG (avoids SVG clipping with 4+ trucks)
   var lgd='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;align-items:center">';
   if(pr&&pr.trucks&&pr.trucks.length>0){
+    if(pr.tau_return!=null){
+      lgd+='<span style="font-size:11px;color:var(--text-2);padding:3px 10px;'+
+           'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;white-space:nowrap">'+
+           '&#128339; Retour dépôt : '+pr.tau_return.toFixed(2)+'h</span>';
+    }
     pr.trucks.forEach(function(tr){
       var c=TC[(tr.k-1)%TC.length];
       lgd+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;'+
            'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;font-size:11px;white-space:nowrap">'+
            '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+
            '<b style="color:var(--text)">k='+tr.k+'</b>'+
-           '<span style="color:var(--text-2)">'+tr.ret.toFixed(2)+'h</span>'+
            '</span>';
     });
     lgd+='<span style="flex:1;min-width:8px"></span>';
@@ -462,8 +494,11 @@ def compute_node_positions(N, svg_w=480, svg_h=290):
     nc      = len(clients)
     pos     = {}
 
+    if nc > 6 and svg_w == 480 and svg_h == 290:
+        svg_w, svg_h = 1120, 680
+
     # Depot: vertically centered, pushed left
-    pos[0] = [int(svg_w * 0.13), svg_h // 2]
+    pos[0] = [int(svg_w * (0.11 if nc > 6 else 0.13)), svg_h // 2]
 
     if nc == 0:
         pass
@@ -484,15 +519,16 @@ def compute_node_positions(N, svg_w=480, svg_h=290):
         for i, c in enumerate(clients):
             pos[c] = [int(svg_w * xs[i]), int(svg_h * ys[i])]
     else:
-        # General: semicircle on the right half
-        cx  = svg_w * 0.62
+        # Large instances: wide ellipse, leaving a clear left lane for depot arcs.
+        cx  = svg_w * 0.58
         cy  = svg_h / 2
-        rx  = svg_w * 0.30
-        ry  = svg_h * 0.40
+        rx  = svg_w * 0.34
+        ry  = svg_h * 0.39
         for i, c in enumerate(clients):
-            angle = math.pi * (0.85 - 1.7 * i / max(nc - 1, 1))
+            # Start from top, go clockwise, avoid the leftmost point (depot side)
+            angle = -math.pi / 2 + 2 * math.pi * i / nc
             pos[c] = [int(cx + rx * math.cos(angle)),
-                      int(cy - ry * math.sin(angle))]
+                      int(cy + ry * math.sin(angle))]
 
     return {str(k): v for k, v in pos.items()}
 

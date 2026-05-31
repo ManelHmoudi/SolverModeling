@@ -143,7 +143,7 @@ def add_time_constraints(mdl, x, tau, tau_return, w1, w2, N, A, T, M, O,
     for t in T:
         mdl.add_constraint(tau[O, t] == 0, ctname=f"c10_t{t}")
 
-    # C11 — arrival time propagation (Big-M linearisation)
+    # C11 — arrival time propagation 
     for k in M:
         for (i, j) in A:
             if j == O:          
