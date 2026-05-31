@@ -7,13 +7,14 @@ Decision Variables
 
 def build_variables(mdl, N, A, T, M, clients):
 
-
+    # ── Transport variables ───────────────────────────────────────────────────
     # x[i,j,t,k] : binary -- 1 if vehicle k travels arc (i,j) in period t
     x = {
         (i, j, t, k): mdl.binary_var(name=f"x_{i}_{j}_{t}_{k}")
         for (i, j) in A for t in T for k in M
     }
 
+    # ── Load / delivery variables ─────────────────────────────────────────────
     # f[i,j,t,k] : continuous -- load (units) carried on arc (i,j) by vehicle k in period t
     f = {
         (i, j, t, k): mdl.continuous_var(lb=0, name=f"f_{i}_{j}_{t}_{k}")
@@ -29,30 +30,31 @@ def build_variables(mdl, N, A, T, M, clients):
         if t <= td
     }
 
+    # ── Auxiliary variables ───────────────────────────────────────────────────
     # tau[i,t] : continuous -- arrival time at node i in period t (hours)
     tau = {
         (i, t): mdl.continuous_var(lb=0, name=f"tau_{i}_{t}")
         for i in N for t in T
-    }   
+    }
     # tau_return[t] : effective depot return time in period t (hours)
     tau_return = {
     t: mdl.continuous_var(lb=0, name=f"tau_ret_{t}")
     for t in T
     }
 
-    # I_O_frigo[t] : stock de produits réfrigérés au dépôt, fin de période t
+    # I_O_frigo[t] : depot refrigerated product inventory at end of period t
     I_O_frigo = {
         t: mdl.continuous_var(lb=0, name=f"I_O_frigo_{t}")
         for t in T
     }
 
-    # I_O_nonfrigo[t] : stock de produits non réfrigérés au dépôt, fin de période t
+    # I_O_nonfrigo[t] : depot non-refrigerated product inventory at end of period t
     I_O_nonfrigo = {
         t: mdl.continuous_var(lb=0, name=f"I_O_nonfrigo_{t}")
         for t in T
     }
 
-    # Slack variables for early (w1) and late (w2) arrival penalties
+    # w1[l,t] / w2[l,t] : slack variables for early (w1) and late (w2) arrival penalties
     w1 = {
         (l, t): mdl.continuous_var(lb=0, name=f"w1_{l}_{t}")
         for l in clients for t in T
