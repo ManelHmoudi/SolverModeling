@@ -85,7 +85,7 @@ def _load_problem_data(data_path=DATA_PATH):
         for k in vehicles
     }
 
-    # Réapprovisionnement par type : basé sur le camion assigné (requires_cold) en période t
+    # Replenishment split by product type based on the assigned vehicle (requires_cold) in period t
     R_frigo    = {}
     R_nonfrigo = {}
     for t in periods:

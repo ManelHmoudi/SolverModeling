@@ -54,16 +54,16 @@ def add_inventory_constraints(mdl, I_O_frigo, I_O_nonfrigo, q_prime, clients, T,
                                I_O_min_frigo, I_O_max_frigo, I_O_init_frigo,
                                I_O_min_nonfrigo, I_O_max_nonfrigo, I_O_init_nonfrigo,
                                q_lt, R_frigo, R_nonfrigo, requires_cold, frigo_trucks):
-    # C6 — bornes de stock par type de produit
+    # C6 — inventory bounds by product type (refrigerated / non-refrigerated)
     for t in T:
         mdl.add_constraint(I_O_frigo[t]    >= I_O_min_frigo,    ctname=f"c6f_min_t{t}")
         mdl.add_constraint(I_O_frigo[t]    <= I_O_max_frigo,    ctname=f"c6f_max_t{t}")
         mdl.add_constraint(I_O_nonfrigo[t] >= I_O_min_nonfrigo, ctname=f"c6nf_min_t{t}")
         mdl.add_constraint(I_O_nonfrigo[t] <= I_O_max_nonfrigo, ctname=f"c6nf_max_t{t}")
 
-    # C7 — bilan stock dépôt par type (frigo / non-frigo)
-    # L'appartenance au type est déterminée par requires_cold[l, td] :
-    # si le camion assigné est dans frigo_trucks → frigo, sinon → non-frigo
+    # C7 — depot stock balance by product type (refrigerated / non-refrigerated)
+    # Product type is determined by requires_cold[l, td]:
+    # if the assigned vehicle is in frigo_trucks → refrigerated, otherwise → non-refrigerated
     for t in T:
         prev_frigo    = I_O_frigo[t - 1]    if t > 1 else I_O_init_frigo
         prev_nonfrigo = I_O_nonfrigo[t - 1] if t > 1 else I_O_init_nonfrigo
@@ -88,7 +88,7 @@ def add_inventory_constraints(mdl, I_O_frigo, I_O_nonfrigo, q_prime, clients, T,
             ctname=f"c7nf_t{t}"
         )
 
-    # C8 — total livré au client l pour la période td = demande q_lt[l,td]
+    # C8 — total quantity delivered to client l for demand period td must equal q_lt[l,td]
     for l in clients:
         for td in T:
             mdl.add_constraint(

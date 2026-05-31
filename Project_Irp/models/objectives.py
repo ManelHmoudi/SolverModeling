@@ -44,7 +44,7 @@ def build_f1_logistics_cost(mdl, vars_, sets_, params_):
         for (i, j) in A for t in T for k in M
     )
 
-    # y2 -- coût de stockage : frigo + non-frigo
+    # y2 -- storage holding cost: refrigerated + non-refrigerated inventory
     y2 = mdl.sum(h_O * (I_O_frigo[t] + I_O_nonfrigo[t]) for t in T)
 
     # y3 -- time-window penalty: linearised via non-negative slack variables
