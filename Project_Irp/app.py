@@ -19,178 +19,374 @@ app = Flask(__name__)
 
 
 MENU_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRP Modules</title>
+<title>IRP — Module Launcher</title>
 <style>
 :root {
-  --bg: #f6f7f9;
+  --bg: #f0f4f8;
   --surface: #ffffff;
-  --surface-soft: #eef3f8;
-  --border: #d9e0e8;
-  --text: #1d2733;
-  --muted: #667485;
-  --accent: #256f83;
-  --accent-strong: #164f5f;
-  --disabled: #9aa6b3;
+  --surface-hover: #f5f8fb;
+  --border: #cdd7e3;
+  --border-active: #a8bdd1;
+  --text: #0d1b2a;
+  --muted: #546475;
+  --accent: #1a6f8a;
+  --accent-hover: #145c74;
+  --accent-fg: #ffffff;
+  --tag-active-bg: #dff3f0;
+  --tag-active-fg: #0e6b5e;
+  --tag-soon-bg: #f0f1f3;
+  --tag-soon-fg: #6b7585;
+  --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 12px rgba(0,0,0,.05);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,.09), 0 8px 24px rgba(0,0,0,.08);
+  --num-bg: #eaf3f7;
+  --num-fg: #1a6f8a;
+  --btn-sec-bg: #ffffff;
+  --btn-sec-border: #cdd7e3;
+  --btn-sec-fg: #0d1b2a;
+  --btn-sec-hover: #eef3f7;
+  --btn-dis-bg: #eceff2;
+  --btn-dis-fg: #9daab6;
+  --toggle-bg: #dde5ee;
+  --toggle-fg: #546475;
 }
-* { box-sizing: border-box; }
+[data-theme="dark"] {
+  --bg: #0e1118;
+  --surface: #161c27;
+  --surface-hover: #1c2436;
+  --border: #252e42;
+  --border-active: #334360;
+  --text: #dde4ef;
+  --muted: #8493ab;
+  --accent: #4ab0cc;
+  --accent-hover: #38a0be;
+  --accent-fg: #0a1520;
+  --tag-active-bg: #0d2e2a;
+  --tag-active-fg: #4ecbb8;
+  --tag-soon-bg: #1c2236;
+  --tag-soon-fg: #6b7c9a;
+  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.25);
+  --shadow-hover: 0 2px 8px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+  --num-bg: #0e2535;
+  --num-fg: #4ab0cc;
+  --btn-sec-bg: #1c2436;
+  --btn-sec-border: #2d3a55;
+  --btn-sec-fg: #dde4ef;
+  --btn-sec-hover: #232d44;
+  --btn-dis-bg: #181e2e;
+  --btn-dis-fg: #3e4e6a;
+  --toggle-bg: #252e42;
+  --toggle-fg: #8493ab;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  margin: 0;
   min-height: 100vh;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
+  transition: background .25s, color .25s;
+  -webkit-font-smoothing: antialiased;
 }
 .page {
-  max-width: 1040px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 36px 22px;
+  padding: 48px 24px 64px;
 }
-.topbar {
+
+/* ── Header ─────────────────────────────────────────────── */
+.header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
   gap: 20px;
-  margin-bottom: 28px;
+  margin-bottom: 48px;
 }
-h1 {
-  margin: 0 0 6px;
-  font-size: 30px;
-  line-height: 1.15;
+.header-brand { display: flex; align-items: center; gap: 14px; }
+.brand-mark {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.brand-mark svg { width: 22px; height: 22px; fill: var(--accent-fg); }
+.brand-text h1 {
+  font-size: 22px;
   font-weight: 700;
+  letter-spacing: -.4px;
+  line-height: 1.2;
+  color: var(--text);
 }
-.subtitle {
-  margin: 0;
+.brand-text p {
+  font-size: 13px;
   color: var(--muted);
-  font-size: 14px;
+  margin-top: 2px;
 }
-.badge {
+.theme-toggle {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
   border: 1px solid var(--border);
-  background: var(--surface);
   border-radius: 8px;
-  padding: 8px 11px;
-  color: var(--muted);
-  font-size: 12px;
+  background: var(--toggle-bg);
+  color: var(--toggle-fg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+  outline: none;
   white-space: nowrap;
 }
+.theme-toggle:hover { border-color: var(--border-active); }
+.theme-toggle svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+/* ── Grid ─────────────────────────────────────────────────── */
 .modules {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
+
+/* ── Card ─────────────────────────────────────────────────── */
 .module {
-  min-height: 205px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
+  gap: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
-  padding: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow .2s, border-color .2s, background .2s;
 }
-.module.available {
-  background: linear-gradient(180deg, #ffffff 0%, var(--surface-soft) 100%);
+.module.available:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--border-active);
 }
-.label {
-  margin: 0 0 8px;
-  font-size: 18px;
-  line-height: 1.25;
+.card-body {
+  flex: 1;
+  padding: 20px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.module-num {
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--num-fg);
+  background: var(--num-bg);
+  border-radius: 5px;
+  padding: 3px 7px;
 }
-.description {
-  margin: 0;
-  color: var(--muted);
+.status-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+.status-tag.active {
+  background: var(--tag-active-bg);
+  color: var(--tag-active-fg);
+}
+.status-tag.soon {
+  background: var(--tag-soon-bg);
+  color: var(--tag-soon-fg);
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.2px;
+  color: var(--text);
+  line-height: 1.3;
+}
+.card-desc {
   font-size: 13px;
-  line-height: 1.45;
+  color: var(--muted);
+  line-height: 1.55;
 }
-.actions {
+.card-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  background: transparent;
 }
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 9px 13px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
   border-radius: 7px;
   border: 1px solid transparent;
-  background: var(--accent);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 700;
   font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
 }
-.button:hover { background: var(--accent-strong); }
+.button.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.button.primary:hover { background: var(--accent-hover); }
 .button.secondary {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--text);
+  background: var(--btn-sec-bg);
+  border-color: var(--btn-sec-border);
+  color: var(--btn-sec-fg);
 }
-.button.secondary:hover { background: var(--surface-soft); }
+.button.secondary:hover { background: var(--btn-sec-hover); }
 .button.disabled {
   pointer-events: none;
-  background: #edf0f3;
-  color: var(--disabled);
-  border-color: var(--border);
+  background: var(--btn-dis-bg);
+  color: var(--btn-dis-fg);
+  border-color: transparent;
 }
-@media (max-width: 820px) {
+
+@media (max-width: 780px) {
   .modules { grid-template-columns: 1fr; }
-  .topbar { flex-direction: column; }
-  .badge { white-space: normal; }
+  .header { flex-direction: row; }
+  .page { padding: 32px 16px 48px; }
 }
 </style>
 </head>
 <body>
-  <main class="page">
-    <header class="topbar">
-      <div>
-        <h1>IRP Project Modules</h1>
-        <p class="subtitle">Choose a module to run it as a separate app.</p>
+<main class="page">
+
+  <header class="header">
+    <div class="header-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z"/>
+        </svg>
       </div>
-      <div class="badge">Shared: models, helpers, data</div>
-    </header>
+      <div class="brand-text">
+        <h1>IRP Modules</h1>
+        <p>Select a module to launch as a standalone app</p>
+      </div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <span id="themeLabel">Light</span>
+    </button>
+  </header>
 
-    <section class="modules" aria-label="Project modules">
-      <article class="module available">
-        <div>
-          <h2 class="label">ObjectiveCalibration</h2>
-          <p class="description">
-            Run the many-objective calibration model and open the generated dashboard report.
-          </p>
-        </div>
-        <div class="actions">
-          <a class="button" href="{{ url_for('run_objective_calibration_route') }}">Run module</a>
-          <a class="button secondary" href="{{ url_for('objective_calibration_report') }}">Last report</a>
-        </div>
-      </article>
+  <p class="section-label">Available modules</p>
 
-      <article class="module">
-        <div>
-          <h2 class="label">Module 2</h2>
-          <p class="description">Reserved for the next IRP workflow.</p>
-        </div>
-        <div class="actions">
-          <span class="button disabled">Coming soon</span>
-        </div>
-      </article>
+  <section class="modules" aria-label="Project modules">
 
-      <article class="module">
-        <div>
-          <h2 class="label">Module 3</h2>
-          <p class="description">Reserved for another workflow using the shared project model.</p>
+    <article class="module available">
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="module-num">01</span>
+          <span class="status-tag active">Active</span>
         </div>
-        <div class="actions">
-          <span class="button disabled">Coming soon</span>
+        <h2 class="card-title">Objective Calibration</h2>
+        <p class="card-desc">Run the many-objective calibration model and open the generated dashboard report.</p>
+      </div>
+      <div class="card-footer">
+        <a class="button primary" href="{{ url_for('run_objective_calibration_route') }}">Run module</a>
+        <a class="button secondary" href="{{ url_for('objective_calibration_report') }}">Last report</a>
+      </div>
+    </article>
+
+    <article class="module">
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="module-num">02</span>
+          <span class="status-tag soon">Coming soon</span>
         </div>
-      </article>
-    </section>
-  </main>
+        <h2 class="card-title">Module 2</h2>
+        <p class="card-desc">Reserved for the next IRP workflow.</p>
+      </div>
+      <div class="card-footer">
+        <span class="button disabled">Unavailable</span>
+      </div>
+    </article>
+
+    <article class="module">
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="module-num">03</span>
+          <span class="status-tag soon">Coming soon</span>
+        </div>
+        <h2 class="card-title">Module 3</h2>
+        <p class="card-desc">Reserved for another workflow using the shared project model.</p>
+      </div>
+      <div class="card-footer">
+        <span class="button disabled">Unavailable</span>
+      </div>
+    </article>
+
+  </section>
+</main>
+
+<script>
+const MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+const SUN_SVG = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+const icon = document.getElementById('themeIcon');
+const label = document.getElementById('themeLabel');
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  if (theme === 'dark') {
+    icon.innerHTML = MOON_SVG;
+    icon.setAttribute('fill', 'currentColor');
+    icon.removeAttribute('stroke');
+    label.textContent = 'Dark';
+  } else {
+    icon.innerHTML = SUN_SVG;
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('fill', 'none');
+    label.textContent = 'Light';
+  }
+  localStorage.setItem('irp-theme', theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+(function() {
+  const saved = localStorage.getItem('irp-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+})();
+</script>
 </body>
 </html>"""
 
