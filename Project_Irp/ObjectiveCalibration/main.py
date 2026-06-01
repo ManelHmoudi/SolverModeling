@@ -63,8 +63,8 @@ def _build_model():
 
 def _solve_single(label, expr, mdl, vars_, objectives):
     mdl.minimize(expr)
-    mdl.parameters.timelimit = 120          # max 2 min par objectif
-    mdl.parameters.mip.tolerances.mipgap = 0.05   # gap 5% acceptable pour la calibration
+    mdl.parameters.timelimit = 120          # max 2 min per objective
+    mdl.parameters.mip.tolerances.mipgap = 0.05   # 5% gap acceptable for calibration
     solution = mdl.solve(log_output=False)
     if not solution:
         return None, None
@@ -74,7 +74,7 @@ def _solve_single(label, expr, mdl, vars_, objectives):
     periods  = sets_["T"]
     vehicles = sets_["M"]
     clients  = sets_["clients"]
-    q_lt     = params_["q_lt"]
+    q_lt    = params_["q_lt"]
 
     routes = {}
     for t in periods:

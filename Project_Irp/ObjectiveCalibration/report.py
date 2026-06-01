@@ -1,4 +1,4 @@
-"""HTML report generator for IRP calibration results."""
+﻿"""HTML report generator for IRP calibration results."""
 
 import json
 import math
@@ -12,7 +12,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRP &mdash; Tableau de Bord</title>
+<title>IRP &mdash; Dashboard</title>
 <style>
 :root {
   --bg:         #f4f4f2;
@@ -122,7 +122,7 @@ tr:last-child td{border-bottom:none}
 
 <div class="hdr">
   <div>
-    <h1>IRP &mdash; Tableau de Bord de Calibration</h1>
+    <h1>IRP &mdash; Calibration Dashboard</h1>
     <p class="meta" id="meta-line"></p>
   </div>
   <button id="tbtn" onclick="toggleTheme()">🌙</button>
@@ -130,28 +130,28 @@ tr:last-child td{border-bottom:none}
 
 <div class="kpis" id="kpi-grid"></div>
 
-<!-- Network (left) + Stock dépôt (right) -->
+<!-- Network (left) + Depot stock (right) -->
 <div class="split">
   <div class="card">
-    <div class="ct">R&#233;seau &amp; arcs actifs (i &#8594; j) &#8212; charge transport&#233;e</div>
+    <div class="ct">Network &amp; active arcs (i &#8594; j) &#8212; transported load</div>
     <div class="tabs" id="g-obj"></div>
     <div class="tabs" id="g-per"></div>
     <div id="graph"></div>
   </div>
   <div class="card">
-    <div class="ct">Stock d&#233;p&#244;t &#8212; &#233;volution par p&#233;riode</div>
+    <div class="ct">Depot stock &#8212; evolution by period</div>
     <div id="depot"></div>
   </div>
 </div>
 
 <!-- Deliveries -->
 <div class="card">
-  <div class="ct">R&#233;sum&#233; des livraisons</div>
+  <div class="ct">Delivery summary</div>
   <div class="tabs" id="d-obj"></div>
   <table>
     <thead><tr>
-      <th>Client</th><th>P&#233;riode</th><th>Camion</th>
-      <th>Re&#231;u</th><th>Demande</th><th>Statut</th>
+      <th>Client</th><th>Period</th><th>Truck</th>
+      <th>Received</th><th>Demand</th><th>Status</th>
     </tr></thead>
     <tbody id="dtbody"></tbody>
   </table>
@@ -159,7 +159,7 @@ tr:last-child td{border-bottom:none}
 
 <!-- BFR -->
 <div class="card" id="bfr-card" style="display:none">
-  <div class="ct">D&#233;tail BFR &#8212; Capital de travail (f4)</div>
+  <div class="ct">BFR detail &#8212; Working capital (f4)</div>
   <div class="bfrg" id="bfrd"></div>
 </div>
 
@@ -172,10 +172,10 @@ var BK    = ["C_max","E_max","T_max","B"];
 
 if(!OBJS||!OBJS.length){
   document.getElementById('meta-line').textContent=
-    META.n_nodes+' nœuds · '+META.n_periods+' périodes · '+META.n_vehicles+' véhicules · '+META.n_obj+' objectifs';
+    META.n_nodes+' nodes · '+META.n_periods+' periods · '+META.n_vehicles+' vehicles · '+META.n_obj+' objectives';
   document.getElementById('kpi-grid').innerHTML=
     '<div style="grid-column:1/-1;color:#a32d2d;font-weight:600;padding:.5rem 0">'+
-    'Aucune solution trouvée — le modèle est infaisable ou le solveur a échoué.</div>';
+    'No solution found — the model is infeasible or the solver failed.</div>';
   throw new Error('No solutions');
 }
 
@@ -193,7 +193,7 @@ if(localStorage.getItem('irp-theme')==='dark'){
 
 // ── Meta ─────────────────────────────────────────────────────────────────────
 document.getElementById('meta-line').textContent=
-  META.n_nodes+' nœuds · '+META.n_periods+' périodes · '+META.n_vehicles+' véhicules · '+META.n_obj+' objectifs';
+  META.n_nodes+' nodes · '+META.n_periods+' periods · '+META.n_vehicles+' vehicles · '+META.n_obj+' objectives';
 
 // ── KPI cards ─────────────────────────────────────────────────────────────────
 OBJS.forEach(function(o,i){
@@ -233,7 +233,7 @@ var OL=OBJS.map(function(o){return o.label;});
 var PL=periods.map(function(p){
   var rd=OBJS[0].routes[p];
   var Rf=(rd)?rd.R_frigo:0, Rnf=(rd)?rd.R_nonfrigo:0;
-  return 'Période '+p+' (❄️'+Rf+' 📦'+Rnf+')';
+  return 'Period '+p+' (❄️'+Rf+' 📦'+Rnf+')';
 });
 ['g-obj','d-obj'].forEach(function(id){buildTabs(id,OL,0,'',function(i){syncObj(i);});});
 buildTabs('g-per',PL,0,'period',function(i){curPer=periods[i];document.getElementById('g-per').querySelectorAll('.tab').forEach(function(t,j){t.classList.toggle('active',j===i)});renderGraph();renderDepot();});
@@ -391,7 +391,7 @@ function renderGraph(){
     if(pr.tau_return!=null){
       lgd+='<span style="font-size:11px;color:var(--text-2);padding:3px 10px;'+
            'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;white-space:nowrap">'+
-           '&#128339; Retour dépôt : '+pr.tau_return.toFixed(2)+'h</span>';
+           '&#128339; Return to depot: '+pr.tau_return.toFixed(2)+'h</span>';
     }
     pr.trucks.forEach(function(tr){
       var c=TC[(tr.k-1)%TC.length];
@@ -405,11 +405,11 @@ function renderGraph(){
     lgd+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);white-space:nowrap">'+
          '<svg width="24" height="10" style="flex-shrink:0;overflow:visible">'+
          '<line x1="1" y1="5" x2="16" y2="5" stroke="#888" stroke-width="2.2" stroke-linecap="round"/>'+
-         '<polygon points="14,2 23,5 14,8" fill="#888"/></svg>livraison</span>';
+         '<polygon points="14,2 23,5 14,8" fill="#888"/></svg>delivery</span>';
     lgd+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);white-space:nowrap">'+
          '<svg width="24" height="10" style="flex-shrink:0;overflow:visible">'+
          '<line x1="1" y1="5" x2="16" y2="5" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4,3"/>'+
-         '<polygon points="14,2 23,5 14,8" fill="#aaa" opacity="0.5"/></svg>retour dépôt</span>';
+         '<polygon points="14,2 23,5 14,8" fill="#aaa" opacity="0.5"/></svg>return to depot</span>';
   }
   lgd+='</div>';
   document.getElementById('graph').innerHTML=svg+lgd;
@@ -432,7 +432,7 @@ function renderDepot(){
         '<div class="sop">&#8722;</div>'+
         '<div class="sc sd"><span class="sl">Livr&#233;</span><span class="sv" style="font-size:16px">'+livr+'</span></div>'+
         '<div class="sop">=</div>'+
-        '<div class="sc sf" style="background:'+color+'"><span class="sl">Stock fin.</span><span class="sv" style="font-size:16px">'+fin+'</span></div>'+
+        '<div class="sc sf" style="background:'+color+'"><span class="sl">End stock</span><span class="sv" style="font-size:16px">'+fin+'</span></div>'+
       '</div></div>';
   }
 
@@ -444,8 +444,8 @@ function renderDepot(){
     var fin_nf=(stocks[t])?stocks[t].nonfrigo:'?';
 
     var html='<div class="sb"><div class="sp">P&#233;riode '+t+'</div>'+
-      stockRow('&#10052;&#65039; Frigo',   'var(--si-bg)', prev_f,  R_f,  fin_f)+
-      stockRow('&#128230; Non-frigo', '#f0f0ea',      prev_nf, R_nf, fin_nf)+
+      stockRow('&#10052;&#65039; Refrigerated',   'var(--si-bg)', prev_f,  R_f,  fin_f)+
+      stockRow('&#128230; Non-refrigerated', '#f0f0ea',      prev_nf, R_nf, fin_nf)+
       '</div>';
 
     prev_f=fin_f; prev_nf=fin_nf; return html;
@@ -456,10 +456,10 @@ function renderDepot(){
 function renderDel(){
   var dl=OBJS[curObj].deliveries;
   var el=document.getElementById('dtbody');
-  if(!dl||!dl.length){el.innerHTML='<tr><td colspan="6" class="empty">Aucune livraison.</td></tr>';return;}
+  if(!dl||!dl.length){el.innerHTML='<tr><td colspan="6" class="empty">No deliveries.</td></tr>';return;}
   el.innerHTML=dl.map(function(d){
     var ex=Math.abs(d.recu-d.dem)<0.01, an=d.recu>d.dem+0.01;
-    var st=ex?'<span class="ok">&#10003; exact</span>':an?'<span class="ante">anticipé</span>':'<span class="part">partiel</span>';
+    var st=ex?'<span class="ok">&#10003; exact</span>':an?'<span class="ante">anticipated</span>':'<span class="part">partial</span>';
     return '<tr><td>Client '+d.l+'</td><td>t='+d.t+'</td><td>k='+d.k+'</td><td><b>'+d.recu+'</b></td><td>'+d.dem+'</td><td>'+st+'</td></tr>';
   }).join('');
 }
@@ -471,10 +471,10 @@ function renderBFR(){
   card.style.display='block';
   var net=b.stock+b.receivables-b.payables;
   document.getElementById('bfrd').innerHTML=
-    '<div class="bi"><div class="bl">Stock (valeur)</div><div class="bv" style="color:#534ab7">'+b.stock.toFixed(2)+'</div></div>'+
-    '<div class="bi"><div class="bl">Créances clients</div><div class="bv" style="color:#185fa5">'+b.receivables.toFixed(2)+'</div></div>'+
-    '<div class="bi"><div class="bl">Dettes fournisseurs</div><div class="bv" style="color:#a32d2d">'+b.payables.toFixed(2)+'</div></div>'+
-    '<div class="bi" style="background:var(--sf-bg)"><div class="bl">BFR Net</div><div class="bv" style="color:var(--sf-fg)">'+net.toFixed(2)+'</div></div>';
+    '<div class="bi"><div class="bl">Stock (value)</div><div class="bv" style="color:#534ab7">'+b.stock.toFixed(2)+'</div></div>'+
+    '<div class="bi"><div class="bl">Customer receivables</div><div class="bv" style="color:#185fa5">'+b.receivables.toFixed(2)+'</div></div>'+
+    '<div class="bi"><div class="bl">Supplier payables</div><div class="bv" style="color:#a32d2d">'+b.payables.toFixed(2)+'</div></div>'+
+    '<div class="bi" style="background:var(--sf-bg)"><div class="bl">Net WCR</div><div class="bv" style="color:var(--sf-fg)">'+net.toFixed(2)+'</div></div>';
 }
 
 function renderAll(){renderGraph();renderDepot();renderDel();renderBFR();}

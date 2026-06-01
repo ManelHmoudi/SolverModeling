@@ -7,7 +7,8 @@
       "Read(//c/Program Files/IBM/ILOG/CPLEX_Studio222/cplex/bin/**)",
       "Bash(Select-String \"cplex\")",
       "Bash(docplex config *)",
-      "Bash(.venv\\\\Scripts\\\\pip install *)"
+      "Bash(.venv\\\\Scripts\\\\pip install *)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Mariem\\\\OneDrive\\\\Bureau\\\\SolverModeling\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(py|cs|vb|js|ts|jsx|tsx|java|cpp|c|h|php|rb|go|rs|m|swift|kt\\)$' } | Measure-Object | Select-Object -ExpandProperty Count)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Mariem\\OneDrive\\Bureau\\SolverModeling\\docs"
