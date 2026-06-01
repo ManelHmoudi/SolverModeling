@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IRP &mdash; Function Merge</title>
+<style>
+:root {
+  --bg:        #f4f4f2;
+  --surface:   #ffffff;
+  --border:    #e5e5e3;
+  --text:      #1a1a18;
+  --text-2:    #888;
+  --tab-bg:    #ececea;
+  --row-bg:    #f4f4f2;
+  --mesh:      #e0e0dd;
+  --node-surf: #ffffff;
+  --f1-bg:#e6f1fb; --f1-fg:#185fa5;
+  --f2-bg:#e8f5e2; --f2-fg:#3b6d11;
+  --f3-bg:#fdecea; --f3-fg:#a32d2d;
+  --f4-bg:#eeedfe; --f4-fg:#534ab7;
+  --cx-bg:#fff8e1; --cx-fg:#7a5800;
+}
+[data-dark] {
+  --bg:        #111113;
+  --surface:   #1c1c20;
+  --border:    #2c2c34;
+  --text:      #ededed;
+  --text-2:    #777;
+  --tab-bg:    #232328;
+  --row-bg:    #222226;
+  --mesh:      #252528;
+  --node-surf: #1c1c20;
+  --f1-bg:#1a2a3d; --f1-fg:#6aaae8;
+  --f2-bg:#1a2e1a; --f2-fg:#6abd52;
+  --f3-bg:#2e1a1a; --f3-fg:#e06060;
+  --f4-bg:#2e2b52; --f4-fg:#9f9cf5;
+  --cx-bg:#2a2210; --cx-fg:#f0c040;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  padding:1.25rem 1.75rem;font-size:14px;line-height:1.5;
+  transition:background .2s,color .2s;
+}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem}
+.hdr h1{font-size:20px;font-weight:700;letter-spacing:-.015em}
+.hdr .meta{color:var(--text-2);font-size:12px;margin-top:3px}
+#tbtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:15px;color:var(--text);transition:background .15s}
+#tbtn:hover{background:var(--tab-bg)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.25rem;margin-bottom:1.1rem}
+.ct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--text-2);margin-bottom:.9rem}
+/* KPI grid */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.1rem}
+@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:560px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{border-radius:10px;padding:.9rem 1.1rem;border:1px solid var(--border)}
+.kpi.f1{background:var(--f1-bg)}
+.kpi.f2{background:var(--f2-bg)}
+.kpi.f3{background:var(--f3-bg)}
+.kpi.f4{background:var(--f4-bg)}
+.kpi.cx{background:var(--cx-bg)}
+.kl{font-size:11px;margin-bottom:5px}
+.kpi.f1 .kl{color:var(--f1-fg)}
+.kpi.f2 .kl{color:var(--f2-fg)}
+.kpi.f3 .kl{color:var(--f3-fg)}
+.kpi.f4 .kl{color:var(--f4-fg)}
+.kpi.cx .kl{color:var(--cx-fg)}
+.kv{font-size:21px;font-weight:700;line-height:1;margin-bottom:3px;color:var(--text)}
+.ku{font-size:11px;color:var(--text-2)}
+/* Split layout */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+/* Period tabs */
+.tabs{display:flex;gap:5px;margin-bottom:.85rem;flex-wrap:wrap}
+.tab{padding:4px 12px;border-radius:7px;font-size:11px;cursor:pointer;
+  border:1px solid var(--border);background:var(--tab-bg);color:var(--text-2);
+  transition:background .15s,color .15s,border-color .15s;white-space:nowrap}
+.tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+/* SVG container */
+.svgwrap{position:relative;overflow:hidden;border-radius:8px;background:var(--bg);
+  border:1px solid var(--border)}
+.svgwrap svg{display:block;width:100%;height:auto}
+/* Delivery table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2)}
+td{padding:5px 8px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:var(--row-bg)}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.ok{background:var(--f2-bg);color:var(--f2-fg)}
+.partial{background:var(--cx-bg);color:var(--cx-fg)}
+.none{background:var(--f3-bg);color:var(--f3-fg)}
+/* BFR detail */
+.bfr-row{display:flex;justify-content:space-between;padding:5px 0;
+  border-bottom:1px solid var(--border);font-size:13px}
+.bfr-row:last-child{border:none;font-weight:700}
+.bfr-label{color:var(--text-2)}
+/* Formula note */
+.formula{font-size:11px;color:var(--text-2);margin-top:.5rem;padding-top:.5rem;
+  border-top:1px solid var(--border)}
+/* Stock equation blocks (calibration style) */
+.sb{margin-bottom:1rem}
+.sp{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:.6rem}
+.seq{display:flex;align-items:stretch;flex-wrap:wrap;gap:2px}
+.sc{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 14px;border-radius:9px;min-width:70px;text-align:center;flex:1}
+.sl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;opacity:.75}
+.sv{font-size:17px;font-weight:700;line-height:1}
+.sop{display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;color:var(--text-2);padding:0 4px;flex-shrink:0}
+.si{background:var(--f1-bg);color:var(--f1-fg)}
+.sr{background:var(--f2-bg);color:var(--f2-fg)}
+.sd{background:var(--f3-bg);color:var(--f3-fg)}
+.sf{background:var(--f4-bg);color:var(--f4-fg)}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hdr">
+  <div>
+    <h1>IRP &mdash; Function Merge</h1>
+    <div class="meta" id="metaLine"></div>
+  </div>
+  <button id="tbtn" onclick="toggleDark()" title="Toggle theme">&#9680;</button>
+</div>
+
+<!-- KPI row -->
+<div class="kpis" id="kpiRow"></div>
+
+<!-- Network + Depot stock -->
+<div class="split">
+  <div class="card">
+    <div class="ct">Route network</div>
+    <div class="tabs" id="periodTabs"></div>
+    <div class="svgwrap" id="svgWrap"></div>
+  </div>
+  <div class="card">
+    <div class="ct">Depot stock evolution</div>
+    <div id="depotTable"></div>
+  </div>
+</div>
+
+<!-- Deliveries -->
+<div class="card">
+  <div class="ct">Deliveries per client &amp; period</div>
+  <div id="delivTable"></div>
+</div>
+
+<!-- BFR breakdown -->
+<div class="card">
+  <div class="ct">Working capital breakdown (f4)</div>
+  <div id="bfrDetail"></div>
+</div>
+
+</main>
+<script>
+const D = {"meta": {"model_name": "IRP_FunctionMerge", "n_nodes": 16, "n_periods": 10, "n_vehicles": 10, "I_O_init_frigo": 300, "I_O_init_nonfrigo": 250, "node_positions": {"0": [123, 340], "1": [649, 74], "2": [804, 97], "3": [932, 162], "4": [1011, 258], "5": [1028, 367], "6": [979, 472], "7": [873, 554], "8": [728, 599], "9": [570, 599], "10": [425, 554], "11": [319, 472], "12": [270, 367], "13": [287, 258], "14": [366, 162], "15": [494, 97]}}, "objectives": {"f1": 9510.18, "f2": 1508.3566, "f3": 156.3333, "f4": 1398.5342, "composite": 9776.3357}, "routes": {"1": {"R": 344, "R_frigo": 196, "R_nonfrigo": 148, "tau_return": 5.1667, "trucks": [{"k": 1, "path": [0, 1, 11], "qty": {"1": 18.0, "11": 68.0}}, {"k": 2, "path": [0, 2, 7], "qty": {"2": 25.0, "7": 37.0}}, {"k": 3, "path": [0, 13], "qty": {"13": 54.0}}, {"k": 4, "path": [0, 4, 9], "qty": {"4": 20.0, "9": 34.0}}, {"k": 5, "path": [0, 15], "qty": {"15": 66.0}}, {"k": 6, "path": [0, 6], "qty": {"6": 63.0}}, {"k": 7, "path": [0, 12], "qty": {"12": 38.0}}, {"k": 8, "path": [0, 3, 8], "qty": {"3": 15.0, "8": 52.0}}, {"k": 9, "path": [0, 14], "qty": {"14": 67.0}}, {"k": 10, "path": [0, 5, 10], "qty": {"5": 26.0, "10": 40.0}}], "shipped": 623.0}, "2": {"R": 357, "R_frigo": 186, "R_nonfrigo": 171, "tau_return": 5.75, "trucks": [{"k": 1, "path": [0, 1], "qty": {"1": 20.0}}, {"k": 2, "path": [0, 2, 7, 12], "qty": {"2": 22.0, "7": 32.0, "12": 46.0}}, {"k": 3, "path": [0, 3, 8], "qty": {"3": 35.0, "8": 51.0}}, {"k": 4, "path": [0, 14], "qty": {"14": 61.0}}, {"k": 8, "path": [0, 13], "qty": {"13": 62.0}}, {"k": 9, "path": [0, 4, 9], "qty": {"4": 22.0, "9": 32.0}}, {"k": 10, "path": [0, 10, 15], "qty": {"10": 39.0, "15": 41.0}}], "shipped": 463.0}, "3": {"R": 382, "R_frigo": 166, "R_nonfrigo": 216, "tau_return": 5.25, "trucks": [{"k": 2, "path": [0, 2], "qty": {"2": 28.0}}, {"k": 4, "path": [0, 4, 9], "qty": {"4": 41.0, "9": 59.0}}, {"k": 5, "path": [0, 5], "qty": {"5": 41.0}}, {"k": 6, "path": [0, 1, 6, 11], "qty": {"1": 22.0, "6": 20.0, "11": 38.0}}, {"k": 8, "path": [0, 3], "qty": {"3": 16.0}}], "shipped": 265.0}, "4": {"R": 346, "R_frigo": 219, "R_nonfrigo": 127, "tau_return": 4.5, "trucks": [{"k": 1, "path": [0, 1, 11], "qty": {"1": 19.0, "11": 65.0}}, {"k": 2, "path": [0, 2], "qty": {"2": 24.0}}, {"k": 5, "path": [0, 10, 15], "qty": {"10": 56.0, "15": 44.0}}, {"k": 6, "path": [0, 6], "qty": {"6": 53.0}}, {"k": 7, "path": [0, 7], "qty": {"7": 48.0}}, {"k": 9, "path": [0, 4], "qty": {"4": 45.0}}, {"k": 10, "path": [0, 5], "qty": {"5": 43.0}}], "shipped": 397.0}, "5": {"R": 365, "R_frigo": 131, "R_nonfrigo": 234, "tau_return": 5.4167, "trucks": [{"k": 1, "path": [0, 1, 6], "qty": {"1": 21.0, "6": 29.0}}, {"k": 2, "path": [0, 7, 12], "qty": {"7": 22.0, "12": 43.0}}, {"k": 6, "path": [0, 11], "qty": {"11": 36.0}}, {"k": 7, "path": [0, 2], "qty": {"2": 26.0}}, {"k": 8, "path": [0, 3, 13], "qty": {"3": 31.0, "13": 49.0}}, {"k": 9, "path": [0, 9, 14], "qty": {"9": 33.0, "14": 33.0}}, {"k": 10, "path": [0, 10], "qty": {"10": 80.0}}], "shipped": 403.0}, "6": {"R": 351, "R_frigo": 215, "R_nonfrigo": 136, "tau_return": 5.0833, "trucks": [{"k": 2, "path": [0, 2, 7], "qty": {"2": 50.0, "7": 50.0}}, {"k": 3, "path": [0, 3], "qty": {"3": 19.0}}, {"k": 4, "path": [0, 9, 14], "qty": {"9": 36.0, "14": 64.0}}, {"k": 6, "path": [0, 1], "qty": {"1": 17.0}}, {"k": 8, "path": [0, 8, 13], "qty": {"8": 38.0, "13": 42.0}}], "shipped": 316.0}, "7": {"R": 377, "R_frigo": 215, "R_nonfrigo": 162, "tau_return": 5.1667, "trucks": [{"k": 1, "path": [0, 1, 11], "qty": {"1": 23.0, "11": 63.0}}, {"k": 3, "path": [0, 13], "qty": {"13": 61.0}}, {"k": 4, "path": [0, 4, 9], "qty": {"4": 46.0, "9": 54.0}}, {"k": 6, "path": [0, 6], "qty": {"6": 77.0}}, {"k": 7, "path": [0, 12], "qty": {"12": 45.0}}, {"k": 9, "path": [0, 14], "qty": {"14": 58.0}}], "shipped": 427.0}, "8": {"R": 376, "R_frigo": 164, "R_nonfrigo": 212, "tau_return": 5.75, "trucks": [{"k": 1, "path": [0, 1], "qty": {"1": 20.0}}, {"k": 2, "path": [0, 2, 12], "qty": {"2": 25.0, "12": 42.0}}, {"k": 3, "path": [0, 3], "qty": {"3": 32.0}}, {"k": 6, "path": [0, 6, 11], "qty": {"6": 6.0, "11": 74.0}}, {"k": 9, "path": [0, 4, 9], "qty": {"4": 41.0, "9": 35.0}}, {"k": 10, "path": [0, 5, 15], "qty": {"5": 25.0, "15": 43.0}}], "shipped": 343.0}, "9": {"R": 337, "R_frigo": 174, "R_nonfrigo": 163, "tau_return": 5.5833, "trucks": [{"k": 2, "path": [0, 2, 7], "qty": {"2": 22.0, "7": 46.0}}, {"k": 6, "path": [0, 1], "qty": {"1": 18.0}}, {"k": 8, "path": [0, 3, 8, 13], "qty": {"3": 18.0, "8": 34.0, "13": 26.0}}, {"k": 10, "path": [0, 10], "qty": {"10": 57.0}}], "shipped": 221.0}, "10": {"R": 368, "R_frigo": 185, "R_nonfrigo": 183, "tau_return": 4.25, "trucks": [{"k": 1, "path": [0, 1, 6], "qty": {"1": 22.0, "6": 29.0}}, {"k": 4, "path": [0, 9, 14], "qty": {"9": 33.0, "14": 33.0}}, {"k": 7, "path": [0, 2], "qty": {"2": 28.0}}], "shipped": 145.0}}, "deliveries": [{"l": 1, "t": 1, "k": 1, "recu": 18.0, "dem": 18}, {"l": 1, "t": 2, "k": 1, "recu": 20.0, "dem": 20}, {"l": 1, "t": 3, "k": 6, "recu": 22.0, "dem": 22}, {"l": 1, "t": 4, "k": 1, "recu": 19.0, "dem": 19}, {"l": 1, "t": 5, "k": 1, "recu": 21.0, "dem": 21}, {"l": 1, "t": 6, "k": 6, "recu": 17.0, "dem": 17}, {"l": 1, "t": 7, "k": 1, "recu": 23.0, "dem": 23}, {"l": 1, "t": 8, "k": 1, "recu": 20.0, "dem": 20}, {"l": 1, "t": 9, "k": 6, "recu": 18.0, "dem": 18}, {"l": 1, "t": 10, "k": 1, "recu": 22.0, "dem": 22}, {"l": 2, "t": 1, "k": 2, "recu": 25.0, "dem": 25}, {"l": 2, "t": 2, "k": 2, "recu": 22.0, "dem": 22}, {"l": 2, "t": 3, "k": 2, "recu": 28.0, "dem": 28}, {"l": 2, "t": 4, "k": 2, "recu": 24.0, "dem": 24}, {"l": 2, "t": 5, "k": 7, "recu": 26.0, "dem": 26}, {"l": 2, "t": 6, "k": 2, "recu": 50.0, "dem": 23}, {"l": 2, "t": 8, "k": 2, "recu": 25.0, "dem": 25}, {"l": 2, "t": 9, "k": 2, "recu": 22.0, "dem": 22}, {"l": 2, "t": 10, "k": 7, "recu": 28.0, "dem": 28}, {"l": 3, "t": 1, "k": 8, "recu": 15.0, "dem": 15}, {"l": 3, "t": 2, "k": 3, "recu": 35.0, "dem": 17}, {"l": 3, "t": 3, "k": 8, "recu": 16.0, "dem": 16}, {"l": 3, "t": 5, "k": 8, "recu": 31.0, "dem": 15}, {"l": 3, "t": 6, "k": 3, "recu": 19.0, "dem": 19}, {"l": 3, "t": 8, "k": 3, "recu": 32.0, "dem": 17}, {"l": 3, "t": 9, "k": 8, "recu": 18.0, "dem": 18}, {"l": 4, "t": 1, "k": 4, "recu": 20.0, "dem": 20}, {"l": 4, "t": 2, "k": 9, "recu": 22.0, "dem": 22}, {"l": 4, "t": 3, "k": 4, "recu": 41.0, "dem": 21}, {"l": 4, "t": 4, "k": 9, "recu": 45.0, "dem": 23}, {"l": 4, "t": 7, "k": 4, "recu": 46.0, "dem": 24}, {"l": 4, "t": 8, "k": 9, "recu": 41.0, "dem": 21}, {"l": 5, "t": 1, "k": 10, "recu": 26.0, "dem": 12}, {"l": 5, "t": 3, "k": 5, "recu": 41.0, "dem": 13}, {"l": 5, "t": 4, "k": 10, "recu": 43.0, "dem": 15}, {"l": 5, "t": 8, "k": 10, "recu": 25.0, "dem": 13}, {"l": 6, "t": 1, "k": 6, "recu": 63.0, "dem": 28}, {"l": 6, "t": 3, "k": 6, "recu": 20.0, "dem": 30}, {"l": 6, "t": 4, "k": 6, "recu": 53.0, "dem": 27}, {"l": 6, "t": 5, "k": 1, "recu": 29.0, "dem": 29}, {"l": 6, "t": 7, "k": 6, "recu": 77.0, "dem": 30}, {"l": 6, "t": 8, "k": 6, "recu": 6.0, "dem": 28}, {"l": 6, "t": 10, "k": 1, "recu": 29.0, "dem": 29}, {"l": 7, "t": 1, "k": 2, "recu": 37.0, "dem": 22}, {"l": 7, "t": 2, "k": 2, "recu": 32.0, "dem": 24}, {"l": 7, "t": 4, "k": 7, "recu": 48.0, "dem": 25}, {"l": 7, "t": 5, "k": 2, "recu": 22.0, "dem": 22}, {"l": 7, "t": 6, "k": 2, "recu": 50.0, "dem": 24}, {"l": 7, "t": 9, "k": 2, "recu": 46.0, "dem": 24}, {"l": 8, "t": 1, "k": 8, "recu": 52.0, "dem": 16}, {"l": 8, "t": 2, "k": 3, "recu": 51.0, "dem": 18}, {"l": 8, "t": 6, "k": 8, "recu": 38.0, "dem": 18}, {"l": 8, "t": 9, "k": 8, "recu": 34.0, "dem": 18}, {"l": 9, "t": 1, "k": 4, "recu": 34.0, "dem": 30}, {"l": 9, "t": 2, "k": 9, "recu": 32.0, "dem": 32}, {"l": 9, "t": 3, "k": 4, "recu": 59.0, "dem": 35}, {"l": 9, "t": 5, "k": 9, "recu": 33.0, "dem": 33}, {"l": 9, "t": 6, "k": 4, "recu": 36.0, "dem": 30}, {"l": 9, "t": 7, "k": 4, "recu": 54.0, "dem": 32}, {"l": 9, "t": 8, "k": 9, "recu": 35.0, "dem": 35}, {"l": 9, "t": 10, "k": 4, "recu": 33.0, "dem": 33}, {"l": 10, "t": 1, "k": 10, "recu": 40.0, "dem": 25}, {"l": 10, "t": 2, "k": 10, "recu": 39.0, "dem": 28}, {"l": 10, "t": 4, "k": 5, "recu": 56.0, "dem": 30}, {"l": 10, "t": 5, "k": 10, "recu": 80.0, "dem": 27}, {"l": 10, "t": 9, "k": 10, "recu": 57.0, "dem": 30}, {"l": 11, "t": 1, "k": 1, "recu": 68.0, "dem": 35}, {"l": 11, "t": 3, "k": 6, "recu": 38.0, "dem": 38}, {"l": 11, "t": 4, "k": 1, "recu": 65.0, "dem": 30}, {"l": 11, "t": 5, "k": 6, "recu": 36.0, "dem": 36}, {"l": 11, "t": 7, "k": 1, "recu": 63.0, "dem": 33}, {"l": 11, "t": 8, "k": 6, "recu": 74.0, "dem": 38}, {"l": 12, "t": 1, "k": 7, "recu": 38.0, "dem": 20}, {"l": 12, "t": 2, "k": 2, "recu": 46.0, "dem": 22}, {"l": 12, "t": 5, "k": 2, "recu": 43.0, "dem": 23}, {"l": 12, "t": 7, "k": 7, "recu": 45.0, "dem": 22}, {"l": 12, "t": 8, "k": 2, "recu": 42.0, "dem": 24}, {"l": 13, "t": 1, "k": 3, "recu": 54.0, "dem": 28}, {"l": 13, "t": 2, "k": 8, "recu": 62.0, "dem": 30}, {"l": 13, "t": 5, "k": 8, "recu": 49.0, "dem": 31}, {"l": 13, "t": 6, "k": 8, "recu": 42.0, "dem": 28}, {"l": 13, "t": 7, "k": 3, "recu": 61.0, "dem": 30}, {"l": 13, "t": 9, "k": 8, "recu": 26.0, "dem": 26}, {"l": 14, "t": 1, "k": 9, "recu": 67.0, "dem": 32}, {"l": 14, "t": 2, "k": 4, "recu": 61.0, "dem": 30}, {"l": 14, "t": 5, "k": 9, "recu": 33.0, "dem": 33}, {"l": 14, "t": 6, "k": 4, "recu": 64.0, "dem": 32}, {"l": 14, "t": 7, "k": 9, "recu": 58.0, "dem": 30}, {"l": 14, "t": 10, "k": 4, "recu": 33.0, "dem": 33}, {"l": 15, "t": 1, "k": 5, "recu": 66.0, "dem": 18}, {"l": 15, "t": 2, "k": 10, "recu": 41.0, "dem": 20}, {"l": 15, "t": 4, "k": 5, "recu": 44.0, "dem": 16}, {"l": 15, "t": 8, "k": 10, "recu": 43.0, "dem": 22}], "depot_stock": {"1": {"frigo": 174.0, "nonfrigo": 97.0}, "2": {"frigo": 93.0, "nonfrigo": 72.0}, "3": {"frigo": 90.0, "nonfrigo": 192.0}, "4": {"frigo": 101.0, "nonfrigo": 130.0}, "5": {"frigo": 117.0, "nonfrigo": 76.0}, "6": {"frigo": 113.0, "nonfrigo": 115.0}, "7": {"frigo": 81.0, "nonfrigo": 97.0}, "8": {"frigo": 126.0, "nonfrigo": 85.0}, "9": {"frigo": 232.0, "nonfrigo": 95.0}, "10": {"frigo": 300.0, "nonfrigo": 250.0}}, "bfr_sub": {"stock": 1083.2877, "receivables": 2536.274, "payables": 2221.0274}};
+
+/* ── Theme ─────────────────────────────────────────────────────────────── */
+function toggleDark(){
+  const on = document.documentElement.toggleAttribute('data-dark');
+  localStorage.setItem('fm-dark', on ? '1' : '');
+  renderNetwork(currentPeriod);
+}
+(function(){
+  if(localStorage.getItem('fm-dark')==='1')
+    document.documentElement.setAttribute('data-dark','');
+})();
+
+/* ── Vehicle colours ────────────────────────────────────────────────────── */
+const TRUCK_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
+function truckColor(k){ return TRUCK_COLORS[(k-1) % TRUCK_COLORS.length]; }
+
+/* ── Meta header ────────────────────────────────────────────────────────── */
+function renderMeta(){
+  const m = D.meta;
+  document.getElementById('metaLine').textContent =
+    `${m.model_name}  ·  ${m.n_nodes} nodes  ·  ${m.n_periods} periods  ·  ${m.n_vehicles} vehicles`;
+}
+
+/* ── KPI row ────────────────────────────────────────────────────────────── */
+function renderKPIs(){
+  const o  = D.objectives;
+  const defs = [
+    {cls:'f1', label:'f1 — Logistics cost',   val:o.f1, unit:'cost units'},
+    {cls:'f2', label:'f2 — CO₂ emissions',    val:o.f2, unit:'kg CO₂'},
+    {cls:'f3', label:'f3 — Travel time',      val:o.f3, unit:'hours'},
+    {cls:'f4', label:'f4 — Working capital',  val:o.f4, unit:'currency  (↑ max)'},
+    {cls:'cx', label:'Composite  f1+f2+f3−f4',val:o.composite, unit:'scalarised objective'},
+  ];
+  const row = document.getElementById('kpiRow');
+  row.innerHTML = defs.map(d => `
+    <div class="kpi ${d.cls}">
+      <div class="kl">${d.label}</div>
+      <div class="kv">${fmt(d.val)}</div>
+      <div class="ku">${d.unit}</div>
+    </div>`).join('');
+}
+
+function fmt(v){
+  if(v===null||v===undefined) return '—';
+  const av = Math.abs(v);
+  if(av>=1e6)  return (v/1e6).toFixed(2)+'M';
+  if(av>=1e3)  return (v/1e3).toFixed(2)+'k';
+  return v.toFixed ? v.toFixed(3) : v;
+}
+
+/* ── Period tabs ────────────────────────────────────────────────────────── */
+let currentPeriod = null;
+
+function renderPeriodTabs(){
+  const periods = Object.keys(D.routes).map(Number).sort((a,b)=>a-b);
+  currentPeriod = periods[0];
+  const wrap = document.getElementById('periodTabs');
+  wrap.innerHTML = periods.map(t =>
+    `<div class="tab${t===currentPeriod?' active':''}" onclick="selectPeriod(${t})">Period ${t}</div>`
+  ).join('');
+}
+
+function selectPeriod(t){
+  currentPeriod = t;
+  document.querySelectorAll('#periodTabs .tab').forEach(el=>{
+    el.classList.toggle('active', el.textContent===`Period ${t}`);
+  });
+  renderNetwork(t);
+}
+
+/* ── Network SVG ────────────────────────────────────────────────────────── */
+function renderNetwork(t){
+  const pos   = D.meta.node_positions;
+  const nodes = Object.keys(pos).map(Number);
+  const period = D.routes[String(t)];
+  const trucks = period ? period.trucks : [];
+
+  // Infer SVG size from positions
+  let maxX=0, maxY=0;
+  nodes.forEach(n => {
+    maxX = Math.max(maxX, pos[String(n)][0]);
+    maxY = Math.max(maxY, pos[String(n)][1]);
+  });
+  const W = maxX + 60, H = maxY + 50;
+
+  const isDark = document.documentElement.hasAttribute('data-dark');
+  const nodeFill   = isDark ? '#1c1c20' : '#ffffff';
+  const nodeStroke = isDark ? '#8494ab' : '#555';
+  const textFill   = isDark ? '#ededed' : '#1a1a18';
+  const meshFill   = isDark ? '#252528' : '#e0e0dd';
+  const depotFill  = isDark ? '#4ab0cc' : '#1a6f8a';
+
+  let arcs = '';
+  const seen = new Set();
+
+  trucks.forEach(tr => {
+    const col = truckColor(tr.k);
+    const path = tr.path;
+    for(let i=0; i<path.length-1; i++){
+      const a = path[i], b = path[i+1];
+      const key = `${a}-${b}`;
+      if(seen.has(key)) return;
+      seen.add(key);
+      const [x1,y1] = pos[String(a)];
+      const [x2,y2] = pos[String(b)];
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const dx = x2-x1, dy = y2-y1;
+      const nx = -dy, ny = dx;
+      const len = Math.sqrt(nx*nx+ny*ny)||1;
+      const bend = 22;
+      const cx = mx + (nx/len)*bend, cy = my + (ny/len)*bend;
+
+      const delivered = tr.qty && tr.qty[String(b)] ? tr.qty[String(b)] : null;
+      const labelTxt  = delivered !== null ? String(delivered) : '';
+
+      // arrow marker id per truck
+      const mid = `arr${tr.k}`;
+      arcs += `<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}"
+        fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round"
+        marker-end="url(#${mid})" opacity="0.82"/>`;
+      if(labelTxt){
+        arcs += `<text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="9"
+          fill="${col}" font-weight="600">${labelTxt}</text>`;
+      }
+    }
+    // return to depot (dashed)
+    if(path.length>0){
+      const last = path[path.length-1];
+      if(last !== 0){
+        const [x1,y1] = pos[String(last)];
+        const [x2,y2] = pos['0'];
+        const mx=(x1+x2)/2, my=(y1+y2)/2;
+        const dx=x2-x1, dy=y2-y1;
+        const nx=-dy, ny=dx;
+        const len=Math.sqrt(nx*nx+ny*ny)||1;
+        const bend=18;
+        const cx=mx+(nx/len)*bend, cy=my+(ny/len)*bend;
+        arcs += `<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}"
+          fill="none" stroke="${col}" stroke-width="1.4" stroke-dasharray="5,3"
+          opacity="0.5"/>`;
+      }
+    }
+  });
+
+  // Defs for arrowheads per truck colour
+  const defs = trucks.map(tr => {
+    const col = truckColor(tr.k);
+    return `<marker id="arr${tr.k}" markerWidth="7" markerHeight="7"
+      refX="5" refY="3.5" orient="auto">
+      <polygon points="0 0,7 3.5,0 7" fill="${col}" opacity="0.85"/>
+    </marker>`;
+  }).join('');
+
+  // Nodes
+  const nodesSvg = nodes.map(n => {
+    const [x,y] = pos[String(n)];
+    const isDepot = (n===0);
+    const r = isDepot ? 17 : 14;
+    const fill = isDepot ? depotFill : nodeFill;
+    const stroke = isDepot ? depotFill : nodeStroke;
+    const tFill  = isDepot ? '#fff' : textFill;
+    const label  = isDepot ? 'D' : String(n);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.8"/>
+      <text x="${x}" y="${y+4}" text-anchor="middle" font-size="${isDepot?11:10}"
+        font-weight="700" fill="${tFill}">${label}</text>`;
+  }).join('');
+
+  const svgStr = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs>${defs}</defs>
+    <rect width="${W}" height="${H}" fill="${isDark?'#111113':'#f4f4f2'}"/>
+    ${arcs}
+    ${nodesSvg}
+  </svg>`;
+
+  // HTML legend below SVG
+  let lgd = '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;align-items:center">';
+  if(trucks.length > 0){
+    const pr = D.routes[String(t)];
+    if(pr && pr.tau_return != null){
+      lgd += `<span style="font-size:11px;color:var(--text-2);padding:3px 10px;
+        background:var(--row-bg);border:1px solid var(--border);border-radius:99px;white-space:nowrap">
+        &#128339; Return: ${pr.tau_return.toFixed(2)}h</span>`;
+    }
+    trucks.forEach(tr => {
+      const c = truckColor(tr.k);
+      lgd += `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;
+        background:var(--row-bg);border:1px solid var(--border);border-radius:99px;font-size:11px;white-space:nowrap">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>
+        <b style="color:var(--text)">k=${tr.k}</b></span>`;
+    });
+  }
+  lgd += '</div>';
+
+  document.getElementById('svgWrap').innerHTML = svgStr + lgd;
+}
+
+/* ── Depot stock (equation style) ────────────────────────────────────────── */
+function renderDepotTable(){
+  const stock = D.depot_stock;
+  const periods = Object.keys(stock).map(Number).sort((a,b)=>a-b);
+  let prevF = D.meta.I_O_init_frigo, prevNF = D.meta.I_O_init_nonfrigo;
+
+  function stockRow(label, prev, R, fin){
+    const livr = (typeof prev==='number' && typeof R==='number' && typeof fin==='number')
+      ? Math.round((prev + R - fin)*100)/100 : '?';
+    return `<div style="margin-bottom:6px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-2);margin-bottom:3px">${label}</div>
+      <div class="seq">
+        <div class="sc si"><span class="sl">Init.</span><span class="sv">${prev}</span></div>
+        <div class="sop">+</div>
+        <div class="sc sr"><span class="sl">Replen.</span><span class="sv">${R}</span></div>
+        <div class="sop">&#8722;</div>
+        <div class="sc sd"><span class="sl">Delivered</span><span class="sv">${livr}</span></div>
+        <div class="sop">=</div>
+        <div class="sc sf"><span class="sl">End stock</span><span class="sv">${fin}</span></div>
+      </div></div>`;
+  }
+
+  document.getElementById('depotTable').innerHTML = periods.map(t => {
+    const s = stock[String(t)];
+    const r = D.routes[String(t)] || {};
+    const rf = r.R_frigo||0, rnf = r.R_nonfrigo||0;
+    const finF = s ? s.frigo : '?', finNF = s ? s.nonfrigo : '?';
+    const html = `<div class="sb">
+      <div class="sp">Period ${t}</div>
+      ${stockRow('&#10052;&#65039; Refrigerated', prevF, rf, finF)}
+      ${stockRow('&#128230; Non-refrigerated', prevNF, rnf, finNF)}
+    </div>`;
+    prevF = finF; prevNF = finNF;
+    return html;
+  }).join('');
+}
+
+/* ── Deliveries table ───────────────────────────────────────────────────── */
+function renderDelivTable(){
+  const rows = D.deliveries.map(d => {
+    const ratio = d.dem>0 ? d.recu/d.dem : 1;
+    const badge = ratio>=0.999 ? '<span class="badge ok">Full</span>'
+                : ratio>0.001  ? `<span class="badge partial">${(ratio*100).toFixed(0)}%</span>`
+                               : '<span class="badge none">None</span>';
+    return `<tr>
+      <td>Client ${d.l}</td>
+      <td>t=${d.t}</td>
+      <td><span style="color:${truckColor(d.k)};font-weight:600">Truck ${d.k}</span></td>
+      <td>${d.recu}</td>
+      <td>${d.dem}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('delivTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Client</th><th>Period</th><th>Vehicle</th>
+        <th>Delivered</th><th>Demand</th><th>Status</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ── BFR breakdown ──────────────────────────────────────────────────────── */
+function renderBFR(){
+  const b = D.bfr_sub;
+  const net = (b.stock + b.receivables - b.payables).toFixed(4);
+  document.getElementById('bfrDetail').innerHTML = `
+    <div class="bfr-row">
+      <span class="bfr-label">Stock value  (I × P_purchase × DIO/365)</span>
+      <span>${b.stock}</span>
+    </div>
+    <div class="bfr-row">
+      <span class="bfr-label">+ Accounts receivable  (q × P_sale × DSO/365)</span>
+      <span>${b.receivables}</span>
+    </div>
+    <div class="bfr-row">
+      <span class="bfr-label">− Accounts payable  (q × P_purchase × DPO/365)</span>
+      <span>−${b.payables}</span>
+    </div>
+    <div class="bfr-row">
+      <span>f4 = BFR</span>
+      <span>${net}</span>
+    </div>
+    <p class="formula">Scalarization: minimize f1 + f2 + f3 − f4 &nbsp;(f4 maximised by negation)</p>`;
+}
+
+/* ── Boot ───────────────────────────────────────────────────────────────── */
+renderMeta();
+renderKPIs();
+renderPeriodTabs();
+renderNetwork(currentPeriod);
+renderDepotTable();
+renderDelivTable();
+renderBFR();
+</script>
+</body>
+</html>

@@ -11,6 +11,7 @@ from html import escape
 from flask import Flask, redirect, render_template_string, send_file, url_for
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
+from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -323,17 +324,18 @@ body {
       </div>
     </article>
 
-    <article class="module">
+    <article class="module available">
       <div class="card-body">
         <div class="card-meta">
           <span class="module-num">02</span>
-          <span class="status-tag soon">Coming soon</span>
+          <span class="status-tag active">Active</span>
         </div>
-        <h2 class="card-title">Module 2</h2>
-        <p class="card-desc">Reserved for the next IRP workflow.</p>
+        <h2 class="card-title">Function Merge</h2>
+        <p class="card-desc">Solve all four objectives together in one run: minimise f1 (cost), f2 (CO₂), f3 (time) and maximise f4 (working capital) via a single scalarised CPLEX solve.</p>
       </div>
       <div class="card-footer">
-        <span class="button disabled">Unavailable</span>
+        <a class="button primary" href="{{ url_for('run_function_merge_route') }}">Run module</a>
+        <a class="button secondary" href="{{ url_for('function_merge_report') }}">Last report</a>
       </div>
     </article>
 
@@ -413,6 +415,27 @@ def objective_calibration_report():
         if not os.path.exists(DEFAULT_REPORT_PATH):
             run_objective_calibration()
         return send_file(DEFAULT_REPORT_PATH)
+    except Exception:
+        return render_error(traceback.format_exc()), 500
+
+
+@app.route("/function-merge/run")
+def run_function_merge_route():
+    try:
+        run_function_merge()
+        return redirect(url_for("function_merge_report"))
+    except Exception:
+        tb = traceback.format_exc()
+        print(tb, flush=True)
+        return render_error(tb), 500
+
+
+@app.route("/function-merge/report")
+def function_merge_report():
+    try:
+        if not os.path.exists(FM_REPORT_PATH):
+            run_function_merge()
+        return send_file(FM_REPORT_PATH)
     except Exception:
         return render_error(traceback.format_exc()), 500
 

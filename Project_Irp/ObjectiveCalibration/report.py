@@ -250,156 +250,93 @@ if (isLarge) {
   if (splitEl) splitEl.classList.add('stacked');
 }
 
-function getR(n){return n===0?22:18;}
-
-// Compute outward direction from depot for node label placement
-function labelPos(n){
-  var cx=NP[n][0], cy=NP[n][1];
-  var r=isLarge?20:getR(n);
-  var d0=NP[0];
-  var dx=cx-d0[0], dy=cy-d0[1];
-  var len=Math.sqrt(dx*dx+dy*dy);
-  if(len<1)return [cx,cy-r-12];
-  return [cx+dx/len*(r+13), cy+dy/len*(r+13)];
-}
-
-// Arc loads: load on arc path[i]→path[i+1] = sum qty from i+1..end
-function arcLoads(path,qty){
-  var out=[];
-  for(var i=0;i<path.length-1;i++){
-    var s=0;for(var j=i+1;j<path.length;j++)s+=(qty[String(path[j])]||0);
-    out.push(Math.round(s*10)/10);
-  }
-  return out;
-}
-
-// Draw one bezier arc with glow track
-function drawArc(nA,nB,off,curve,color,mid,dashed,load){
-  var p1=NP[nA],p2=NP[nB];
-  var dx=p2[0]-p1[0],dy=p2[1]-p1[1];
-  var len=Math.sqrt(dx*dx+dy*dy); if(len<1)return '';
-  var ux=dx/len,uy=dy/len,px=-uy,py=ux;
-  var rA=getR(nA),rB=getR(nB);
-  var x0=p1[0]+ux*(rA+3), y0=p1[1]+uy*(rA+3);
-  var x2=p2[0]-ux*(rB+14), y2=p2[1]-uy*(rB+14);
-  var cx=(x0+x2)/2+px*(curve+off), cy=(y0+y2)/2+py*(curve+off);
-  var sw=dashed?(isLarge?1.1:1.5):Math.max(isLarge?1.35:2,Math.min(isLarge?3.1:5,(isLarge?1.05:1.5)+load/(isLarge?34:22)));
-  var d='M'+x0.toFixed(1)+','+y0.toFixed(1)+' Q'+cx.toFixed(1)+','+cy.toFixed(1)+' '+x2.toFixed(1)+','+y2.toFixed(1);
-  var r='';
-  if(!dashed){
-    r+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+(sw*3.8).toFixed(1)+'" opacity="0.14" stroke-linecap="round"/>';
-  }
-  r+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+sw.toFixed(1)+'"'+
-     (dashed?' stroke-dasharray="6,4" opacity="0.38"':' opacity="0.93"')+
-     ' marker-end="url(#'+mid+')" stroke-linecap="round"/>';
-  if(!dashed&&load>0){
-    var mx=x0/4+cx/2+x2/4, my=y0/4+cy/2+y2/4;
-    var txt=load+'u', lw=txt.length*(isLarge?6:7)+16;
-    r+='<rect x="'+(mx-lw/2).toFixed(1)+'" y="'+(my-9.5).toFixed(1)+
-       '" width="'+lw+'" height="19" rx="9.5" fill="var(--surface)" stroke="'+color+'" stroke-width="1.2"/>'+
-       '<text x="'+mx.toFixed(1)+'" y="'+(my+5).toFixed(1)+
-       '" text-anchor="middle" font-size="'+(isLarge?9:10)+'" font-weight="700" fill="'+color+'">'+txt+'</text>';
-  }
-  return r;
-}
-
 function renderGraph(){
   var pr=OBJS[curObj].routes[curPer];
   var nodes=Object.keys(NP).map(Number);
-  var nT=(pr&&pr.trucks)?pr.trucks.length:1;
+  var trucks=(pr&&pr.trucks)?pr.trucks:[];
 
-  var nodeR = isLarge ? 16 : 18;
-  function getNodeR(n){ return n===0 ? 22 : nodeR; }
+  var isDark=document.documentElement.hasAttribute('data-dark');
+  var nodeFill=isDark?'#1c1c20':'#ffffff';
+  var nodeStroke=isDark?'#8494ab':'#555';
+  var textFill=isDark?'#ededed':'#1a1a18';
+  var bgFill=isDark?'#111113':'#f4f4f2';
+  var depotFill=isDark?'#9f9cf5':'#534ab7';
 
-  var defs='<defs>';
-  defs+='<pattern id="dotgrid" x="0" y="0" width="'+(isLarge?40:30)+'" height="'+(isLarge?40:28)+'" patternUnits="userSpaceOnUse">'+
-    '<circle cx="1" cy="1" r="1.1" fill="var(--mesh)" opacity="0.9"/></pattern>';
-  defs+='<filter id="nshadow" x="-50%" y="-50%" width="200%" height="200%">'+
-    '<feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="rgba(0,0,0,0.18)"/></filter>';
-  defs+='<radialGradient id="gd-depot" cx="38%" cy="35%" r="65%">'+
-    '<stop offset="0%" stop-color="#7b72e3"/><stop offset="100%" stop-color="#3d34a8"/></radialGradient>';
-  defs+='<radialGradient id="gd-active" cx="38%" cy="35%" r="65%">'+
-    '<stop offset="0%" stop-color="#4daef5"/><stop offset="100%" stop-color="#1254a0"/></radialGradient>';
-  defs+='<radialGradient id="gd-idle" cx="38%" cy="35%" r="65%">'+
-    '<stop offset="0%" stop-color="#c5d9ed"/><stop offset="100%" stop-color="#7096b8"/></radialGradient>';
-  TC.forEach(function(c,i){
-    defs+='<marker id="ah'+i+'" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
-      '<path d="M0,1 L10,4 L0,7 Z" fill="'+c+'"/></marker>';
-    defs+='<marker id="ahd'+i+'" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse">'+
-      '<path d="M0,1 L10,4 L0,7 Z" fill="'+c+'" opacity="0.35"/></marker>';
-  });
-  defs+='</defs>';
+  var seen={};
+  var arcs='';
 
-  var svg='<svg viewBox="0 0 '+SW+' '+SH+'" class="nsvg">'+defs;
-  svg+='<rect width="'+SW+'" height="'+SH+'" fill="url(#dotgrid)"/>';
+  var markerDefs=trucks.map(function(tr){
+    var col=TC[(tr.k-1)%TC.length];
+    return '<marker id="arr'+tr.k+'" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">'+
+      '<polygon points="0 0,7 3.5,0 7" fill="'+col+'" opacity="0.85"/></marker>';
+  }).join('');
 
-  if(pr&&pr.trucks){
-    pr.trucks.forEach(function(tr, tIdx){
-      var ki=(tr.k-1)%TC.length, color=TC[ki];
-      var offIdx = isLarge ? tIdx : ki;
-      var offMul = isLarge ? 8 : 9;
-      var off=(offIdx-(nT-1)/2)*offMul;
-      var curve=(isLarge?36:26)+off*0.45;
-      var loads=arcLoads(tr.path,tr.qty);
-      for(var s=0;s<tr.path.length-1;s++)
-        svg+=drawArc(tr.path[s],tr.path[s+1],off,curve,color,'ah'+ki,false,loads[s]);
-      var last=tr.path[tr.path.length-1];
-      if(last!==0) svg+=drawArc(last,0,off,-curve,color,'ahd'+ki,true,0);
-    });
-  }
-
-  // Nodes drawn last so they sit above arcs
-  nodes.forEach(function(n){
-    var cx=NP[n][0],cy=NP[n][1],r=getNodeR(n);
-    var isD=(n===0);
-
-    var q=0;
-    if(!isD&&pr&&pr.trucks)
-      q=pr.trucks.reduce(function(s,tr){return s+(tr.qty[String(n)]||0);},0);
-
-    var fillId=isD?'url(#gd-depot)':(q>0?'url(#gd-active)':'url(#gd-idle)');
-    var fillColor=isD?'#534ab7':(q>0?'#185fa5':'#8cafd4');
-
-    var qt='';
-    if(!isD&&q>0){
-      var lp=labelPos(n);
-      qt='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+4).toFixed(1)+
-         '" text-anchor="middle" font-size="'+(isLarge?9:10)+'" font-weight="700" fill="'+fillColor+'">'+q+'u</text>';
+  trucks.forEach(function(tr){
+    var col=TC[(tr.k-1)%TC.length];
+    var path=tr.path, qty=tr.qty||{};
+    for(var i=0;i<path.length-1;i++){
+      var a=path[i],b=path[i+1];
+      var key=a+'-'+b;
+      if(seen[key]) continue;
+      seen[key]=true;
+      var x1=NP[a][0],y1=NP[a][1],x2=NP[b][0],y2=NP[b][1];
+      var mx=(x1+x2)/2,my=(y1+y2)/2;
+      var nx=-(y2-y1),ny=x2-x1;
+      var len=Math.sqrt(nx*nx+ny*ny)||1;
+      var cx=mx+nx/len*22,cy=my+ny/len*22;
+      var delivered=qty[String(b)]||0;
+      arcs+='<path d="M'+x1+','+y1+' Q'+cx+','+cy+' '+x2+','+y2+'"'+
+        ' fill="none" stroke="'+col+'" stroke-width="2.2" stroke-linecap="round"'+
+        ' marker-end="url(#arr'+tr.k+')" opacity="0.82"/>';
+      if(delivered>0){
+        arcs+='<text x="'+cx+'" y="'+(cy-5)+'" text-anchor="middle" font-size="9"'+
+          ' fill="'+col+'" font-weight="600">'+delivered+'u</text>';
+      }
     }
-
-    if(isD){
-      svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+8)+'" fill="none" stroke="#534ab7" stroke-width="1.2" opacity="0.22"/>';
-      svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+16)+'" fill="none" stroke="#534ab7" stroke-width="0.7" opacity="0.1"/>';
+    // dashed return to depot
+    if(path.length>0){
+      var last=path[path.length-1];
+      if(last!==0){
+        var rx1=NP[last][0],ry1=NP[last][1],rx2=NP[0][0],ry2=NP[0][1];
+        var rmx=(rx1+rx2)/2,rmy=(ry1+ry2)/2;
+        var rnx=-(ry2-ry1),rny=rx2-rx1;
+        var rlen=Math.sqrt(rnx*rnx+rny*rny)||1;
+        var rcx=rmx+rnx/rlen*18,rcy=rmy+rny/rlen*18;
+        arcs+='<path d="M'+rx1+','+ry1+' Q'+rcx+','+rcy+' '+rx2+','+ry2+'"'+
+          ' fill="none" stroke="'+col+'" stroke-width="1.4" stroke-dasharray="5,3" opacity="0.5"/>';
+      }
     }
-
-    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+3.5)+'" fill="var(--surface)" opacity="0.88" filter="url(#nshadow)"/>';
-
-    var fs=isD?(isLarge?13:12):(isLarge?11:11);
-    var innerTxt=isD
-      ?'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="'+fs+'" font-weight="800">D</text>'
-      :'<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="'+fs+'" font-weight="700">'+n+'</text>';
-
-    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+
-         '" fill="'+fillId+'" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>'+
-         innerTxt+qt;
   });
 
-  svg+='</svg>';
+  var nodesSvg=nodes.map(function(n){
+    var x=NP[n][0],y=NP[n][1];
+    var isD=(n===0),r=isD?17:14;
+    var fill=isD?depotFill:nodeFill;
+    var stroke=isD?depotFill:nodeStroke;
+    var tFill=isD?'#fff':textFill;
+    return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.8"/>'+
+      '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="'+(isD?11:10)+'"'+
+      ' font-weight="700" fill="'+tFill+'">'+(isD?'D':String(n))+'</text>';
+  }).join('');
+
+  var svgStr='<svg viewBox="0 0 '+SW+' '+SH+'" class="nsvg">'+
+    '<defs>'+markerDefs+'</defs>'+
+    '<rect width="'+SW+'" height="'+SH+'" fill="'+bgFill+'"/>'+
+    arcs+nodesSvg+'</svg>';
 
   var lgd='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;align-items:center">';
-  if(pr&&pr.trucks&&pr.trucks.length>0){
-    if(pr.tau_return!=null){
+  if(trucks.length>0){
+    if(pr&&pr.tau_return!=null){
       lgd+='<span style="font-size:11px;color:var(--text-2);padding:3px 10px;'+
            'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;white-space:nowrap">'+
-           '&#128339; Return to depot: '+pr.tau_return.toFixed(2)+'h</span>';
+           '&#128339; Return: '+pr.tau_return.toFixed(2)+'h</span>';
     }
-    pr.trucks.forEach(function(tr){
+    trucks.forEach(function(tr){
       var c=TC[(tr.k-1)%TC.length];
       lgd+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;'+
            'background:var(--row-bg);border:1px solid var(--border);border-radius:99px;font-size:11px;white-space:nowrap">'+
            '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+
-           '<b style="color:var(--text)">k='+tr.k+'</b>'+
-           '</span>';
+           '<b style="color:var(--text)">k='+tr.k+'</b></span>';
     });
     lgd+='<span style="flex:1;min-width:8px"></span>';
     lgd+='<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);white-space:nowrap">'+
@@ -412,7 +349,7 @@ function renderGraph(){
          '<polygon points="14,2 23,5 14,8" fill="#aaa" opacity="0.5"/></svg>return to depot</span>';
   }
   lgd+='</div>';
-  document.getElementById('graph').innerHTML=svg+lgd;
+  document.getElementById('graph').innerHTML=svgStr+lgd;
 }
 
 // ── Depot stock ───────────────────────────────────────────────────────────────

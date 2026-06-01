@@ -8,7 +8,9 @@
       "Bash(Select-String \"cplex\")",
       "Bash(docplex config *)",
       "Bash(.venv\\\\Scripts\\\\pip install *)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Mariem\\\\OneDrive\\\\Bureau\\\\SolverModeling\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(py|cs|vb|js|ts|jsx|tsx|java|cpp|c|h|php|rb|go|rs|m|swift|kt\\)$' } | Measure-Object | Select-Object -ExpandProperty Count)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Mariem\\\\OneDrive\\\\Bureau\\\\SolverModeling\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(py|cs|vb|js|ts|jsx|tsx|java|cpp|c|h|php|rb|go|rs|m|swift|kt\\)$' } | Measure-Object | Select-Object -ExpandProperty Count)",
+      "Bash(cd /c/Users/Mariem/OneDrive/Bureau/SolverModeling/Project_Irp && find . -type f -o -type d | head -100)",
+      "Read(//c/c/Users/Mariem/OneDrive/Bureau/SolverModeling/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Mariem\\OneDrive\\Bureau\\SolverModeling\\docs"
