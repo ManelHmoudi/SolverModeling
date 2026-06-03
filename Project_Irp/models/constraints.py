@@ -53,30 +53,27 @@ def add_capacity_constraints(mdl, x, f, A, T, M, Q):
 def add_inventory_constraints(mdl, I_O_frigo, I_O_nonfrigo, q_prime, clients, T,
                                I_O_min_frigo, I_O_max_frigo, I_O_init_frigo,
                                I_O_min_nonfrigo, I_O_max_nonfrigo, I_O_init_nonfrigo,
-                               q_lt, R_frigo, R_nonfrigo, requires_cold, frigo_trucks):
-    # C6 — inventory bounds by product type (refrigerated / non-refrigerated)
+                               q_lt, R_frigo, R_nonfrigo, requires_cold):
+    # C6 — inventory bounds by product type
     for t in T:
         mdl.add_constraint(I_O_frigo[t]    >= I_O_min_frigo,    ctname=f"c6f_min_t{t}")
         mdl.add_constraint(I_O_frigo[t]    <= I_O_max_frigo,    ctname=f"c6f_max_t{t}")
         mdl.add_constraint(I_O_nonfrigo[t] >= I_O_min_nonfrigo, ctname=f"c6nf_min_t{t}")
         mdl.add_constraint(I_O_nonfrigo[t] <= I_O_max_nonfrigo, ctname=f"c6nf_max_t{t}")
 
-    # C7 — depot stock balance by product type (refrigerated / non-refrigerated)
-    # Product type is determined by requires_cold[l, td]:
-    # if the assigned vehicle is in frigo_trucks → refrigerated, otherwise → non-refrigerated
+    # C7 — depot stock balance by product type
+    # requires_cold[l,td] is True if demand period td of client l requires frigo
     for t in T:
         prev_frigo    = I_O_frigo[t - 1]    if t > 1 else I_O_init_frigo
         prev_nonfrigo = I_O_nonfrigo[t - 1] if t > 1 else I_O_init_nonfrigo
 
         shipped_frigo = mdl.sum(
             q_prime[l, t, td]
-            for l in clients for td in T if t <= td
-            and requires_cold[l, td][0] in frigo_trucks
+            for l in clients for td in T if t <= td and requires_cold[l, td]
         )
         shipped_nonfrigo = mdl.sum(
             q_prime[l, t, td]
-            for l in clients for td in T if t <= td
-            and requires_cold[l, td][0] not in frigo_trucks
+            for l in clients for td in T if t <= td and not requires_cold[l, td]
         )
 
         mdl.add_constraint(
@@ -116,23 +113,36 @@ def add_no_empty_visits_constraints(mdl, x, f, N, T, M, clients):
                 )
                 
 
-def add_flow_balance_constraints(mdl, f, q_prime, N, T, M, clients, requires_cold):
+def add_flow_balance_constraints(mdl, f, q_prime, N, T, M, clients, requires_cold, frigo_trucks):
+    # C9 — flow balance at client l in period t, split by product type.
+    # Frigo trucks collectively carry all frigo q_prime dispatched in t.
+    # Nonfrigo trucks collectively carry all nonfrigo q_prime dispatched in t.
+    # This prevents multiple compatible trucks from duplicating the same q_prime.
+    nonfrigo_trucks = [k for k in M if k not in frigo_trucks]
+
+    def net_flow(l, t, truck_set):
+        return mdl.sum(
+            mdl.sum(f[i, l, t, k] for i in N if i != l)
+            - mdl.sum(f[l, j, t, k] for j in N if j != l)
+            for k in truck_set
+        )
+
     for l in clients:
         for t in T:
-            for k in M:
-                inbound  = mdl.sum(f[i, l, t, k] for i in N if i != l)
-                outbound = mdl.sum(f[l, j, t, k] for j in N if j != l)
-
-                assigned = mdl.sum(
-                    q_prime[l, t, td]
-                    for td in T if t <= td
-                    and k in requires_cold[l, td]
-                )
-
-                mdl.add_constraint(
-                    inbound - outbound == assigned,
-                    ctname=f"c9_l{l}_t{t}_k{k}"
-                )
+            frigo_qprime = mdl.sum(
+                q_prime[l, t, td] for td in T if t <= td and requires_cold[l, td]
+            )
+            nonfrigo_qprime = mdl.sum(
+                q_prime[l, t, td] for td in T if t <= td and not requires_cold[l, td]
+            )
+            mdl.add_constraint(
+                net_flow(l, t, frigo_trucks) == frigo_qprime,
+                ctname=f"c9f_l{l}_t{t}"
+            )
+            mdl.add_constraint(
+                net_flow(l, t, nonfrigo_trucks) == nonfrigo_qprime,
+                ctname=f"c9nf_l{l}_t{t}"
+            )
 
 
 # ── 6.3  Time & time windows ─────────────────────────────────────────────────
@@ -263,7 +273,7 @@ def add_all_constraints(mdl, vars_, sets_, params_):
         params_["I_O_min_frigo"],    params_["I_O_max_frigo"],    params_["I_O_init_frigo"],
         params_["I_O_min_nonfrigo"], params_["I_O_max_nonfrigo"], params_["I_O_init_nonfrigo"],
         params_["q_lt"], params_["R_frigo"], params_["R_nonfrigo"],
-        params_["requires_cold"], params_["frigo_trucks"],
+        params_["requires_cold"],
     )
 
     # Empty visits restriction
@@ -271,7 +281,8 @@ def add_all_constraints(mdl, vars_, sets_, params_):
 
     # C9
     add_flow_balance_constraints(
-        mdl, f, q_prime, N, T, M, clients, params_["requires_cold"]
+        mdl, f, q_prime, N, T, M, clients,
+        params_["requires_cold"], params_["frigo_trucks"]
     )
 
     # C10 – C13
@@ -284,3 +295,18 @@ def add_all_constraints(mdl, vars_, sets_, params_):
 
     # C14
     add_vehicle_compatibility_constraints(mdl, x, N, T, clients, params_["K_lt"], M)
+
+    # Symmetry breaking: among identical trucks of the same type,
+    # force lower-indexed trucks to be used at least as much as higher-indexed ones.
+    # This eliminates symmetric solutions without cutting any optimal solution.
+    frigo_trucks    = sorted(params_["frigo_trucks"])
+    nonfrigo_trucks = sorted(k for k in M if k not in params_["frigo_trucks"])
+
+    for group in [frigo_trucks, nonfrigo_trucks]:
+        for idx in range(len(group) - 1):
+            k1, k2 = group[idx], group[idx + 1]
+            mdl.add_constraint(
+                mdl.sum(x[O, j, t, k1] for j in N if j != O for t in T) >=
+                mdl.sum(x[O, j, t, k2] for j in N if j != O for t in T),
+                ctname=f"sym_break_k{k1}_k{k2}"
+            )

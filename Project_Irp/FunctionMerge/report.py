@@ -101,10 +101,11 @@ th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);
 td{padding:5px 8px;border-bottom:1px solid var(--border)}
 tr:last-child td{border-bottom:none}
 tr:nth-child(even) td{background:var(--row-bg)}
-.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;cursor:default}
 .ok{background:var(--f2-bg);color:var(--f2-fg)}
 .partial{background:var(--cx-bg);color:var(--cx-fg)}
 .none{background:var(--f3-bg);color:var(--f3-fg)}
+.advance{background:var(--f4-bg);color:var(--f4-fg)}
 /* BFR detail */
 .bfr-row{display:flex;justify-content:space-between;padding:5px 0;
   border-bottom:1px solid var(--border);font-size:13px}
@@ -406,9 +407,10 @@ function renderDepotTable(){
 function renderDelivTable(){
   const rows = D.deliveries.map(d => {
     const ratio = d.dem>0 ? d.recu/d.dem : 1;
-    const badge = ratio>=0.999 ? '<span class="badge ok">Full</span>'
-                : ratio>0.001  ? `<span class="badge partial">${(ratio*100).toFixed(0)}%</span>`
-                               : '<span class="badge none">None</span>';
+    const badge = ratio > 1.001 ? `<span class="badge advance" title="Early delivery: also covers future demand periods">Early ×${ratio.toFixed(1)}</span>`
+                : ratio >= 0.999 ? '<span class="badge ok">Full</span>'
+                : ratio > 0.001  ? `<span class="badge partial">${(ratio*100).toFixed(0)}%</span>`
+                                 : '<span class="badge none">None</span>';
     return `<tr>
       <td>Client ${d.l}</td>
       <td>t=${d.t}</td>
@@ -423,7 +425,9 @@ function renderDelivTable(){
     <table>
       <thead><tr>
         <th>Client</th><th>Period</th><th>Vehicle</th>
-        <th>Delivered</th><th>Demand</th><th>Status</th>
+        <th>Delivered</th>
+        <th title="Demand for this period only. An &quot;Early&quot; delivery also covers future demand periods.">Demand (t) ⓘ</th>
+        <th>Status</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;

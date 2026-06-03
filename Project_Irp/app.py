@@ -8,13 +8,26 @@ import webbrowser
 import time
 from html import escape
 
-from flask import Flask, redirect, render_template_string, send_file, url_for
+from flask import Flask, redirect, render_template_string, request, send_file, url_for
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
 from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+INSTANCES = {
+    "3":  os.path.join(BASE_DIR, "data", "instance_3_clients.json"),
+    "5":  os.path.join(BASE_DIR, "data", "instance_5_clients.json"),
+    "15": os.path.join(BASE_DIR, "data", "instance_15_clients.json"),
+    "25": os.path.join(BASE_DIR, "data", "instance_25_clients.json"),
+}
+DEFAULT_INSTANCE = "15"
+
+
+def _resolve_instance():
+    key = request.args.get("instance", DEFAULT_INSTANCE)
+    return INSTANCES.get(key, INSTANCES[DEFAULT_INSTANCE]), key
 
 app = Flask(__name__)
 
@@ -142,6 +155,60 @@ body {
 }
 .theme-toggle:hover { border-color: var(--border-active); }
 .theme-toggle svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ── Instance bar ────────────────────────────────────────── */
+.instance-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.instance-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.inst-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.inst-btn:hover {
+  border-color: var(--border-active);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.inst-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.inst-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .7;
+  flex-shrink: 0;
+}
 
 /* ── Divider ─────────────────────────────────────────────── */
 .section-label {
@@ -305,6 +372,23 @@ body {
     </button>
   </header>
 
+  <!-- Instance selector -->
+  <div class="instance-bar" id="instanceBar">
+    <span class="instance-bar-label">Instance</span>
+    <button class="inst-btn" data-instance="3"  onclick="selectInstance('3')">
+      <span class="inst-dot"></span>3 clients
+    </button>
+    <button class="inst-btn" data-instance="5"  onclick="selectInstance('5')">
+      <span class="inst-dot"></span>5 clients
+    </button>
+    <button class="inst-btn selected" data-instance="15" onclick="selectInstance('15')">
+      <span class="inst-dot"></span>15 clients
+    </button>
+    <button class="inst-btn" data-instance="25" onclick="selectInstance('25')">
+      <span class="inst-dot"></span>25 clients
+    </button>
+  </div>
+
   <p class="section-label">Available modules</p>
 
   <section class="modules" aria-label="Project modules">
@@ -319,8 +403,8 @@ body {
         <p class="card-desc">Run the many-objective calibration model and open the generated dashboard report.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary" href="{{ url_for('run_objective_calibration_route') }}">Run module</a>
-        <a class="button secondary" href="{{ url_for('objective_calibration_report') }}">Last report</a>
+        <a class="button primary"    id="oc-run"    href="{{ url_for('run_objective_calibration_route') }}?instance=15">Run module</a>
+        <a class="button secondary"  id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15">Last report</a>
       </div>
     </article>
 
@@ -334,8 +418,8 @@ body {
         <p class="card-desc">Solve all four objectives together in one run: minimise f1 (cost), f2 (CO₂), f3 (time) and maximise f4 (working capital) via a single scalarised CPLEX solve.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary" href="{{ url_for('run_function_merge_route') }}">Run module</a>
-        <a class="button secondary" href="{{ url_for('function_merge_report') }}">Last report</a>
+        <a class="button primary"   id="fm-run"    href="{{ url_for('run_function_merge_route') }}?instance=15">Run module</a>
+        <a class="button secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15">Last report</a>
       </div>
     </article>
 
@@ -361,6 +445,38 @@ const MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 const SUN_SVG = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const icon = document.getElementById('themeIcon');
 const label = document.getElementById('themeLabel');
+
+/* ── Instance selector ───────────────────────────────────── */
+let selectedInstance = localStorage.getItem('irp-instance') || '15';
+
+function selectInstance(key) {
+  selectedInstance = key;
+  localStorage.setItem('irp-instance', key);
+
+  // Update button styles
+  document.querySelectorAll('.inst-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.instance === key);
+  });
+
+  // Update all module button hrefs
+  const pairs = [
+    ['oc-run',    '{{ url_for("run_objective_calibration_route") }}'],
+    ['oc-report', '{{ url_for("objective_calibration_report") }}'],
+    ['fm-run',    '{{ url_for("run_function_merge_route") }}'],
+    ['fm-report', '{{ url_for("function_merge_report") }}'],
+  ];
+  pairs.forEach(([id, base]) => {
+    const el = document.getElementById(id);
+    if (el) el.href = base + '?instance=' + key;
+  });
+}
+
+// Restore saved selection on load — default to 15 if saved value no longer valid
+(function() {
+  const valid = ['3','5','15','25'];
+  const saved = localStorage.getItem('irp-instance') || '15';
+  selectInstance(valid.includes(saved) ? saved : '15');
+})();
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -400,9 +516,10 @@ def menu():
 
 @app.route("/objective-calibration/run")
 def run_objective_calibration_route():
+    data_path, inst_key = _resolve_instance()
     try:
-        run_objective_calibration()
-        return redirect(url_for("objective_calibration_report"))
+        run_objective_calibration(data_path=data_path)
+        return redirect(url_for("objective_calibration_report") + f"?instance={inst_key}")
     except Exception:
         tb = traceback.format_exc()
         print(tb, flush=True)
@@ -411,9 +528,10 @@ def run_objective_calibration_route():
 
 @app.route("/objective-calibration/report")
 def objective_calibration_report():
+    data_path, inst_key = _resolve_instance()
     try:
         if not os.path.exists(DEFAULT_REPORT_PATH):
-            run_objective_calibration()
+            run_objective_calibration(data_path=data_path)
         return send_file(DEFAULT_REPORT_PATH)
     except Exception:
         return render_error(traceback.format_exc()), 500
@@ -421,9 +539,15 @@ def objective_calibration_report():
 
 @app.route("/function-merge/run")
 def run_function_merge_route():
+    data_path, inst_key = _resolve_instance()
     try:
-        run_function_merge()
-        return redirect(url_for("function_merge_report"))
+        result = run_function_merge(data_path=data_path)
+        if result is None:
+            return render_error(
+                f"No feasible solution found for instance {inst_key} within the time limit.\n"
+                "Try increasing timelimit or mipgap in FunctionMerge/main.py."
+            ), 500
+        return redirect(url_for("function_merge_report") + f"?instance={inst_key}")
     except Exception:
         tb = traceback.format_exc()
         print(tb, flush=True)
@@ -432,9 +556,10 @@ def run_function_merge_route():
 
 @app.route("/function-merge/report")
 def function_merge_report():
+    data_path, inst_key = _resolve_instance()
     try:
         if not os.path.exists(FM_REPORT_PATH):
-            run_function_merge()
+            run_function_merge(data_path=data_path)
         return send_file(FM_REPORT_PATH)
     except Exception:
         return render_error(traceback.format_exc()), 500

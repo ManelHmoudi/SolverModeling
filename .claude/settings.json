@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import json; d=json.load\\(open\\('c:/Users/Mariem/OneDrive/Bureau/SolverModeling/Project_Irp/data/instance_15_clients.json'\\)\\); p=d['parameters']; print\\('C_max=',p.get\\('C_max'\\)\\); print\\('E_max=',p.get\\('E_max'\\)\\); print\\('T_max=',p.get\\('T_max'\\)\\); print\\('B=',p.get\\('B'\\)\\); print\\('mipgap=0.01 \\(hardcoded in main.py\\)'\\)\")",
+      "Bash(python -c ' *)"
+    ]
+  }
+}
