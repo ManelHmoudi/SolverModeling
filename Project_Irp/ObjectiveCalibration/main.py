@@ -13,7 +13,7 @@ PROJECT_DIR = os.path.dirname(MODULE_DIR)
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
-from models.parametres import sets_, params_
+from models.parametres import load_instance
 from models.constraints import add_all_constraints, add_budget_constraints
 from models.objectives import build_all_objectives
 from models.variables import build_variables
@@ -46,7 +46,7 @@ def _get_ordered_path(arcs):
     return path
 
 
-def _build_model():
+def _build_model(sets_, params_):
     mdl  = Model(name="IRP_ManyObjective")
     vars_ = build_variables(
         mdl,
@@ -61,10 +61,10 @@ def _build_model():
     return mdl, vars_, objectives
 
 
-def _solve_single(label, expr, mdl, vars_, objectives):
+def _solve_single(label, expr, mdl, vars_, objectives, sets_, params_):
     mdl.minimize(expr)
-    mdl.parameters.timelimit = 120          # max 2 min per objective
-    mdl.parameters.mip.tolerances.mipgap = 0.05   # 5% gap acceptable for calibration
+    mdl.parameters.timelimit = 120
+    mdl.parameters.mip.tolerances.mipgap = 0.05
     solution = mdl.solve(log_output=False)
     if not solution:
         return None, None
@@ -162,12 +162,13 @@ def _solve_single(label, expr, mdl, vars_, objectives):
     }
 
 
-def build_report_data():
-    mdl, vars_, objectives = _build_model()
+def build_report_data(data_path=None):
+    sets_, params_ = load_instance(data_path)
+    mdl, vars_, objectives = _build_model(sets_, params_)
     calibration = [
-        ("f1  Logistics cost",       objectives["f1"], "C_max"),
-        ("f2  CO2 emissions",        objectives["f2"], "E_max"),
-        ("f3  Total travel time",    objectives["f3"], "T_max"),
+        ("f1  Logistics cost",        objectives["f1"], "C_max"),
+        ("f2  CO2 emissions",         objectives["f2"], "E_max"),
+        ("f3  Total travel time",     objectives["f3"], "T_max"),
         ("f4  Working capital (BFR)", objectives["f4"], "B"),
     ]
 
@@ -175,7 +176,7 @@ def build_report_data():
     objs_data     = []
 
     for label, expr, param_name in calibration:
-        value, obj_data = _solve_single(label, expr, mdl, vars_, objectives)
+        value, obj_data = _solve_single(label, expr, mdl, vars_, objectives, sets_, params_)
         if value is not None:
             calib_results[param_name] = round(value * 1.2, 4)
             objs_data.append(obj_data)
@@ -209,8 +210,8 @@ def build_report_data():
     }
 
 
-def run_objective_calibration(output_path=DEFAULT_REPORT_PATH):
-    return write_report(build_report_data(), output_path)
+def run_objective_calibration(output_path=DEFAULT_REPORT_PATH, data_path=None):
+    return write_report(build_report_data(data_path), output_path)
 
 
 if __name__ == "__main__":

@@ -23,8 +23,8 @@ PROJECT_DIR = os.path.dirname(MODULE_DIR)
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
-from models.parametres import sets_, params_
-from models.constraints import add_all_constraints
+from models.parametres import load_instance
+from models.constraints import add_all_constraints, add_budget_constraints
 from models.objectives  import build_all_objectives
 from models.variables   import build_variables
 
@@ -53,7 +53,7 @@ def _get_ordered_path(arcs):
     return path
 
 
-def _build_model():
+def _build_model(sets_, params_):
     mdl   = Model(name="IRP_FunctionMerge")
     vars_ = build_variables(
         mdl,
@@ -65,11 +65,19 @@ def _build_model():
     )
     objectives = build_all_objectives(mdl, vars_, sets_, params_)
     add_all_constraints(mdl, vars_, sets_, params_)
+    add_budget_constraints(
+        mdl,
+        objectives["f1"], objectives["f2"],
+        objectives["f3"], objectives["f4"],
+        params_["C_max"], params_["E_max"],
+        params_["T_max"], params_["B"],
+    )
     return mdl, vars_, objectives
 
 
-def run_combined_solve():
-    mdl, vars_, objectives = _build_model()
+def run_combined_solve(data_path=None):
+    sets_, params_ = load_instance(data_path)
+    mdl, vars_, objectives = _build_model(sets_, params_)
 
     f1 = objectives["f1"]
     f2 = objectives["f2"]
@@ -81,8 +89,17 @@ def run_combined_solve():
     composite = f1 + f2 + f3 - f4
     mdl.minimize(composite)
 
-    mdl.parameters.timelimit = 300
-    mdl.parameters.mip.tolerances.mipgap = 0.01
+    n_clients = len(sets_["clients"])
+    if n_clients <= 5:
+        mdl.parameters.timelimit = 60
+    elif n_clients <= 15:
+        mdl.parameters.timelimit = 300
+        mdl.parameters.mip.tolerances.mipgap = 0.01
+    else:
+        mdl.parameters.timelimit = 300
+        mdl.parameters.mip.tolerances.mipgap = 0.05
+
+    mdl.parameters.mip.strategy.heuristicfreq = 10
 
     solution = mdl.solve(log_output=True)
     if not solution:
@@ -185,12 +202,12 @@ def run_combined_solve():
     }
 
 
-def build_report_data():
-    return run_combined_solve()
+def build_report_data(data_path=None):
+    return run_combined_solve(data_path)
 
 
-def run_function_merge(output_path=DEFAULT_REPORT_PATH):
-    data = build_report_data()
+def run_function_merge(output_path=DEFAULT_REPORT_PATH, data_path=None):
+    data = build_report_data(data_path)
     if data is None:
         return None
     return write_report(data, output_path)
