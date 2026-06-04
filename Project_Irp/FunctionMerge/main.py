@@ -96,8 +96,9 @@ def run_combined_solve(data_path=None):
         mdl.parameters.timelimit = 300
         mdl.parameters.mip.tolerances.mipgap = 0.01
     else:
-        mdl.parameters.timelimit = 300
+        mdl.parameters.timelimit = 600
         mdl.parameters.mip.tolerances.mipgap = 0.05
+        mdl.parameters.emphasis.mip = 1   # prioritise finding a feasible solution
 
     mdl.parameters.mip.strategy.heuristicfreq = 10
 
