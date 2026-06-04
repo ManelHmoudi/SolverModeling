@@ -403,8 +403,8 @@ body {
         <p class="card-desc">Run the many-objective calibration model and open the generated dashboard report.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary"    id="oc-run"    href="{{ url_for('run_objective_calibration_route') }}?instance=15">Run module</a>
-        <a class="button secondary"  id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15">Last report</a>
+        <a class="button primary"    id="oc-run"    href="{{ url_for('run_objective_calibration_route') }}?instance=15" target="_blank" rel="noopener noreferrer">Run module</a>
+        <a class="button secondary"  id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15" target="_blank" rel="noopener noreferrer">Last report</a>
       </div>
     </article>
 
@@ -418,8 +418,8 @@ body {
         <p class="card-desc">Solve all four objectives together in one run: minimise f1 (cost), f2 (CO₂), f3 (time) and maximise f4 (working capital) via a single scalarised CPLEX solve.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary"   id="fm-run"    href="{{ url_for('run_function_merge_route') }}?instance=15">Run module</a>
-        <a class="button secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15">Last report</a>
+        <a class="button primary"   id="fm-run"    href="{{ url_for('run_function_merge_route') }}?instance=15" target="_blank" rel="noopener noreferrer">Run module</a>
+        <a class="button secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15" target="_blank" rel="noopener noreferrer">Last report</a>
       </div>
     </article>
 
