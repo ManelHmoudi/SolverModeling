@@ -107,10 +107,15 @@ tr:nth-child(even) td{background:var(--row-bg)}
 .none{background:var(--f3-bg);color:var(--f3-fg)}
 .advance{background:var(--f4-bg);color:var(--f4-fg)}
 /* BFR detail */
-.bfr-row{display:flex;justify-content:space-between;padding:5px 0;
-  border-bottom:1px solid var(--border);font-size:13px}
-.bfr-row:last-child{border:none;font-weight:700}
-.bfr-label{color:var(--text-2)}
+.bfr-row{display:grid;grid-template-columns:1.6fr 2fr 1fr;
+  padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+.bfr-header-row{font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--text-2);border-bottom:2px solid var(--border)}
+.bfr-total-row{font-weight:700;border-top:2px solid var(--border);border-bottom:none;margin-top:2px}
+.bfr-col-label{color:var(--text-1)}
+.bfr-col-formula{color:var(--text-2)}
+.bfr-formula-text{font-style:italic;font-size:12px}
+.bfr-col-value{text-align:right;font-variant-numeric:tabular-nums}
 /* Formula note */
 .formula{font-size:11px;color:var(--text-2);margin-top:.5rem;padding-top:.5rem;
   border-top:1px solid var(--border)}
@@ -407,7 +412,7 @@ function renderDepotTable(){
 function renderDelivTable(){
   const rows = D.deliveries.map(d => {
     const ratio = d.dem>0 ? d.recu/d.dem : 1;
-    const badge = ratio > 1.001 ? `<span class="badge advance" title="Early delivery: also covers future demand periods">Early ×${ratio.toFixed(1)}</span>`
+    const badge = ratio > 1.001 ? `<span class="badge advance" title="Early delivery: also covers future demand periods">Early</span>`
                 : ratio >= 0.999 ? '<span class="badge ok">Full</span>'
                 : ratio > 0.001  ? `<span class="badge partial">${(ratio*100).toFixed(0)}%</span>`
                                  : '<span class="badge none">None</span>';
@@ -438,21 +443,30 @@ function renderBFR(){
   const b = D.bfr_sub;
   const net = (b.stock + b.receivables - b.payables).toFixed(4);
   document.getElementById('bfrDetail').innerHTML = `
-    <div class="bfr-row">
-      <span class="bfr-label">Stock value  (I × P_purchase × DIO/365)</span>
-      <span>${b.stock}</span>
+    <div class="bfr-row bfr-header-row">
+      <span class="bfr-col-label">Component</span>
+      <span class="bfr-col-formula">Formula</span>
+      <span class="bfr-col-value">Value</span>
     </div>
     <div class="bfr-row">
-      <span class="bfr-label">+ Accounts receivable  (q × P_sale × DSO/365)</span>
-      <span>${b.receivables}</span>
+      <span class="bfr-col-label">Stock value</span>
+      <span class="bfr-col-formula bfr-formula-text">I × P<sub>purchase</sub> × DIO / 365</span>
+      <span class="bfr-col-value">${b.stock}</span>
     </div>
     <div class="bfr-row">
-      <span class="bfr-label">− Accounts payable  (q × P_purchase × DPO/365)</span>
-      <span>−${b.payables}</span>
+      <span class="bfr-col-label">+ Accounts receivable</span>
+      <span class="bfr-col-formula bfr-formula-text">q × P<sub>sale</sub> × DSO / 365</span>
+      <span class="bfr-col-value">${b.receivables}</span>
     </div>
     <div class="bfr-row">
-      <span>f4 = BFR</span>
-      <span>${net}</span>
+      <span class="bfr-col-label">− Accounts payable</span>
+      <span class="bfr-col-formula bfr-formula-text">q × P<sub>purchase</sub> × DPO / 365</span>
+      <span class="bfr-col-value">−${b.payables}</span>
+    </div>
+    <div class="bfr-row bfr-total-row">
+      <span class="bfr-col-label">f4 = BFR</span>
+      <span class="bfr-col-formula bfr-formula-text">Stock + Receivables − Payables</span>
+      <span class="bfr-col-value">${net}</span>
     </div>
     <p class="formula">Scalarization: minimize f1 + f2 + f3 − f4 &nbsp;(f4 maximised by negation)</p>`;
 }

@@ -120,7 +120,6 @@ def load_instance(data_path=None):
     Cd   = params_raw["Cd"]
     A_f  = params_raw["A_f"]
     rho  = params_raw["rho"]
-    a    = params_raw["a"]
     w    = params_raw["w"]
 
     alpha_co2      = {(i, j): g * Cr for (i, j) in A}
