@@ -63,8 +63,6 @@ def _build_model(sets_, params_):
 
 def _solve_single(label, expr, mdl, vars_, objectives, sets_, params_):
     mdl.minimize(expr)
-    mdl.parameters.timelimit = 120
-    mdl.parameters.mip.tolerances.mipgap = 0.05
     solution = mdl.solve(log_output=False)
     if not solution:
         return None, None

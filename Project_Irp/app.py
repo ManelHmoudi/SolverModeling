@@ -21,6 +21,7 @@ INSTANCES = {
     "5":  os.path.join(BASE_DIR, "data", "instance_5_clients.json"),
     "15": os.path.join(BASE_DIR, "data", "instance_15_clients.json"),
     "25": os.path.join(BASE_DIR, "data", "instance_25_clients.json"),
+    "30": os.path.join(BASE_DIR, "data", "instance_30_clients.json"),
 }
 DEFAULT_INSTANCE = "15"
 
@@ -386,6 +387,9 @@ body {
     </button>
     <button class="inst-btn" data-instance="25" onclick="selectInstance('25')">
       <span class="inst-dot"></span>25 clients
+    </button>
+    <button class="inst-btn" data-instance="30" onclick="selectInstance('30')">
+      <span class="inst-dot"></span>30 clients
     </button>
   </div>
 

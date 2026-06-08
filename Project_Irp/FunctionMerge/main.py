@@ -89,18 +89,9 @@ def run_combined_solve(data_path=None):
     composite = f1 + f2 + f3 - f4
     mdl.minimize(composite)
 
-    n_clients = len(sets_["clients"])
-    if n_clients <= 5:
-        mdl.parameters.timelimit = 60
-    elif n_clients <= 15:
-        mdl.parameters.timelimit = 300
-        mdl.parameters.mip.tolerances.mipgap = 0.01
-    else:
-        mdl.parameters.timelimit = 600
-        mdl.parameters.mip.tolerances.mipgap = 0.05
-        mdl.parameters.emphasis.mip = 1   # prioritise finding a feasible solution
-
     mdl.parameters.mip.strategy.heuristicfreq = 10
+    mdl.parameters.mip.tolerances.mipgap = 0
+    mdl.parameters.mip.tolerances.absmipgap = 0
 
     solution = mdl.solve(log_output=True)
     if not solution:
