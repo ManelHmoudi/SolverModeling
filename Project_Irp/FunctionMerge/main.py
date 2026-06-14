@@ -166,11 +166,12 @@ def run_combined_solve(data_path=None):
     composite = f1 + f2 + f3 - f4
     mdl.minimize(composite)
 
-    mdl.parameters.mip.strategy.heuristicfreq = 10
-    mdl.parameters.mip.tolerances.mipgap = 0.01   # accept 1% gap — returns best incumbent found
+    mdl.parameters.mip.strategy.heuristicfreq = 5   # run heuristics every 5 nodes (was 10)
+    mdl.parameters.mip.strategy.fpheur = 1          # feasibility pump: find any integer solution fast
+    mdl.parameters.mip.tolerances.mipgap = 0.05    # 5% gap — accept near-optimal, stops sooner
     mdl.parameters.mip.tolerances.absmipgap = 0
-    mdl.parameters.timelimit = 43200               # 12-hour cap; checkpoint saves best found
-    mdl.parameters.workmem = 2048                  # MB in RAM before spilling nodes to disk
+    mdl.parameters.timelimit = 39600              # 11-hour cap; returns best incumbent found
+    mdl.parameters.workmem = 8192                  # MB in RAM before spilling nodes to disk
     mdl.parameters.mip.strategy.file = 2           # compress & write node files to disk on OOM
 
     # Load warmstart from the best checkpoint of a previous interrupted run
