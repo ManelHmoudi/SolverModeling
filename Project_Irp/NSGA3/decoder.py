@@ -15,7 +15,10 @@ def decode_chromosome(chromosome, sets_):
 def build_routes(quantities, sets_, params_):
     """
     Decode quantities into vehicle routes, enforcing all hard constraints
-    (capacity C5, depot inventory C6-C7, demand satisfaction C8).
+    (capacity C5, depot inventory C6-C7, demand satisfaction C8, C9, C14).
+
+    One truck type per client per period (except T_last which delivers all remaining).
+    C9 mirror: frigo truck ↔ requires_cold[l,td]=True ; nonfrigo ↔ False.
 
     Returns dict: x, f, depot_stock, arrival_times, truck_assign,
                   actual_qty, routes_data, tau_return.
@@ -43,8 +46,23 @@ def build_routes(quantities, sets_, params_):
     R_frigo    = params_["R_frigo"]
     R_nonfrigo = params_["R_nonfrigo"]
 
-    total_demand     = {l: sum(q_lt[l, t] for t in T) for l in clients}
-    delivered_so_far = {l: 0 for l in clients}
+    # Total demand split by product type per client (C9 mirror)
+    frigo_total    = {l: sum(q_lt[l, t] for t in T if     requires_cold[l, t]) for l in clients}
+    nonfrigo_total = {l: sum(q_lt[l, t] for t in T if not requires_cold[l, t]) for l in clients}
+
+    # Cumulative demand by type up to each period t (used to enforce delivery deadlines)
+    cum_frigo_demand    = {
+        (l, t): sum(q_lt[l, td] for td in T if td <= t and     requires_cold[l, td])
+        for l in clients for t in T
+    }
+    cum_nonfrigo_demand = {
+        (l, t): sum(q_lt[l, td] for td in T if td <= t and not requires_cold[l, td])
+        for l in clients for t in T
+    }
+
+    # Separate delivery counters per type (needed to cap pre-delivery correctly)
+    frigo_dlv    = {l: 0 for l in clients}
+    nonfrigo_dlv = {l: 0 for l in clients}
 
     x_vars        = {}
     f_vars        = {}
@@ -56,21 +74,40 @@ def build_routes(quantities, sets_, params_):
     T_last        = T[-1]
 
     for t in T:
-        # C8: last period delivers exactly remaining demand; earlier periods round & cap
         if t == T_last:
-            desired = {l: max(0, total_demand[l] - delivered_so_far[l]) for l in clients}
-        else:
-            desired = {
-                l: min(
-                    max(0, int(round(quantities[l, t]))),
-                    max(0, total_demand[l] - delivered_so_far[l]),
-                )
+            # C8: last period must satisfy ALL remaining demand of both types
+            frigo_desired = {
+                l: max(0, frigo_total[l] - frigo_dlv[l])
                 for l in clients
+                if frigo_total[l] - frigo_dlv[l] > 0
             }
-
-        # C14: split by temperature requirement
-        frigo_desired    = {l: q for l, q in desired.items() if     requires_cold[l, t] and q > 0}
-        nonfrigo_desired = {l: q for l, q in desired.items() if not requires_cold[l, t] and q > 0}
+            nonfrigo_desired = {
+                l: max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
+                for l in clients
+                if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
+            }
+        else:
+            # C9 + C14: one truck type per client per period = requires_cold[l, t].
+            # Only pre-deliver demand of the SAME type as the current dispatch period.
+            # DEADLINE RULE: cumulative delivered >= cumulative demand up to t.
+            # A client may receive less than their period demand ONLY if an advance
+            # was made earlier; otherwise the full deficit must be covered now.
+            frigo_desired    = {}
+            nonfrigo_desired = {}
+            for l in clients:
+                qty = max(0, int(round(quantities[l, t])))
+                if requires_cold[l, t]:
+                    remaining  = max(0, frigo_total[l] - frigo_dlv[l])
+                    min_needed = max(0, cum_frigo_demand[l, t] - frigo_dlv[l])
+                    actual     = max(min_needed, min(qty, remaining))
+                    if actual > 0:
+                        frigo_desired[l] = actual
+                else:
+                    remaining  = max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
+                    min_needed = max(0, cum_nonfrigo_demand[l, t] - nonfrigo_dlv[l])
+                    actual     = max(min_needed, min(qty, remaining))
+                    if actual > 0:
+                        nonfrigo_desired[l] = actual
 
         # C6: maximum releasable = available stock above safety level
         max_rel_f  = max(0, int(I_frigo    + R_frigo[t]    - I_min_f))
@@ -80,9 +117,11 @@ def build_routes(quantities, sets_, params_):
         nonfrigo_qty = _clamp_to_integer_budget(nonfrigo_desired, max_rel_nf)
 
         for l in clients:
-            qty = frigo_qty.get(l, nonfrigo_qty.get(l, 0))
-            actual_qty[l, t]     = qty
-            delivered_so_far[l] += qty
+            f  = frigo_qty.get(l, 0)
+            nf = nonfrigo_qty.get(l, 0)
+            actual_qty[l, t]  = f + nf
+            frigo_dlv[l]    += f
+            nonfrigo_dlv[l] += nf
 
         shipped_f  = sum(frigo_qty.values())
         shipped_nf = sum(nonfrigo_qty.values())
