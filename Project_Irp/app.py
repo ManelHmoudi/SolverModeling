@@ -12,6 +12,7 @@ from flask import Flask, redirect, render_template_string, request, send_file, u
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
 from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
+from NSGA3.main import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -427,17 +428,18 @@ body {
       </div>
     </article>
 
-    <article class="module">
+    <article class="module available">
       <div class="card-body">
         <div class="card-meta">
           <span class="module-num">03</span>
-          <span class="status-tag soon">Coming soon</span>
+          <span class="status-tag active">Active</span>
         </div>
-        <h2 class="card-title">Module 3</h2>
-        <p class="card-desc">Reserved for another workflow using the shared project model.</p>
+        <h2 class="card-title">NSGA-III</h2>
+        <p class="card-desc">Many-objective metaheuristic: evolves a Pareto front of trade-off solutions for f1 (cost), f2 (CO₂), f3 (time) and f4 (working capital) without CPLEX.</p>
       </div>
       <div class="card-footer">
-        <span class="button disabled">Unavailable</span>
+        <a class="button primary"   id="n3-run"    href="{{ url_for('run_nsga3_route') }}?instance=25" target="_blank" rel="noopener noreferrer">Run module</a>
+        <a class="button secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25"    target="_blank" rel="noopener noreferrer">Last report</a>
       </div>
     </article>
 
@@ -468,6 +470,8 @@ function selectInstance(key) {
     ['oc-report', '{{ url_for("objective_calibration_report") }}'],
     ['fm-run',    '{{ url_for("run_function_merge_route") }}'],
     ['fm-report', '{{ url_for("function_merge_report") }}'],
+    ['n3-run',    '{{ url_for("run_nsga3_route") }}'],
+    ['n3-report', '{{ url_for("nsga3_report") }}'],
   ];
   pairs.forEach(([id, base]) => {
     const el = document.getElementById(id);
@@ -565,6 +569,29 @@ def function_merge_report():
         if not os.path.exists(FM_REPORT_PATH):
             run_function_merge(data_path=data_path)
         return send_file(FM_REPORT_PATH)
+    except Exception:
+        return render_error(traceback.format_exc()), 500
+
+
+@app.route("/nsga3/run")
+def run_nsga3_route():
+    data_path, inst_key = _resolve_instance()
+    try:
+        run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path)
+        return redirect(url_for("nsga3_report") + f"?instance={inst_key}")
+    except Exception:
+        tb = traceback.format_exc()
+        print(tb, flush=True)
+        return render_error(tb), 500
+
+
+@app.route("/nsga3/report")
+def nsga3_report():
+    data_path, inst_key = _resolve_instance()
+    try:
+        if not os.path.exists(NSGA3_REPORT_PATH):
+            run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path)
+        return send_file(NSGA3_REPORT_PATH)
     except Exception:
         return render_error(traceback.format_exc()), 500
 
