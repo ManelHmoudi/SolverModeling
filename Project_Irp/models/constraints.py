@@ -180,11 +180,15 @@ def add_time_constraints(mdl, x, tau, tau_return, w1, w2, N, A, T, M, O,
     # C12 — soft time window constraints
     for l in [n for n in N if n != O]:
         for t in T:
-            visited = mdl.sum(
+            total_in = mdl.sum(
                 x[i, l, t, k]
                 for i in N if i != l
                 for k in M
             )
+            # binary indicator: 1 iff at least one vehicle visits l in period t
+            visited = mdl.binary_var(name=f"y_{l}_{t}")
+            mdl.add_constraint(visited <= total_in,           ctname=f"c12_y_lb_{l}_{t}")
+            mdl.add_constraint(total_in <= len(M) * visited,  ctname=f"c12_y_ub_{l}_{t}")
 
             mdl.add_constraint(
                 tau[l, t] <= BIG_M * visited,
