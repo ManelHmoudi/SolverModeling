@@ -104,6 +104,13 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     elapsed  = time.time() - t_start
     pareto_X = result.X  # (n_solutions, n_var)
 
+    if pareto_X is None or len(pareto_X) == 0:
+        raise RuntimeError(
+            "[NSGA3] No feasible solutions found — all solutions violate the hard constraint "
+            f"(tau_return > tau_max={params_['tau_max']}). "
+            "Check tau_max in the instance JSON or increase pop/gen."
+        )
+
     print(f"[NSGA3] Done in {elapsed:.1f}s | Pareto front: {len(pareto_X)} solutions",
           flush=True)
 

@@ -75,7 +75,8 @@ def build_routes(quantities, sets_, params_):
 
     for t in T:
         if t == T_last:
-            # C8: last period must satisfy ALL remaining demand of both types
+            # C8: last period must satisfy ALL remaining demand of both types.
+            # The entire desired amount is mandatory (min_required = desired).
             frigo_desired = {
                 l: max(0, frigo_total[l] - frigo_dlv[l])
                 for l in clients
@@ -86,6 +87,8 @@ def build_routes(quantities, sets_, params_):
                 for l in clients
                 if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
             }
+            frigo_floor    = dict(frigo_desired)
+            nonfrigo_floor = dict(nonfrigo_desired)
         else:
             # C9 + C14: one truck type per client per period = requires_cold[l, t].
             # Only pre-deliver demand of the SAME type as the current dispatch period.
@@ -94,6 +97,8 @@ def build_routes(quantities, sets_, params_):
             # was made earlier; otherwise the full deficit must be covered now.
             frigo_desired    = {}
             nonfrigo_desired = {}
+            frigo_floor      = {}   # mandatory minimum per client (Bug-1 fix)
+            nonfrigo_floor   = {}
             for l in clients:
                 qty = max(0, int(round(quantities[l, t])))
                 if requires_cold[l, t]:
@@ -102,19 +107,21 @@ def build_routes(quantities, sets_, params_):
                     actual     = max(min_needed, min(qty, remaining))
                     if actual > 0:
                         frigo_desired[l] = actual
+                        frigo_floor[l]   = min_needed
                 else:
                     remaining  = max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
                     min_needed = max(0, cum_nonfrigo_demand[l, t] - nonfrigo_dlv[l])
                     actual     = max(min_needed, min(qty, remaining))
                     if actual > 0:
                         nonfrigo_desired[l] = actual
+                        nonfrigo_floor[l]   = min_needed
 
         # C6: maximum releasable = available stock above safety level
         max_rel_f  = max(0, int(I_frigo    + R_frigo[t]    - I_min_f))
         max_rel_nf = max(0, int(I_nonfrigo + R_nonfrigo[t] - I_min_nf))
 
-        frigo_qty    = _clamp_to_integer_budget(frigo_desired,    max_rel_f)
-        nonfrigo_qty = _clamp_to_integer_budget(nonfrigo_desired, max_rel_nf)
+        frigo_qty    = _clamp_to_integer_budget(frigo_desired,    max_rel_f,  frigo_floor)
+        nonfrigo_qty = _clamp_to_integer_budget(nonfrigo_desired, max_rel_nf, nonfrigo_floor)
 
         for l in clients:
             f  = frigo_qty.get(l, 0)
@@ -126,9 +133,9 @@ def build_routes(quantities, sets_, params_):
         shipped_f  = sum(frigo_qty.values())
         shipped_nf = sum(nonfrigo_qty.values())
 
-        # C7: depot stock balance, clamped within [I_min, I_max]
-        I_frigo    = max(I_min_f,  min(I_max_f,  I_frigo    + R_frigo[t]    - shipped_f))
-        I_nonfrigo = max(I_min_nf, min(I_max_nf, I_nonfrigo + R_nonfrigo[t] - shipped_nf))
+        # C7: depot stock balance — strict equality, same as MIP: I_t = I_{t-1} + R_t - shipped_t
+        I_frigo    = I_frigo    + R_frigo[t]    - shipped_f
+        I_nonfrigo = I_nonfrigo + R_nonfrigo[t] - shipped_nf
 
         depot_stock[t] = {
             "frigo":    round(I_frigo,    4),
@@ -136,10 +143,11 @@ def build_routes(quantities, sets_, params_):
         }
 
         routes_data[t] = {}
+        tau_max = params_.get("tau_max")
         for qty_group, trucks in [(frigo_qty, frigo_list), (nonfrigo_qty, non_frigo_trucks)]:
             if not qty_group or not trucks:
                 continue
-            r, tx, tf, ta, tassign = _nearest_neighbour(qty_group, trucks, t, d, v, s, Q, O)
+            r, tx, tf, ta, tassign = _nearest_neighbour(qty_group, trucks, t, d, v, s, Q, O, tau_max)
             routes_data[t].update(r)
             x_vars.update(tx)
             f_vars.update(tf)
@@ -172,30 +180,39 @@ def build_routes(quantities, sets_, params_):
     }
 
 
-def _clamp_to_integer_budget(qty_dict, max_total):
-    """Trim allocations (largest first) until total fits within max_total."""
+def _clamp_to_integer_budget(qty_dict, max_total, min_required=None):
+    """
+    Trim allocations until total fits within max_total.
+    min_required: mandatory floor per client — never cut below it.
+    Only the discretionary surplus (qty - floor) is eligible for cutting.
+    """
     if not qty_dict:
         return {}
 
-    result = dict(qty_dict)
-    total  = sum(result.values())
+    result   = dict(qty_dict)
+    floors   = min_required or {}
+    total    = sum(result.values())
 
     if total <= max_total:
         return result
 
-    # Sorted descending: subtract excess greedily, O(n log n) instead of O(n×excess)
+    # Sort by discretionary surplus descending: cut optional portion first
     excess = total - max_total
-    for l in sorted(result, key=result.__getitem__, reverse=True):
+    for l in sorted(result, key=lambda l: result[l] - floors.get(l, 0), reverse=True):
         if excess <= 0:
             break
-        cut        = min(result[l], excess)
+        floor     = floors.get(l, 0)
+        surplus   = result[l] - floor
+        if surplus <= 0:
+            continue
+        cut        = min(surplus, excess)
         result[l] -= cut
         excess     -= cut
 
     return {l: q for l, q in result.items() if q > 0}
 
 
-def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O):
+def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None):
     """Build routes for one truck group using greedy nearest-neighbour."""
     x_vars   = {}
     f_vars   = {}
@@ -222,6 +239,13 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O):
             for l, q in pending.items():
                 if load + q <= cap:
                     dist = d[current, l]
+                    if tau_max is not None:
+                        # Ensure visiting l and returning to depot stays within tau_max
+                        projected = (current_time
+                                     + s.get(current, 0.0) + dist / speed
+                                     + s.get(l, 0.0) + d[l, O] / speed)
+                        if projected > tau_max:
+                            continue
                     if dist < best_dist:
                         best_dist, best = dist, l
             if best is None:
