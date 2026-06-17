@@ -88,7 +88,7 @@ body{
 .ku{font-size:11px;color:var(--text-2)}
 /* ── Pareto chart ── */
 .pareto-wrap{overflow-x:auto}
-.pareto-wrap svg{display:block;min-width:480px}
+.pareto-wrap svg{display:block;min-width:480px;min-height:320px}
 .hint{font-size:11px;color:var(--text-2);margin-top:.5rem}
 /* ── Solution selector ── */
 .sol-hdr{display:flex;align-items:center;gap:10px;margin-bottom:.85rem;flex-wrap:wrap}
@@ -262,9 +262,9 @@ let currentPeriod = null;
 
 /* ── Pareto parallel coordinates ────────────────────────── */
 function renderPareto(){
-  const W=820, H=260, MT=48, MB=28, ML=55, MR=55;
+  const W=860, H=380, MT=58, MB=36, ML=28, MR=50;
   const CH = H - MT - MB;
-  const AXES = ['f1  Logistics','f2  CO₂','f3  Travel time','f4  BFR (max)'];
+  const AXES = ['f1  Logistics','f2  CO₂','f3  Travel time','f4  BFR (min)'];
   const AX = [0,1,2,3].map(i => ML + i*(W-ML-MR)/3);
 
   // Min/max per objective
@@ -276,47 +276,58 @@ function renderPareto(){
     const r=maxs[j]-mins[j];
     if(r<1e-9) return 0.5;
     const n=(val-mins[j])/r;
-    return j===3 ? 1-n : n;   // f4 inverted: higher = better = top
+    return n;   // all objectives: lower = better = top
   }
   function yp(n){ return MT + n*CH; }
 
   const isDark=document.documentElement.hasAttribute('data-dark');
-  const axColor   = isDark ? '#3a3a44' : '#ddd';
-  const lineColor = isDark ? '#555'    : '#bbb';
-  const selColor  = isDark ? '#9f9cf5' : '#534ab7';
-  const lblColor  = isDark ? '#999'    : '#888';
-  const valColor  = isDark ? '#ccc'    : '#555';
+  const axColor  = isDark ? '#3a3a44' : '#ddd';
+  const selColor = isDark ? '#9f9cf5' : '#534ab7';
+  const lblColor = isDark ? '#999'    : '#666';
+  const valColor = isDark ? '#ccc'    : '#444';
+  const n = SOLS.length;
+
+  // Each solution gets a distinct hue (blue→teal→green→orange spectrum)
+  function solColor(i){
+    const h = Math.round(240 - (i / Math.max(n-1,1)) * 200);
+    return isDark ? `hsl(${h},65%,65%)` : `hsl(${h},65%,42%)`;
+  }
 
   let svg = '';
 
-  // Axes
+  // Axes + tick marks
   AX.forEach((ax,j)=>{
     svg += `<line x1="${ax}" y1="${MT}" x2="${ax}" y2="${H-MB}" stroke="${axColor}" stroke-width="2"/>`;
-    svg += `<text x="${ax}" y="${MT-14}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${lblColor}">${AXES[j]}</text>`;
+    // Small ticks at 25%, 50%, 75%
+    [0.25,0.5,0.75].forEach(t=>{
+      svg += `<line x1="${ax-4}" y1="${yp(t)}" x2="${ax+4}" y2="${yp(t)}" stroke="${axColor}" stroke-width="1"/>`;
+    });
+    svg += `<text x="${ax}" y="${MT-18}" text-anchor="middle" font-size="11" font-weight="700" fill="${lblColor}">${AXES[j]}</text>`;
     const best  = j===3 ? fmt(maxs[j]) : fmt(mins[j]);
     const worst = j===3 ? fmt(mins[j]) : fmt(maxs[j]);
-    svg += `<text x="${ax}" y="${MT-2}" text-anchor="middle" font-size="9" fill="${valColor}">${best}</text>`;
-    svg += `<text x="${ax}" y="${H-MB+11}" text-anchor="middle" font-size="9" fill="${valColor}">${worst}</text>`;
+    svg += `<text x="${ax}" y="${MT-5}" text-anchor="middle" font-size="9.5" fill="${valColor}">${best}</text>`;
+    svg += `<text x="${ax}" y="${H-MB+13}" text-anchor="middle" font-size="9.5" fill="${valColor}">${worst}</text>`;
   });
 
   // Non-selected polylines (draw first, underneath)
   SOLS.forEach((sol,i)=>{
     if(i===selectedIdx) return;
+    const c   = solColor(i);
     const pts = AX.map((ax,j)=>`${ax},${yp(norm(sol.objectives[keys[j]],j))}`).join(' ');
-    svg += `<polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="1.5"
-      opacity="0.5" style="cursor:pointer;transition:opacity .1s"
-      onmouseenter="this.setAttribute('stroke-width','2.5');this.style.opacity='0.9'"
-      onmouseleave="this.setAttribute('stroke-width','1.5');this.style.opacity='0.5'"
+    svg += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.5"
+      opacity="0.3" style="cursor:pointer;transition:opacity .12s,stroke-width .12s"
+      onmouseenter="this.setAttribute('stroke-width','3');this.style.opacity='0.95'"
+      onmouseleave="this.setAttribute('stroke-width','1.5');this.style.opacity='0.3'"
       onclick="selectSolution(${i})"/>`;
   });
 
   // Selected polyline (draw on top)
   const sel=SOLS[selectedIdx];
   const selPts=AX.map((ax,j)=>`${ax},${yp(norm(sel.objectives[keys[j]],j))}`).join(' ');
-  svg += `<polyline points="${selPts}" fill="none" stroke="${selColor}" stroke-width="3"/>`;
+  svg += `<polyline points="${selPts}" fill="none" stroke="${selColor}" stroke-width="3.5"/>`;
   AX.forEach((ax,j)=>{
     const cy=yp(norm(sel.objectives[keys[j]],j));
-    svg += `<circle cx="${ax}" cy="${cy}" r="5" fill="${selColor}" stroke="var(--surface)" stroke-width="2"/>`;
+    svg += `<circle cx="${ax}" cy="${cy}" r="5.5" fill="${selColor}" stroke="var(--surface)" stroke-width="2"/>`;
   });
 
   document.getElementById('paretoChart').innerHTML =
@@ -332,7 +343,7 @@ function renderKPIs(){
     {cls:'f1',label:'f1 — Logistics cost',  val:o.f1, unit:'cost units'},
     {cls:'f2',label:'f2 — CO₂ emissions',   val:o.f2, unit:'kg CO₂'},
     {cls:'f3',label:'f3 — Travel time',     val:o.f3, unit:'hours'},
-    {cls:'f4',label:'f4 — Working capital', val:o.f4, unit:'currency  (↑ max)'},
+    {cls:'f4',label:'f4 — Working capital', val:o.f4, unit:'currency  (↓ min)'},
   ];
   document.getElementById('kpiRow').innerHTML=defs.map(d=>
     `<div class="kpi ${d.cls}">
@@ -650,11 +661,20 @@ def _open_chrome(url):
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
-def write_report(data, output_path):
-    html = _TEMPLATE.replace(
+_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nsga3_data.json")
+
+
+def render_html(data):
+    """Return the complete HTML string for the given data dict."""
+    return _TEMPLATE.replace(
         "/*DATA_PLACEHOLDER*/null",
         json.dumps(data, ensure_ascii=False),
     )
+
+
+def write_report(data, output_path):
+    """Write HTML report to disk (used by standalone CLI runs)."""
+    html = render_html(data)
     with open(output_path, "w", encoding="utf-8") as fh:
         fh.write(html)
     return os.path.abspath(output_path)

@@ -12,7 +12,8 @@ from flask import Flask, redirect, render_template_string, request, send_file, u
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
 from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
-from NSGA3.main import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report
+from NSGA3.main   import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
+from NSGA3.report import render_html as nsga3_render_html
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -589,9 +590,12 @@ def run_nsga3_route():
 def nsga3_report():
     data_path, inst_key = _resolve_instance()
     try:
-        if not os.path.exists(NSGA3_REPORT_PATH):
+        try:
+            data = nsga3_render_from_instance(data_path)
+        except FileNotFoundError:
             run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path)
-        return send_file(NSGA3_REPORT_PATH)
+            data = nsga3_render_from_instance(data_path)
+        return nsga3_render_html(data), 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception:
         return render_error(traceback.format_exc()), 500
 

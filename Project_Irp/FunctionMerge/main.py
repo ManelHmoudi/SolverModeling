@@ -1,11 +1,11 @@
 """
 FunctionMerge — Combined multi-objective IRP solve.
 
-Scalarization:  minimize  f1 + f2 + f3 − f4
+Scalarization:  minimize  f1 + f2 + f3 + f4
     f1  Logistics cost       (minimised)
     f2  CO2 emissions        (minimised)
     f3  Total travel time    (minimised)
-    f4  Working capital BFR  (maximised → negated in composite)
+    f4  Working capital BFR  (minimised)
 
 All four objective expressions are active in a single CPLEX solve, which
 verifies that every model component (variables, constraints, objectives)
@@ -161,12 +161,11 @@ def run_combined_solve(data_path=None):
     f3 = objectives["f3"]
     f4 = objectives["f4"]
 
-    # Linear scalarization: minimise f1 + f2 + f3 − f4
-    # f4 is negated so the solver maximises working-capital requirement.
-    composite = f1 + f2 + f3 - f4
+    # Linear scalarization: minimise f1 + f2 + f3 + f4
+    composite = f1 + f2 + f3 + f4
     mdl.minimize(composite)
 
-    mdl.parameters.mip.strategy.mipemphasis = 1      # feasibility first — find any integer solution fast
+    mdl.parameters.emphasis.mip = 1                   # feasibility first — find any integer solution fast
     mdl.parameters.mip.strategy.heuristicfreq = 5
     mdl.parameters.mip.strategy.fpheur = 1
     mdl.parameters.mip.tolerances.mipgap = 0.05

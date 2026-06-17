@@ -10,6 +10,7 @@ Called from app.py via run_nsga3_report().
 """
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -34,13 +35,14 @@ from .evaluator        import compute_f1, compute_f2, compute_f3, compute_f4_det
 from .report           import write_report, generate_and_open, compute_node_positions
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "nsga3_report.html")
+_CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "nsga3_chromosomes.json")
 
 # Algorithm hyper-parameters
 POP_SIZE       = 100
 N_GEN          = 100
 CROSSOVER_PROB = 0.9
 MUTATION_PROB  = 0.2
-N_PARTITIONS   = 6   # Das-Dennis: C(4+6-1,6) = 84 reference points for 4 objectives
+N_PARTITIONS   = 8   # Das-Dennis: C(4+8-1,8) = 165 reference points for 4 objectives
 
 
 def _build_delivery_rows(route_result, sets_, params_):
@@ -69,9 +71,96 @@ def _build_delivery_rows(route_result, sets_, params_):
     return deliveries
 
 
+def _evaluate_pareto(pareto_X, sets_, params_, meta_base):
+    """Evaluate Pareto chromosomes against sets_/params_ and return the report data dict.
+    Called both after a fresh NSGA3 run and on every refresh (with potentially updated instance).
+    """
+    solutions = []
+    for i, chromosome in enumerate(pareto_X):
+        quantities, priorities = decode_chromosome(chromosome, sets_)
+        route_result = build_routes(quantities, sets_, params_, priorities)
+
+        f1         = compute_f1(route_result, sets_, params_)
+        f2         = compute_f2(route_result, sets_, params_)
+        f3         = compute_f3(route_result, sets_, params_)
+        f4, f4_sub = compute_f4_detail(route_result, sets_, params_)
+
+        routes_report = {}
+        for t in sets_["T"]:
+            trucks_t = [
+                {"k": k, "path": info["path"], "qty": info["qty"]}
+                for k, info in route_result["routes_data"].get(t, {}).items()
+            ]
+            tau_ret = route_result["tau_return"].get(t, 0.0)
+            routes_report[str(t)] = {
+                "trucks":     trucks_t,
+                "R_frigo":    params_["R_frigo"].get(t, 0.0),
+                "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
+                "tau_return": round(tau_ret, 4),
+                "shipped":    sum(route_result["actual_qty"].get((l, t), 0)
+                                  for l in sets_["clients"]),
+            }
+
+        solutions.append({
+            "id":         i,
+            "objectives": {
+                "f1": round(f1, 4),
+                "f2": round(f2, 4),
+                "f3": round(f3, 4),
+                "f4": round(f4, 4),
+            },
+            "routes":      routes_report,
+            "depot_stock": {str(t): route_result["depot_stock"][t] for t in sets_["T"]},
+            "deliveries":  _build_delivery_rows(route_result, sets_, params_),
+            "bfr_sub":     f4_sub,
+        })
+
+    return {
+        "meta": {
+            **meta_base,
+            "n_nodes":           len(sets_["N"]),
+            "n_clients":         len(sets_["clients"]),
+            "n_periods":         len(sets_["T"]),
+            "n_vehicles":        len(sets_["M"]),
+            "n_pareto":          len(solutions),
+            "node_positions":    compute_node_positions(sets_["N"]),
+            "I_O_init_frigo":    params_["I_O_init_frigo"],
+            "I_O_init_nonfrigo": params_["I_O_init_nonfrigo"],
+        },
+        "solutions": solutions,
+    }
+
+
+def render_from_instance(data_path):
+    """Re-evaluate cached NSGA3 chromosomes with the current instance JSON.
+    Lets you refresh the browser after editing the instance and see updated results
+    without re-running the full optimisation.
+    """
+    if not os.path.exists(_CHROM_CACHE_PATH):
+        raise FileNotFoundError(
+            "No cached chromosomes. Run the algorithm at least once first."
+        )
+    with open(_CHROM_CACHE_PATH, encoding="utf-8") as f:
+        cache = json.load(f)
+
+    import numpy as np
+    pareto_X       = np.array(cache["chromosomes"])
+    meta_base      = cache["meta_base"]
+    sets_, params_ = load_instance(data_path)
+
+    n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
+    if pareto_X.shape[1] != n_genes_expected:
+        raise ValueError(
+            f"Cached chromosomes have {pareto_X.shape[1]} genes but the current instance "
+            f"requires {n_genes_expected}. Re-run the algorithm for this instance."
+        )
+
+    return _evaluate_pareto(pareto_X, sets_, params_, meta_base)
+
+
 def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
               crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB):
-    """Run NSGA-III and return the full report-ready data dict."""
+    """Run NSGA-III, cache the Pareto chromosomes, and return the report data dict."""
     if data_path is None:
         data_path = os.path.join(PROJECT_DIR, "data", "instance_25_clients.json")
 
@@ -102,7 +191,7 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
         seed    = 42,
     )
     elapsed  = time.time() - t_start
-    pareto_X = result.X  # (n_solutions, n_var)
+    pareto_X = result.X
 
     if pareto_X is None or len(pareto_X) == 0:
         raise RuntimeError(
@@ -114,68 +203,18 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     print(f"[NSGA3] Done in {elapsed:.1f}s | Pareto front: {len(pareto_X)} solutions",
           flush=True)
 
-    # Re-evaluate each Pareto solution to collect full route detail for the report.
-    # pymoo only stores objective values, not intermediate route dicts.
-    solutions = []
-    for i, chromosome in enumerate(pareto_X):
-        quantities   = decode_chromosome(chromosome, sets_)
-        route_result = build_routes(quantities, sets_, params_)
-
-        f1         = compute_f1(route_result, sets_, params_)
-        f2         = compute_f2(route_result, sets_, params_)
-        f3         = compute_f3(route_result, sets_, params_)
-        f4, f4_sub = compute_f4_detail(route_result, sets_, params_)
-
-        routes_report = {}
-        for t in sets_["T"]:
-            trucks_t = [
-                {"k": k, "path": info["path"], "qty": info["qty"]}
-                for k, info in route_result["routes_data"].get(t, {}).items()
-            ]
-            # tau_return already computed by the decoder — no need to recompute
-            tau_ret = route_result["tau_return"].get(t, 0.0)
-            routes_report[str(t)] = {
-                "trucks":     trucks_t,
-                "R_frigo":    params_["R_frigo"].get(t, 0.0),
-                "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
-                "tau_return": round(tau_ret, 4),
-                "shipped":    sum(route_result["actual_qty"].get((l, t), 0)
-                                  for l in sets_["clients"]),
-            }
-
-        solutions.append({
-            "id":         i,
-            "objectives": {
-                "f1": round(f1, 4),
-                "f2": round(f2, 4),
-                "f3": round(f3, 4),
-                "f4": round(f4, 4),
-            },
-            "routes":      routes_report,
-            "depot_stock": {str(t): route_result["depot_stock"][t] for t in sets_["T"]},
-            "deliveries":  _build_delivery_rows(route_result, sets_, params_),
-            "bfr_sub":     f4_sub,
-        })
-
-    return {
-        "meta": {
-            "instance":          f"{n_clients}_clients",
-            "n_nodes":           len(sets_["N"]),
-            "n_clients":         n_clients,
-            "n_periods":         len(sets_["T"]),
-            "n_vehicles":        len(sets_["M"]),
-            "pop_size":          pop_size,
-            "n_gen":             n_gen,
-            "crossover_prob":    crossover_prob,
-            "mutation_prob":     mutation_prob,
-            "n_pareto":          len(solutions),
-            "elapsed_s":         round(elapsed, 1),
-            "node_positions":    compute_node_positions(sets_["N"]),
-            "I_O_init_frigo":    params_["I_O_init_frigo"],
-            "I_O_init_nonfrigo": params_["I_O_init_nonfrigo"],
-        },
-        "solutions": solutions,
+    meta_base = {
+        "instance":       f"{n_clients}_clients",
+        "pop_size":       pop_size,
+        "n_gen":          n_gen,
+        "crossover_prob": crossover_prob,
+        "mutation_prob":  mutation_prob,
+        "elapsed_s":      round(elapsed, 1),
     }
+    with open(_CHROM_CACHE_PATH, "w", encoding="utf-8") as f:
+        json.dump({"chromosomes": pareto_X.tolist(), "meta_base": meta_base}, f)
+
+    return _evaluate_pareto(pareto_X, sets_, params_, meta_base)
 
 
 def run_nsga3_report(output_path=DEFAULT_REPORT_PATH, data_path=None,

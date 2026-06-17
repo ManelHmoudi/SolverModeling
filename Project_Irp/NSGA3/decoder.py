@@ -1,24 +1,40 @@
-"""Chromosome → feasible IRP routes (greedy nearest-neighbour decoder)."""
+"""Chromosome → feasible IRP routes (greedy nearest-neighbour decoder).
+
+Chromosome layout:
+  [0 … n_clients*n_periods - 1]  quantity genes  — q(l,t) for each (client, period)
+  [n_clients*n_periods … end]     priority genes  — p(l) ∈ [0,1] per client
+                                   higher priority → visited earlier by the NN
+"""
 
 
 def decode_chromosome(chromosome, sets_):
-    """Flat numpy array → {(l, t): quantity} dict."""
+    """Flat numpy array → ({(l,t): quantity}, {l: priority}) tuple."""
     clients = sets_["clients"]
     T       = sets_["T"]
-    return {
+    n_qty   = len(clients) * len(T)
+
+    quantities = {
         (l, t): float(chromosome[l_idx * len(T) + t_idx])
         for l_idx, l in enumerate(clients)
         for t_idx, t in enumerate(T)
     }
+    priorities = {
+        l: float(chromosome[n_qty + l_idx])
+        for l_idx, l in enumerate(clients)
+    }
+    return quantities, priorities
 
 
-def build_routes(quantities, sets_, params_):
+def build_routes(quantities, sets_, params_, priorities=None):
     """
     Decode quantities into vehicle routes, enforcing all hard constraints
     (capacity C5, depot inventory C6-C7, demand satisfaction C8, C9, C14).
 
     One truck type per client per period (except T_last which delivers all remaining).
     C9 mirror: frigo truck ↔ requires_cold[l,td]=True ; nonfrigo ↔ False.
+
+    priorities: {l: float in [0,1]} — higher means visited earlier by the NN.
+                Derived from the chromosome's priority gene segment.
 
     Returns dict: x, f, depot_stock, arrival_times, truck_assign,
                   actual_qty, routes_data, tau_return.
@@ -123,15 +139,47 @@ def build_routes(quantities, sets_, params_):
         frigo_qty    = _clamp_to_integer_budget(frigo_desired,    max_rel_f,  frigo_floor)
         nonfrigo_qty = _clamp_to_integer_budget(nonfrigo_desired, max_rel_nf, nonfrigo_floor)
 
+        # Route first so actual deliveries drive the counters
+        routes_data[t] = {}
+        tau_max = params_.get("tau_max")
+        for qty_group, trucks, floor_group in [
+            (frigo_qty,    frigo_list,       frigo_floor),
+            (nonfrigo_qty, non_frigo_trucks, nonfrigo_floor),
+        ]:
+            if not qty_group or not trucks:
+                continue
+            r, tx, tf, ta, tassign = _nearest_neighbour(
+                qty_group, trucks, t, d, v, s, Q, O, tau_max, floor_group,
+                priorities=priorities,
+            )
+            routes_data[t].update(r)
+            x_vars.update(tx)
+            f_vars.update(tf)
+            arrival_times.update(ta)
+            truck_assign.update(tassign)
+
+        # Collect quantities actually placed on routes (tau_max may have dropped some clients)
+        actually_served_frigo    = {}
+        actually_served_nonfrigo = {}
+        for k, info in routes_data[t].items():
+            is_frigo = k in frigo_trucks
+            for l_str, q in info["qty"].items():
+                l_int = int(l_str)
+                if is_frigo:
+                    actually_served_frigo[l_int]    = actually_served_frigo.get(l_int, 0)    + q
+                else:
+                    actually_served_nonfrigo[l_int] = actually_served_nonfrigo.get(l_int, 0) + q
+
+        # Update actual_qty and cumulative counters from routed quantities only
+        shipped_f = shipped_nf = 0
         for l in clients:
-            f  = frigo_qty.get(l, 0)
-            nf = nonfrigo_qty.get(l, 0)
+            f  = actually_served_frigo.get(l, 0)
+            nf = actually_served_nonfrigo.get(l, 0)
             actual_qty[l, t]  = f + nf
             frigo_dlv[l]    += f
             nonfrigo_dlv[l] += nf
-
-        shipped_f  = sum(frigo_qty.values())
-        shipped_nf = sum(nonfrigo_qty.values())
+            shipped_f += f
+            shipped_nf += nf
 
         # C7: depot stock balance — strict equality, same as MIP: I_t = I_{t-1} + R_t - shipped_t
         I_frigo    = I_frigo    + R_frigo[t]    - shipped_f
@@ -141,18 +189,6 @@ def build_routes(quantities, sets_, params_):
             "frigo":    round(I_frigo,    4),
             "nonfrigo": round(I_nonfrigo, 4),
         }
-
-        routes_data[t] = {}
-        tau_max = params_.get("tau_max")
-        for qty_group, trucks in [(frigo_qty, frigo_list), (nonfrigo_qty, non_frigo_trucks)]:
-            if not qty_group or not trucks:
-                continue
-            r, tx, tf, ta, tassign = _nearest_neighbour(qty_group, trucks, t, d, v, s, Q, O, tau_max)
-            routes_data[t].update(r)
-            x_vars.update(tx)
-            f_vars.update(tf)
-            arrival_times.update(ta)
-            truck_assign.update(tassign)
 
     # C13: latest truck return time per period (used as hard constraint in problem.py)
     tau_return = {}
@@ -212,15 +248,28 @@ def _clamp_to_integer_budget(qty_dict, max_total, min_required=None):
     return {l: q for l, q in result.items() if q > 0}
 
 
-def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None):
-    """Build routes for one truck group using greedy nearest-neighbour."""
+def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=None,
+                        priorities=None):
+    """Build routes for one truck group using greedy nearest-neighbour.
+
+    floors:     mandatory minimum per client — these clients bypass the tau_max check
+                so that the deadline rule (cumulative delivered >= cumulative demand) is
+                never silently violated.  If serving them pushes tau_return above tau_max,
+                pymoo's G constraint penalises the solution and NSGA-III steers away.
+
+    priorities: {l: float in [0,1]} from the chromosome's priority gene segment.
+                Selection score = dist / (0.5 + priority), so higher priority → lower
+                score → visited earlier.  Produces diverse visit orders across chromosomes,
+                widening the Pareto front.
+    """
     x_vars   = {}
     f_vars   = {}
     arrivals = {}
     assign   = {}
     routes   = {}
 
-    pending   = dict(qty_dict)
+    prios   = priorities or {}
+    pending = dict(qty_dict)
     truck_idx = 0
 
     while pending and truck_idx < len(trucks):
@@ -235,19 +284,28 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None):
         current      = O
 
         while True:
-            best, best_dist = None, float("inf")
+            best, best_score = None, float("inf")
             for l, q in pending.items():
                 if load + q <= cap:
                     dist = d[current, l]
-                    if tau_max is not None:
-                        # Ensure visiting l and returning to depot stays within tau_max
+
+                    if tau_max is not None and (floors or {}).get(l, 0) <= 0:
+                        # Only discretionary (advance) deliveries are time-constrained.
+                        # Mandatory deliveries (floor > 0) are always served — if they
+                        # push tau_return beyond tau_max, pymoo G constraint penalises
+                        # the chromosome and NSGA-III steers away from it.
                         projected = (current_time
                                      + s.get(current, 0.0) + dist / speed
                                      + s.get(l, 0.0) + d[l, O] / speed)
                         if projected > tau_max:
                             continue
-                    if dist < best_dist:
-                        best_dist, best = dist, l
+                    # Priority-weighted score: high priority → low score → visited first.
+                    # score = dist / (0.5 + p)  with p ∈ [0,1]
+                    #   p=1 → score = dist/1.5  (preferred)
+                    #   p=0 → score = dist/0.5  (deprioritised)
+                    score = dist / (0.5 + prios.get(l, 0.5))
+                    if score < best_score:
+                        best_score, best = score, l
             if best is None:
                 break
 

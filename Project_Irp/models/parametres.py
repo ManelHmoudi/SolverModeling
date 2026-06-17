@@ -3,6 +3,7 @@ Load instance data from JSON and build sets_ / params_ dicts for the IRP model.
 """
 
 import json
+import math
 import os
 
 BASE_DIR         = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -73,7 +74,17 @@ def load_instance(data_path=None):
     frigo_trucks = set(params_raw["frigo_trucks"])
 
     # ── Network distance and routing cost parameters ───────────────────────────
-    d       = {(i, j): abs(i - j) * 10 for (i, j) in A}
+    # Distances Euclidiennes 2D (km) si les coordonnées sont présentes dans le JSON,
+    # sinon formule 1D de repli.
+    if "coordinates" in sets_raw:
+        coords = {int(k): tuple(v) for k, v in sets_raw["coordinates"].items()}
+        d = {
+            (i, j): math.sqrt((coords[i][0] - coords[j][0]) ** 2
+                               + (coords[i][1] - coords[j][1]) ** 2)
+            for (i, j) in A
+        }
+    else:
+        d = {(i, j): abs(i - j) * 10 for (i, j) in A}
     d_m     = {(i, j): d[i, j] * 1000  for (i, j) in A}
     c_route = {(i, j): params_raw["c_route_value"] for (i, j) in A}
 
