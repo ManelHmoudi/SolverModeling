@@ -97,6 +97,15 @@ body{
 .snav{background:var(--tab-bg);border:1px solid var(--border);border-radius:6px;
   padding:3px 10px;cursor:pointer;font-size:12px;color:var(--text);transition:background .15s}
 .snav:hover{background:var(--border)}
+/* ── Run selector ── */
+.run-btn{background:var(--tab-bg);border:1px solid var(--border);border-radius:6px;
+  padding:4px 12px;cursor:pointer;font-size:12px;color:var(--text);
+  transition:background .15s,color .15s,border-color .15s}
+.run-btn:hover{background:var(--border)}
+.run-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ── Comparison table footer ── */
+tfoot td{border-top:2px solid var(--border);font-size:11px;color:var(--text-2);
+  font-style:italic;padding:5px 8px}
 /* ── Split layout ── */
 .split{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem}
 @media(max-width:860px){.split{grid-template-columns:1fr}}
@@ -165,6 +174,24 @@ tr:nth-child(even) td{background:var(--row-bg)}
   <div class="sbar" id="summaryBar"></div>
 </div>
 
+<!-- Quality metrics -->
+<div class="card">
+  <div class="ct">Pareto-front quality indicators</div>
+  <div class="sbar" id="qualityBar"></div>
+</div>
+
+<!-- Runs comparison (shown only when n_runs > 1) -->
+<div class="card" id="runsCompCard" style="display:none">
+  <div class="ct">Runs comparison &amp; stability</div>
+  <div id="runsCompTable"></div>
+</div>
+
+<!-- Run selector (shown only when n_runs > 1) -->
+<div id="runSelectorBlock" style="display:none;margin-bottom:1.1rem">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);margin-bottom:.6rem">Explore run</div>
+  <div id="runBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+</div>
+
 <!-- Pareto front -->
 <div class="card">
   <div class="ct">Pareto front &mdash; parallel coordinates (click a line to explore that solution)</div>
@@ -190,6 +217,7 @@ tr:nth-child(even) td{background:var(--row-bg)}
     <div class="ct">Route network</div>
     <div class="tabs" id="periodTabs"></div>
     <div class="svgwrap" id="svgWrap"></div>
+    <div id="tourBlock"></div>
   </div>
   <div class="card">
     <div class="ct">Depot stock evolution</div>
@@ -212,8 +240,9 @@ tr:nth-child(even) td{background:var(--row-bg)}
 </main>
 <script>
 const D = /*DATA_PLACEHOLDER*/null;
-const M = D.meta;
-const SOLS = D.solutions;
+const M    = D.meta;
+const RUNS = D.runs;
+const STAB = D.stability;
 
 /* ── Theme ─────────────────────────────────────────────── */
 function toggleDark(){
@@ -237,28 +266,113 @@ function fmt(v){
   return typeof v.toFixed==='function' ? v.toFixed(3) : String(v);
 }
 
+/* ── Per-run state ──────────────────────────────────────── */
+let currentRunIdx = 0;
+let selectedIdx   = 0;
+let currentPeriod = null;
+let SOLS     = RUNS[0].solutions;
+let RUN_META = RUNS[0].meta;
+
+function switchRun(i){
+  currentRunIdx = i;
+  SOLS     = RUNS[i].solutions;
+  RUN_META = RUNS[i].meta;
+  selectedIdx   = 0;
+  currentPeriod = null;
+  renderAll();
+}
+
 /* ── Meta header ────────────────────────────────────────── */
 document.getElementById('metaLine').textContent =
   M.instance.replace('_',' ') + '  ·  ' + M.n_nodes + ' nodes  ·  ' +
   M.n_periods + ' periods  ·  ' + M.n_vehicles + ' vehicles';
 
 /* ── Summary bar ────────────────────────────────────────── */
-(function(){
+function renderSummaryBar(){
   const items = [
-    ['Population', M.pop_size],
-    ['Generations', M.n_gen],
+    ['Population',      M.pop_size],
+    ['Generations',     M.n_gen],
     ['Crossover (SBX)', M.crossover_prob],
-    ['Mutation (PM)', M.mutation_prob],
-    ['Pareto solutions', M.n_pareto],
-    ['Runtime', M.elapsed_s + 's'],
+    ['Mutation (PM)',   M.mutation_prob],
+    ['Pareto solutions',RUN_META.n_pareto],
+    ['Runtime',         RUN_META.elapsed_s + 's'],
   ];
   document.getElementById('summaryBar').innerHTML = items.map(([k,v]) =>
     `<span class="sp"><b>${v}</b> ${k}</span>`).join('');
-})();
+}
 
-/* ── State ──────────────────────────────────────────────── */
-let selectedIdx  = 0;
-let currentPeriod = null;
+/* ── Quality metrics bar ────────────────────────────────── */
+function renderQualityBar(){
+  const Q = RUN_META.quality || {};
+  const fmt6 = v => (v == null ? '—' : Number(v).toFixed(6));
+  const items = [
+    ['HV ↑',      fmt6(Q.HV)],
+    ['GD ↓',      fmt6(Q.GD)],
+    ['IGD ↓',     fmt6(Q.IGD)],
+    ['Spacing ↓', fmt6(Q.Spacing)],
+  ];
+  document.getElementById('qualityBar').innerHTML = items.map(([k,v]) =>
+    `<span class="sp"><b>${v}</b> ${k}</span>`).join('');
+}
+
+/* ── Runs comparison & selector ─────────────────────────── */
+function renderRunsComparison(){
+  const card  = document.getElementById('runsCompCard');
+  const block = document.getElementById('runSelectorBlock');
+  if(RUNS.length <= 1){ card.style.display='none'; block.style.display='none'; return; }
+  card.style.display=''; block.style.display='';
+
+  // Run selector buttons
+  document.getElementById('runBtns').innerHTML = RUNS.map((r,i) =>
+    `<button class="run-btn${i===currentRunIdx?' active':''}" onclick="switchRun(${i})">
+      Run ${r.meta.run_id||i+1}
+      <span style="font-size:10px;opacity:.7;margin-left:5px">${r.meta.n_pareto} sol.</span>
+    </button>`
+  ).join('');
+
+  // Comparison table
+  const fmt6 = v => (v==null?'—':Number(v).toFixed(6));
+  const fmtS = s => (s&&s.mean!=null
+    ? `${Number(s.mean).toFixed(6)}<br><span style="opacity:.7">± ${Number(s.std).toFixed(6)}</span>`
+    : '—');
+  const fmtN = s => (s&&s.mean!=null
+    ? `${Number(s.mean).toFixed(1)}<br><span style="opacity:.7">± ${Number(s.std).toFixed(1)}</span>`
+    : '—');
+
+  const rows = RUNS.map((r,i) => {
+    const q  = r.meta.quality || {};
+    const hl = i===currentRunIdx ? ' style="background:var(--f4-bg)"' : '';
+    return `<tr${hl}>
+      <td><b>Run ${r.meta.run_id||i+1}</b></td>
+      <td>${r.meta.seed||'—'}</td>
+      <td>${r.meta.n_pareto}</td>
+      <td>${fmt6(q.HV)}</td>
+      <td>${fmt6(q.GD)}</td>
+      <td>${fmt6(q.IGD)}</td>
+      <td>${fmt6(q.Spacing)}</td>
+      <td>${r.meta.elapsed_s}s</td>
+    </tr>`;
+  }).join('');
+
+  const S = STAB||{};
+  document.getElementById('runsCompTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Run</th><th>Seed</th><th>Pareto</th>
+        <th>HV ↑</th><th>GD ↓</th><th>IGD ↓</th><th>Spacing ↓</th><th>Time</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td colspan="2"><b>Mean ± Std</b></td>
+        <td>${fmtN(S.n_pareto)}</td>
+        <td>${fmtS(S.HV)}</td>
+        <td>${fmtS(S.GD)}</td>
+        <td>${fmtS(S.IGD)}</td>
+        <td>${fmtS(S.Spacing)}</td>
+        <td>—</td>
+      </tr></tfoot>
+    </table>`;
+}
 
 /* ── Pareto parallel coordinates ────────────────────────── */
 function renderPareto(){
@@ -267,7 +381,6 @@ function renderPareto(){
   const AXES = ['f1  Logistics','f2  CO₂','f3  Travel time','f4  BFR (min)'];
   const AX = [0,1,2,3].map(i => ML + i*(W-ML-MR)/3);
 
-  // Min/max per objective
   const keys=['f1','f2','f3','f4'];
   const mins=keys.map(k=>Math.min(...SOLS.map(s=>s.objectives[k])));
   const maxs=keys.map(k=>Math.max(...SOLS.map(s=>s.objectives[k])));
@@ -275,8 +388,7 @@ function renderPareto(){
   function norm(val,j){
     const r=maxs[j]-mins[j];
     if(r<1e-9) return 0.5;
-    const n=(val-mins[j])/r;
-    return n;   // all objectives: lower = better = top
+    return (val-mins[j])/r;
   }
   function yp(n){ return MT + n*CH; }
 
@@ -287,7 +399,6 @@ function renderPareto(){
   const valColor = isDark ? '#ccc'    : '#444';
   const n = SOLS.length;
 
-  // Each solution gets a distinct hue (blue→teal→green→orange spectrum)
   function solColor(i){
     const h = Math.round(240 - (i / Math.max(n-1,1)) * 200);
     return isDark ? `hsl(${h},65%,65%)` : `hsl(${h},65%,42%)`;
@@ -295,10 +406,8 @@ function renderPareto(){
 
   let svg = '';
 
-  // Axes + tick marks
   AX.forEach((ax,j)=>{
     svg += `<line x1="${ax}" y1="${MT}" x2="${ax}" y2="${H-MB}" stroke="${axColor}" stroke-width="2"/>`;
-    // Small ticks at 25%, 50%, 75%
     [0.25,0.5,0.75].forEach(t=>{
       svg += `<line x1="${ax-4}" y1="${yp(t)}" x2="${ax+4}" y2="${yp(t)}" stroke="${axColor}" stroke-width="1"/>`;
     });
@@ -309,7 +418,6 @@ function renderPareto(){
     svg += `<text x="${ax}" y="${H-MB+13}" text-anchor="middle" font-size="9.5" fill="${valColor}">${worst}</text>`;
   });
 
-  // Non-selected polylines (draw first, underneath)
   SOLS.forEach((sol,i)=>{
     if(i===selectedIdx) return;
     const c   = solColor(i);
@@ -321,7 +429,6 @@ function renderPareto(){
       onclick="selectSolution(${i})"/>`;
   });
 
-  // Selected polyline (draw on top)
   const sel=SOLS[selectedIdx];
   const selPts=AX.map((ax,j)=>`${ax},${yp(norm(sel.objectives[keys[j]],j))}`).join(' ');
   svg += `<polyline points="${selPts}" fill="none" stroke="${selColor}" stroke-width="3.5"/>`;
@@ -332,8 +439,7 @@ function renderPareto(){
 
   document.getElementById('paretoChart').innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${svg}</svg>`;
-  document.getElementById('hintText').textContent =
-    `${SOLS.length} non-dominated solutions · solution #${selectedIdx+1} selected (highlighted)`;
+  document.getElementById('hintText').textContent = '';
 }
 
 /* ── KPI cards ──────────────────────────────────────────── */
@@ -424,7 +530,6 @@ function renderNetwork(t){
       if(delivered>0)
         arcs+=`<text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="9" fill="${col}" font-weight="600">${delivered}</text>`;
     }
-    // dashed return
     if(path.length>0){
       const last=path[path.length-1];
       if(last!==0){
@@ -467,6 +572,32 @@ function renderNetwork(t){
        <rect width="${W}" height="${H}" fill="${bgFill}"/>
        ${arcs}${nodesSvg}
      </svg>${lgd}`;
+
+  let tourHtml='';
+  if(trucks.length>0){
+    tourHtml+=`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">`;
+    tourHtml+=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);margin-bottom:6px">Delivery tours — period ${t}</div>`;
+    trucks.forEach(tr=>{
+      const c=tc(tr.k);
+      const nodes=tr.path.slice();
+      if(nodes.length>0 && nodes[nodes.length-1]!==0) nodes.push(0);
+      const stops=nodes.map(n=>n===0?'D':String(n));
+      const stopsHtml=stops.map((s,i)=>{
+        const isD=(s==='D');
+        const chip=`<span style="padding:2px 7px;border-radius:6px;font-size:11px;font-weight:${isD?700:500};background:${isD?c:'var(--row-bg)'};color:${isD?'#fff':'var(--text)'};border:1px solid ${isD?c:'var(--border)'}">${s}</span>`;
+        return i<stops.length-1?chip+`<span style="color:var(--text-2);font-size:12px;margin:0 1px">&#8594;</span>`:chip;
+      }).join('');
+      tourHtml+=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:5px">
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;background:var(--row-bg);border:1px solid var(--border);font-size:11px;flex-shrink:0">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c}"></span>
+          <b style="color:${c}">k=${tr.k}</b>
+        </span>
+        ${stopsHtml}
+      </div>`;
+    });
+    tourHtml+=`</div>`;
+  }
+  document.getElementById('tourBlock').innerHTML=tourHtml;
 }
 
 /* ── Depot stock ────────────────────────────────────────── */
@@ -581,6 +712,9 @@ function stepSolution(dir){
 
 /* ── Full render ────────────────────────────────────────── */
 function renderAll(){
+  renderRunsComparison();
+  renderSummaryBar();
+  renderQualityBar();
   renderPareto();
   renderSolTitle();
   renderKPIs();
@@ -628,7 +762,7 @@ def compute_node_positions(N, svg_w=480, svg_h=290):
     return {str(k): v for k, v in pos.items()}
 
 
-# ── Chrome opener (same as other modules) ────────────────────────────────────
+# ── Chrome opener ─────────────────────────────────────────────────────────────
 def _open_chrome(url):
     if sys.platform == "win32":
         candidates = [

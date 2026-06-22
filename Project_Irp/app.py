@@ -24,6 +24,7 @@ INSTANCES = {
     "15": os.path.join(BASE_DIR, "data", "instance_15_clients.json"),
     "25": os.path.join(BASE_DIR, "data", "instance_25_clients.json"),
     "30": os.path.join(BASE_DIR, "data", "instance_30_clients.json"),
+    "40": os.path.join(BASE_DIR, "data", "instance_40_clients.json"),
 }
 DEFAULT_INSTANCE = "15"
 
@@ -342,6 +343,19 @@ body {
   .header { flex-direction: row; }
   .page { padding: 32px 16px 48px; }
 }
+.n3rb {
+  padding: 4px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.n3rb:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-active); }
+.n3rb.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 </style>
 </head>
 <body>
@@ -393,6 +407,9 @@ body {
     <button class="inst-btn" data-instance="30" onclick="selectInstance('30')">
       <span class="inst-dot"></span>30 clients
     </button>
+    <button class="inst-btn" data-instance="40" onclick="selectInstance('40')">
+      <span class="inst-dot"></span>40 clients
+    </button>
   </div>
 
   <p class="section-label">Available modules</p>
@@ -437,10 +454,20 @@ body {
         </div>
         <h2 class="card-title">NSGA-III</h2>
         <p class="card-desc">Many-objective metaheuristic: evolves a Pareto front of trade-off solutions for f1 (cost), f2 (CO₂), f3 (time) and f4 (working capital) without CPLEX.</p>
+        <div style="margin-top:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px">Number of runs</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap" id="n3RunsBtns">
+            <button class="n3rb selected" data-runs="1"  onclick="setN3Runs(1)">1×</button>
+            <button class="n3rb"          data-runs="3"  onclick="setN3Runs(3)">3×</button>
+            <button class="n3rb"          data-runs="5"  onclick="setN3Runs(5)">5×</button>
+            <button class="n3rb"          data-runs="10" onclick="setN3Runs(10)">10×</button>
+            <button class="n3rb"          data-runs="20" onclick="setN3Runs(20)">20×</button>
+          </div>
+        </div>
       </div>
       <div class="card-footer">
-        <a class="button primary"   id="n3-run"    href="{{ url_for('run_nsga3_route') }}?instance=25" target="_blank" rel="noopener noreferrer">Run module</a>
-        <a class="button secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25"    target="_blank" rel="noopener noreferrer">Last report</a>
+        <a class="button primary"   id="n3-run"    href="{{ url_for('run_nsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">Run module</a>
+        <a class="button secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25"           target="_blank" rel="noopener noreferrer">Last report</a>
       </div>
     </article>
 
@@ -448,6 +475,16 @@ body {
 </main>
 
 <script>
+let n3Runs = 1;
+function setN3Runs(n) {
+  n3Runs = n;
+  document.querySelectorAll('.n3rb').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.runs) === n);
+  });
+  const el = document.getElementById('n3-run');
+  if (el) el.href = '{{ url_for("run_nsga3_route") }}?instance=' + selectedInstance + '&runs=' + n;
+}
+
 const MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 const SUN_SVG = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const icon = document.getElementById('themeIcon');
@@ -471,18 +508,20 @@ function selectInstance(key) {
     ['oc-report', '{{ url_for("objective_calibration_report") }}'],
     ['fm-run',    '{{ url_for("run_function_merge_route") }}'],
     ['fm-report', '{{ url_for("function_merge_report") }}'],
-    ['n3-run',    '{{ url_for("run_nsga3_route") }}'],
     ['n3-report', '{{ url_for("nsga3_report") }}'],
   ];
   pairs.forEach(([id, base]) => {
     const el = document.getElementById(id);
     if (el) el.href = base + '?instance=' + key;
   });
+  // NSGA-III run button also carries the runs count
+  const n3run = document.getElementById('n3-run');
+  if (n3run) n3run.href = '{{ url_for("run_nsga3_route") }}?instance=' + key + '&runs=' + n3Runs;
 }
 
 // Restore saved selection on load — default to 15 if saved value no longer valid
 (function() {
-  const valid = ['3','5','15','25'];
+  const valid = ['3','5','15','25','30','40'];
   const saved = localStorage.getItem('irp-instance') || '15';
   selectInstance(valid.includes(saved) ? saved : '15');
 })();
@@ -578,7 +617,8 @@ def function_merge_report():
 def run_nsga3_route():
     data_path, inst_key = _resolve_instance()
     try:
-        run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path)
+        n_runs = max(1, min(20, int(request.args.get("runs", 1))))
+        run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
         return redirect(url_for("nsga3_report") + f"?instance={inst_key}")
     except Exception:
         tb = traceback.format_exc()
