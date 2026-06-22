@@ -12,8 +12,9 @@ from flask import Flask, redirect, render_template_string, request, send_file, u
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
 from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
-from NSGA3.main   import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
-from NSGA3.report import render_html as nsga3_render_html
+from NSGA3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
+from NSGA3.report  import render_html as nsga3_render_html
+from QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,485 +42,684 @@ MENU_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRP — Module Launcher</title>
+<title>IRP — Solver Suite</title>
 <style>
 :root {
-  --bg: #f0f4f8;
-  --surface: #ffffff;
-  --surface-hover: #f5f8fb;
-  --border: #cdd7e3;
-  --border-active: #a8bdd1;
-  --text: #0d1b2a;
-  --muted: #546475;
-  --accent: #1a6f8a;
-  --accent-hover: #145c74;
-  --accent-fg: #ffffff;
-  --tag-active-bg: #dff3f0;
-  --tag-active-fg: #0e6b5e;
-  --tag-soon-bg: #f0f1f3;
-  --tag-soon-fg: #6b7585;
-  --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 12px rgba(0,0,0,.05);
-  --shadow-hover: 0 2px 8px rgba(0,0,0,.09), 0 8px 24px rgba(0,0,0,.08);
-  --num-bg: #eaf3f7;
-  --num-fg: #1a6f8a;
-  --btn-sec-bg: #ffffff;
-  --btn-sec-border: #cdd7e3;
-  --btn-sec-fg: #0d1b2a;
-  --btn-sec-hover: #eef3f7;
-  --btn-dis-bg: #eceff2;
-  --btn-dis-fg: #9daab6;
-  --toggle-bg: #dde5ee;
-  --toggle-fg: #546475;
+  --bg:            #f2f5f9;
+  --surface:       #ffffff;
+  --surface-2:     #f8fafc;
+  --border:        #dce3ec;
+  --border-focus:  #93b4ca;
+  --text:          #0f1923;
+  --text-2:        #4e6070;
+  --text-3:        #8fa0b0;
+  --accent:        #0f6a87;
+  --accent-dim:    #e6f3f8;
+  --accent-hover:  #0a5570;
+  --accent-fg:     #ffffff;
+  --green:         #0d7a55;
+  --green-bg:      #e6f5ee;
+  --shadow-sm:     0 1px 2px rgba(0,0,0,.06), 0 3px 8px rgba(0,0,0,.04);
+  --shadow-md:     0 2px 6px rgba(0,0,0,.07), 0 8px 24px rgba(0,0,0,.07);
+  --shadow-lg:     0 4px 12px rgba(0,0,0,.09), 0 16px 40px rgba(0,0,0,.08);
+  --radius:        14px;
+  --radius-sm:     8px;
+  --c1: #0f6a87; --c1-bg: #e6f3f8;
+  --c2: #0d7a55; --c2-bg: #e6f5ee;
+  --c3: #6741d9; --c3-bg: #ede9fb;
+  --c4: #b45309; --c4-bg: #fef3e2;
 }
 [data-theme="dark"] {
-  --bg: #0e1118;
-  --surface: #161c27;
-  --surface-hover: #1c2436;
-  --border: #252e42;
-  --border-active: #334360;
-  --text: #dde4ef;
-  --muted: #8493ab;
-  --accent: #4ab0cc;
-  --accent-hover: #38a0be;
-  --accent-fg: #0a1520;
-  --tag-active-bg: #0d2e2a;
-  --tag-active-fg: #4ecbb8;
-  --tag-soon-bg: #1c2236;
-  --tag-soon-fg: #6b7c9a;
-  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.25);
-  --shadow-hover: 0 2px 8px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
-  --num-bg: #0e2535;
-  --num-fg: #4ab0cc;
-  --btn-sec-bg: #1c2436;
-  --btn-sec-border: #2d3a55;
-  --btn-sec-fg: #dde4ef;
-  --btn-sec-hover: #232d44;
-  --btn-dis-bg: #181e2e;
-  --btn-dis-fg: #3e4e6a;
-  --toggle-bg: #252e42;
-  --toggle-fg: #8493ab;
+  --bg:            #0b0f16;
+  --surface:       #131922;
+  --surface-2:     #1a2130;
+  --border:        #1e2a3a;
+  --border-focus:  #2d4a62;
+  --text:          #e0e8f2;
+  --text-2:        #8097b0;
+  --text-3:        #3d5068;
+  --accent:        #38b2d4;
+  --accent-dim:    #0d2535;
+  --accent-hover:  #2aa3c5;
+  --accent-fg:     #060f18;
+  --green:         #34c98a;
+  --green-bg:      #0a2419;
+  --shadow-sm:     0 1px 2px rgba(0,0,0,.3), 0 3px 8px rgba(0,0,0,.25);
+  --shadow-md:     0 2px 6px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:     0 4px 12px rgba(0,0,0,.4), 0 16px 40px rgba(0,0,0,.35);
+  --c1: #38b2d4; --c1-bg: #0d2535;
+  --c2: #34c98a; --c2-bg: #0a2419;
+  --c3: #a78bfa; --c3-bg: #1e1545;
+  --c4: #fbbf24; --c4-bg: #2a1d06;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition: background .25s, color .25s;
   -webkit-font-smoothing: antialiased;
-}
-.page {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 48px 24px 64px;
+  transition: background .2s, color .2s;
 }
 
-/* ── Header ─────────────────────────────────────────────── */
+/* ── Layout ── */
+.page { max-width: 1020px; margin: 0 auto; padding: 36px 24px 60px; }
+
+/* ── Header ── */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 48px;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
 }
-.header-brand { display: flex; align-items: center; gap: 14px; }
-.brand-mark {
-  width: 44px; height: 44px;
-  border-radius: 10px;
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
   background: var(--accent);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(15,106,135,.35);
 }
-.brand-mark svg { width: 22px; height: 22px; fill: var(--accent-fg); }
-.brand-text h1 {
-  font-size: 22px;
+.brand-icon svg { width: 24px; height: 24px; fill: #fff; }
+.brand-name {
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -.4px;
-  line-height: 1.2;
+  letter-spacing: -.3px;
   color: var(--text);
 }
-.brand-text p {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 2px;
+.brand-sub {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 1px;
 }
-.theme-toggle {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 12px;
+.header-right { display: flex; align-items: center; gap: 10px; }
+.badge-env {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.btn-theme {
+  display: flex; align-items: center; gap: 5px;
+  height: 34px;
+  padding: 0 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--toggle-bg);
-  color: var(--toggle-fg);
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: background .2s, border-color .2s, color .2s;
+  transition: border-color .15s, background .15s, color .15s;
   outline: none;
-  white-space: nowrap;
 }
-.theme-toggle:hover { border-color: var(--border-active); }
-.theme-toggle svg { width: 15px; height: 15px; flex-shrink: 0; }
+.btn-theme:hover { border-color: var(--border-focus); color: var(--text); }
+.btn-theme svg { width: 14px; height: 14px; flex-shrink: 0; }
 
-/* ── Instance bar ────────────────────────────────────────── */
-.instance-bar {
+/* ── Instance panel ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+.panel-hdr {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 16px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
-.instance-bar-label {
-  font-size: 11px;
+.panel-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--accent-dim);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.panel-icon svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; }
+.panel-title {
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-  margin-right: 4px;
+  color: var(--text-2);
 }
-.inst-btn {
+.inst-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.inst-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 7px;
+  border-radius: 99px;
   border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: all .15s;
   white-space: nowrap;
+  user-select: none;
 }
-.inst-btn:hover {
-  border-color: var(--border-active);
-  background: var(--surface-hover);
+.inst-chip:hover {
+  border-color: var(--border-focus);
+  background: var(--surface);
   color: var(--text);
 }
-.inst-btn.selected {
+.inst-chip.selected {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-fg);
+  box-shadow: 0 2px 6px rgba(15,106,135,.3);
 }
-.inst-dot {
-  width: 7px; height: 7px;
+.chip-dot {
+  width: 6px; height: 6px;
   border-radius: 50%;
   background: currentColor;
-  opacity: .7;
+  opacity: .65;
   flex-shrink: 0;
 }
 
-/* ── Divider ─────────────────────────────────────────────── */
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--muted);
+/* ── Section header ── */
+.section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 14px;
 }
+.section-hdr-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-hdr-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+}
 
-/* ── Grid ─────────────────────────────────────────────────── */
+/* ── Grid ── */
 .modules {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-/* ── Card ─────────────────────────────────────────────────── */
-.module {
+/* ── Card ── */
+.card {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: box-shadow .2s, border-color .2s, background .2s;
+  transition: box-shadow .2s, border-color .2s, transform .15s;
+  position: relative;
 }
-.module.available:hover {
-  box-shadow: var(--shadow-hover);
-  border-color: var(--border-active);
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--card-color, var(--accent));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
 }
 .card-body {
   flex: 1;
-  padding: 20px 20px 18px;
+  padding: 20px 20px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.card-meta {
+.card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
-.module-num {
-  font-size: 11px;
+.card-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--card-icon-bg, var(--accent-dim));
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.card-icon svg { width: 18px; height: 18px; }
+.card-badges { display: flex; align-items: center; gap: 6px; }
+.badge-num {
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: .06em;
-  color: var(--num-fg);
-  background: var(--num-bg);
-  border-radius: 5px;
-  padding: 3px 7px;
+  letter-spacing: .05em;
+  color: var(--text-3);
 }
-.status-tag {
-  font-size: 11px;
+.badge-status {
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: .04em;
-  border-radius: 20px;
-  padding: 3px 9px;
+  padding: 2px 8px;
+  border-radius: 99px;
 }
-.status-tag.active {
-  background: var(--tag-active-bg);
-  color: var(--tag-active-fg);
-}
-.status-tag.soon {
-  background: var(--tag-soon-bg);
-  color: var(--tag-soon-fg);
+.badge-status.active {
+  background: var(--green-bg);
+  color: var(--green);
 }
 .card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: -.2px;
+  letter-spacing: -.15px;
   color: var(--text);
   line-height: 1.3;
 }
 .card-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.55;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  flex: 1;
 }
+.runs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+.runs-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.runs-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.card-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+.runs-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .13s;
+  user-select: none;
+}
+.runs-btn:hover { border-color: var(--border-focus); color: var(--text); background: var(--surface); }
+.runs-btn.selected {
+  background: var(--card-color, var(--accent));
+  border-color: var(--card-color, var(--accent));
+  color: #fff;
+}
+
+/* ── Card footer ── */
 .card-footer {
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
+  padding: 12px 20px 16px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  background: transparent;
+  align-items: center;
 }
-.button {
+.btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 7px;
+  gap: 7px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: all .15s;
+  letter-spacing: .01em;
 }
-.button.primary {
-  background: var(--accent);
-  color: var(--accent-fg);
+.btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.btn-primary {
+  background: var(--card-color, var(--accent));
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
 }
-.button.primary:hover { background: var(--accent-hover); }
-.button.secondary {
-  background: var(--btn-sec-bg);
-  border-color: var(--btn-sec-border);
-  color: var(--btn-sec-fg);
+.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.btn-secondary {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-2);
 }
-.button.secondary:hover { background: var(--btn-sec-hover); }
-.button.disabled {
-  pointer-events: none;
-  background: var(--btn-dis-bg);
-  color: var(--btn-dis-fg);
-  border-color: transparent;
+.btn-secondary:hover { border-color: var(--border-focus); color: var(--text); background: var(--surface); }
+
+/* ── Footer ── */
+.page-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.footer-text { font-size: 12px; color: var(--text-3); }
+.footer-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.footer-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  background: var(--surface);
 }
 
-@media (max-width: 780px) {
+@media (max-width: 680px) {
   .modules { grid-template-columns: 1fr; }
-  .header { flex-direction: row; }
-  .page { padding: 32px 16px 48px; }
+  .page { padding: 20px 16px 40px; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .badge-env { display: none; }
 }
-.n3rb {
-  padding: 4px 11px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.n3rb:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-active); }
-.n3rb.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 </style>
 </head>
 <body>
 <main class="page">
 
   <header class="header">
-    <div class="header-brand">
-      <div class="brand-mark">
+    <div class="brand">
+      <div class="brand-icon">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z"/>
         </svg>
       </div>
-      <div class="brand-text">
-        <h1>IRP Modules</h1>
-        <p>Select a module to launch as a standalone app</p>
+      <div>
+        <div class="brand-name">IRP Solver Suite</div>
+        <div class="brand-sub">Inventory Routing Problem — multi-objective optimisation</div>
       </div>
     </div>
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
-      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="5"/>
-        <line x1="12" y1="1" x2="12" y2="3"/>
-        <line x1="12" y1="21" x2="12" y2="23"/>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-        <line x1="1" y1="12" x2="3" y2="12"/>
-        <line x1="21" y1="12" x2="23" y2="12"/>
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-      </svg>
-      <span id="themeLabel">Light</span>
-    </button>
+    <div class="header-right">
+      <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <span id="themeLabel">Light</span>
+      </button>
+    </div>
   </header>
 
-  <!-- Instance selector -->
-  <div class="instance-bar" id="instanceBar">
-    <span class="instance-bar-label">Instance</span>
-    <button class="inst-btn" data-instance="3"  onclick="selectInstance('3')">
-      <span class="inst-dot"></span>3 clients
-    </button>
-    <button class="inst-btn" data-instance="5"  onclick="selectInstance('5')">
-      <span class="inst-dot"></span>5 clients
-    </button>
-    <button class="inst-btn selected" data-instance="15" onclick="selectInstance('15')">
-      <span class="inst-dot"></span>15 clients
-    </button>
-    <button class="inst-btn" data-instance="25" onclick="selectInstance('25')">
-      <span class="inst-dot"></span>25 clients
-    </button>
-    <button class="inst-btn" data-instance="30" onclick="selectInstance('30')">
-      <span class="inst-dot"></span>30 clients
-    </button>
-    <button class="inst-btn" data-instance="40" onclick="selectInstance('40')">
-      <span class="inst-dot"></span>40 clients
-    </button>
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/></svg>
+      </div>
+      <span class="panel-title">Instance</span>
+    </div>
+    <div class="inst-chips" id="instanceBar">
+      <button class="inst-chip" data-instance="3"  onclick="selectInstance('3')"><span class="chip-dot"></span>3 clients</button>
+      <button class="inst-chip" data-instance="5"  onclick="selectInstance('5')"><span class="chip-dot"></span>5 clients</button>
+      <button class="inst-chip selected" data-instance="15" onclick="selectInstance('15')"><span class="chip-dot"></span>15 clients</button>
+      <button class="inst-chip" data-instance="25" onclick="selectInstance('25')"><span class="chip-dot"></span>25 clients</button>
+      <button class="inst-chip" data-instance="30" onclick="selectInstance('30')"><span class="chip-dot"></span>30 clients</button>
+      <button class="inst-chip" data-instance="40" onclick="selectInstance('40')"><span class="chip-dot"></span>40 clients</button>
+    </div>
   </div>
 
-  <p class="section-label">Available modules</p>
+  <div class="section-hdr">
+    <span class="section-hdr-label">Available modules</span>
+    <div class="section-hdr-line"></div>
+    <span class="section-hdr-label">4 active</span>
+  </div>
 
-  <section class="modules" aria-label="Project modules">
+  <section class="modules" aria-label="Solver modules">
 
-    <article class="module available">
+    <!-- ── 01 Objective Calibration ── -->
+    <article class="card" style="--card-color:var(--c1);--card-icon-bg:var(--c1-bg)">
       <div class="card-body">
-        <div class="card-meta">
-          <span class="module-num">01</span>
-          <span class="status-tag active">Active</span>
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="1.8" stroke-linecap="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div class="card-badges">
+            <span class="badge-num">01</span>
+            <span class="badge-status active">Active</span>
+          </div>
         </div>
         <h2 class="card-title">Objective Calibration</h2>
-        <p class="card-desc">Run the many-objective calibration model and open the generated dashboard report.</p>
+        <p class="card-desc">Calibrate and solve the many-objective MIP individually — derives budget bounds C_max, E_max, T_max, B for all four objectives.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary"    id="oc-run"    href="{{ url_for('run_objective_calibration_route') }}?instance=15" target="_blank" rel="noopener noreferrer">Run module</a>
-        <a class="button secondary"  id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15" target="_blank" rel="noopener noreferrer">Last report</a>
+        <a class="btn btn-primary" id="oc-run" href="{{ url_for('run_objective_calibration_route') }}?instance=15" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run
+        </a>
+        <a class="btn btn-secondary" id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Last report
+        </a>
       </div>
     </article>
 
-    <article class="module available">
+    <!-- ── 02 Function Merge ── -->
+    <article class="card" style="--card-color:var(--c2);--card-icon-bg:var(--c2-bg)">
       <div class="card-body">
-        <div class="card-meta">
-          <span class="module-num">02</span>
-          <span class="status-tag active">Active</span>
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c2)" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+            </svg>
+          </div>
+          <div class="card-badges">
+            <span class="badge-num">02</span>
+            <span class="badge-status active">Active</span>
+          </div>
         </div>
         <h2 class="card-title">Function Merge</h2>
-        <p class="card-desc">Solve all four objectives together in one run: minimise f1 (cost), f2 (CO₂), f3 (time) and maximise f4 (working capital) via a single scalarised CPLEX solve.</p>
+        <p class="card-desc">Scalarised single-run CPLEX solve — minimises f1 + f2 + f3 + f4 simultaneously across cost, CO₂, time and working capital.</p>
       </div>
       <div class="card-footer">
-        <a class="button primary"   id="fm-run"    href="{{ url_for('run_function_merge_route') }}?instance=15" target="_blank" rel="noopener noreferrer">Run module</a>
-        <a class="button secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15" target="_blank" rel="noopener noreferrer">Last report</a>
+        <a class="btn btn-primary" id="fm-run" href="{{ url_for('run_function_merge_route') }}?instance=15" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run
+        </a>
+        <a class="btn btn-secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Last report
+        </a>
       </div>
     </article>
 
-    <article class="module available">
+    <!-- ── 03 NSGA-III ── -->
+    <article class="card" style="--card-color:var(--c3);--card-icon-bg:var(--c3-bg)">
       <div class="card-body">
-        <div class="card-meta">
-          <span class="module-num">03</span>
-          <span class="status-tag active">Active</span>
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c3)" stroke-width="1.8" stroke-linecap="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <div class="card-badges">
+            <span class="badge-num">03</span>
+            <span class="badge-status active">Active</span>
+          </div>
         </div>
         <h2 class="card-title">NSGA-III</h2>
-        <p class="card-desc">Many-objective metaheuristic: evolves a Pareto front of trade-off solutions for f1 (cost), f2 (CO₂), f3 (time) and f4 (working capital) without CPLEX.</p>
-        <div style="margin-top:8px">
-          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px">Number of runs</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap" id="n3RunsBtns">
-            <button class="n3rb selected" data-runs="1"  onclick="setN3Runs(1)">1×</button>
-            <button class="n3rb"          data-runs="3"  onclick="setN3Runs(3)">3×</button>
-            <button class="n3rb"          data-runs="5"  onclick="setN3Runs(5)">5×</button>
-            <button class="n3rb"          data-runs="10" onclick="setN3Runs(10)">10×</button>
-            <button class="n3rb"          data-runs="20" onclick="setN3Runs(20)">20×</button>
+        <p class="card-desc">Many-objective genetic algorithm. Builds a dense Pareto front across all four IRP objectives.</p>
+        <div class="card-tags">
+          <span class="card-tag">Pareto front</span>
+          <span class="card-tag">Ref. directions</span>
+          <span class="card-tag">4 objectives</span>
+
+        </div>
+        <div class="runs-row">
+          <span class="runs-label">Runs</span>
+          <div class="runs-group" id="n3RunsBtns">
+            <button class="runs-btn selected" data-runs="1"  onclick="setN3Runs(1)">1×</button>
+            <button class="runs-btn"          data-runs="3"  onclick="setN3Runs(3)">3×</button>
+            <button class="runs-btn"          data-runs="5"  onclick="setN3Runs(5)">5×</button>
+            <button class="runs-btn"          data-runs="10" onclick="setN3Runs(10)">10×</button>
+            <button class="runs-btn"          data-runs="20" onclick="setN3Runs(20)">20×</button>
           </div>
         </div>
       </div>
       <div class="card-footer">
-        <a class="button primary"   id="n3-run"    href="{{ url_for('run_nsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">Run module</a>
-        <a class="button secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25"           target="_blank" rel="noopener noreferrer">Last report</a>
+        <a class="btn btn-primary" id="n3-run" href="{{ url_for('run_nsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run
+        </a>
+        <a class="btn btn-secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Last report
+        </a>
+      </div>
+    </article>
+
+    <!-- ── 04 QI-NSGA-III ── -->
+    <article class="card" style="--card-color:var(--c4);--card-icon-bg:var(--c4-bg)">
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.8" stroke-linecap="round">
+              <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6a6 6 0 1 0 6 6"/><circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
+          <div class="card-badges">
+            <span class="badge-num">04</span>
+            <span class="badge-status active">Active</span>
+          </div>
+        </div>
+        <h2 class="card-title">QI-NSGA-III</h2>
+        <p class="card-desc">Quantum-inspired variant of NSGA-III. Chromosomes are encoded as rotation angles θ; convergence is driven by adaptive rotation gates instead of crossover </p>
+        <div class="card-tags">
+          <span class="card-tag">Quantum encoding</span>
+          <span class="card-tag">Rotation gate θ</span>
+        </div>
+        <div class="runs-row">
+          <span class="runs-label">Runs</span>
+          <div class="runs-group" id="qi3RunsBtns">
+            <button class="runs-btn selected" data-runs="1"  onclick="setQi3Runs(1)">1×</button>
+            <button class="runs-btn"          data-runs="3"  onclick="setQi3Runs(3)">3×</button>
+            <button class="runs-btn"          data-runs="5"  onclick="setQi3Runs(5)">5×</button>
+            <button class="runs-btn"          data-runs="10" onclick="setQi3Runs(10)">10×</button>
+            <button class="runs-btn"          data-runs="20" onclick="setQi3Runs(20)">20×</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-primary" id="qi3-run" href="{{ url_for('run_qinsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run
+        </a>
+        <a class="btn btn-secondary" id="qi3-report" href="{{ url_for('qinsga3_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Last report
+        </a>
       </div>
     </article>
 
   </section>
+
+  <footer class="page-footer">
+    <span class="footer-text">IRP Solver Suite &mdash; Many-objective Inventory Routing</span>
+    <div class="footer-pills">
+      <span class="footer-pill">f1 Cost</span>
+      <span class="footer-pill">f2 CO₂</span>
+      <span class="footer-pill">f3 Time</span>
+      <span class="footer-pill">f4 BFR</span>
+    </div>
+  </footer>
+
 </main>
 
 <script>
 let n3Runs = 1;
 function setN3Runs(n) {
   n3Runs = n;
-  document.querySelectorAll('.n3rb').forEach(b => {
+  document.querySelectorAll('#n3RunsBtns .runs-btn').forEach(b => {
     b.classList.toggle('selected', parseInt(b.dataset.runs) === n);
   });
   const el = document.getElementById('n3-run');
   if (el) el.href = '{{ url_for("run_nsga3_route") }}?instance=' + selectedInstance + '&runs=' + n;
 }
 
+let qi3Runs = 1;
+function setQi3Runs(n) {
+  qi3Runs = n;
+  document.querySelectorAll('#qi3RunsBtns .runs-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.runs) === n);
+  });
+  const el = document.getElementById('qi3-run');
+  if (el) el.href = '{{ url_for("run_qinsga3_route") }}?instance=' + selectedInstance + '&runs=' + n;
+}
+
 const MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-const SUN_SVG = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-const icon = document.getElementById('themeIcon');
+const SUN_SVG  = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+const icon  = document.getElementById('themeIcon');
 const label = document.getElementById('themeLabel');
 
-/* ── Instance selector ───────────────────────────────────── */
 let selectedInstance = localStorage.getItem('irp-instance') || '15';
 
 function selectInstance(key) {
   selectedInstance = key;
   localStorage.setItem('irp-instance', key);
-
-  // Update button styles
-  document.querySelectorAll('.inst-btn').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.instance === key);
+  document.querySelectorAll('.inst-chip').forEach(b => {
+    b.classList.toggle('selected', b.dataset.instance === key);
   });
-
-  // Update all module button hrefs
   const pairs = [
     ['oc-run',    '{{ url_for("run_objective_calibration_route") }}'],
     ['oc-report', '{{ url_for("objective_calibration_report") }}'],
     ['fm-run',    '{{ url_for("run_function_merge_route") }}'],
     ['fm-report', '{{ url_for("function_merge_report") }}'],
     ['n3-report', '{{ url_for("nsga3_report") }}'],
+    ['qi3-report','{{ url_for("qinsga3_report") }}'],
   ];
   pairs.forEach(([id, base]) => {
     const el = document.getElementById(id);
     if (el) el.href = base + '?instance=' + key;
   });
-  // NSGA-III run button also carries the runs count
   const n3run = document.getElementById('n3-run');
   if (n3run) n3run.href = '{{ url_for("run_nsga3_route") }}?instance=' + key + '&runs=' + n3Runs;
+  const qi3run = document.getElementById('qi3-run');
+  if (qi3run) qi3run.href = '{{ url_for("run_qinsga3_route") }}?instance=' + key + '&runs=' + qi3Runs;
 }
 
-// Restore saved selection on load — default to 15 if saved value no longer valid
 (function() {
   const valid = ['3','5','15','25','30','40'];
   const saved = localStorage.getItem('irp-instance') || '15';
@@ -541,16 +741,12 @@ function applyTheme(theme) {
   }
   localStorage.setItem('irp-theme', theme);
 }
-
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'dark' ? 'light' : 'dark');
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
-
 (function() {
   const saved = localStorage.getItem('irp-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+  applyTheme(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 })();
 </script>
 </body>
@@ -640,6 +836,33 @@ def nsga3_report():
         return render_error(traceback.format_exc()), 500
 
 
+@app.route("/qinsga3/run")
+def run_qinsga3_route():
+    data_path, inst_key = _resolve_instance()
+    try:
+        n_runs = max(1, min(20, int(request.args.get("runs", 1))))
+        run_qinsga3_report(output_path=QINSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
+        return redirect(url_for("qinsga3_report") + f"?instance={inst_key}")
+    except Exception:
+        tb = traceback.format_exc()
+        print(tb, flush=True)
+        return render_error(tb), 500
+
+
+@app.route("/qinsga3/report")
+def qinsga3_report():
+    data_path, inst_key = _resolve_instance()
+    try:
+        try:
+            data = qinsga3_render_from_instance(data_path)
+        except FileNotFoundError:
+            run_qinsga3_report(output_path=QINSGA3_REPORT_PATH, data_path=data_path)
+            data = qinsga3_render_from_instance(data_path)
+        return nsga3_render_html(data), 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception:
+        return render_error(traceback.format_exc()), 500
+
+
 def render_error(details):
     details = escape(details)
     return f"""<!DOCTYPE html>
@@ -679,7 +902,7 @@ a {{ color: #256f83; font-weight: 700; }}
 </head>
 <body>
   <main class="box">
-    <h1>ObjectiveCalibration failed</h1>
+    <h1>Module error</h1>
     <p>The solver route raised this Python error. Copy the traceback below if you need help debugging it.</p>
     <pre>{details}</pre>
     <p><a href="{url_for('menu')}">Back to menu</a></p>
@@ -707,7 +930,7 @@ def _open_browser_when_ready(url, port):
             try:
                 sock.connect(("127.0.0.1", port))
             except OSError:
-                threading.Event().wait(0.1)
+                time.sleep(0.1)
                 continue
         webbrowser.open_new_tab(browser_url)
         return

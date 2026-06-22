@@ -16,13 +16,9 @@ def compute_f1(route_result, sets_, params_):
     clients = sets_["clients"]
     T       = sets_["T"]
 
-    # y1: load-weighted arc transport cost
     y1 = sum(c_ijk[i, j, k] * d[i, j] * flow for (i, j, t, k), flow in f_vars.items())
-
-    # y2: depot holding cost over all periods
     y2 = sum(h_O * (depot_stock[t]["frigo"] + depot_stock[t]["nonfrigo"]) for t in T)
 
-    # y3: soft time-window penalty (C12) — only for visited clients
     y3 = 0.0
     for l in clients:
         for t in T:
@@ -64,7 +60,6 @@ def compute_f3(route_result, sets_, params_):
 
 
 def _f4_components(route_result, sets_, params_):
-    """Shared computation for f4: returns (stock_value, receivables, payables)."""
     actual_qty  = route_result["actual_qty"]
     depot_stock = route_result["depot_stock"]
     T           = sets_["T"]
@@ -86,13 +81,13 @@ def _f4_components(route_result, sets_, params_):
 
 
 def compute_f4(route_result, sets_, params_):
-    """Working capital (BFR) scalar — fast path used during optimization."""
+    """Working capital (BFR) scalar — used during optimization."""
     stock, recv, pay = _f4_components(route_result, sets_, params_)
     return stock + recv - pay
 
 
 def compute_f4_detail(route_result, sets_, params_):
-    """Working capital with sub-component breakdown — used only in reporting."""
+    """Working capital with sub-component breakdown — used in reporting."""
     stock, recv, pay = _f4_components(route_result, sets_, params_)
     return stock + recv - pay, {
         "stock":       round(stock, 4),

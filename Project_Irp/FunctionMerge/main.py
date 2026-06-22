@@ -1,15 +1,7 @@
-"""
-FunctionMerge — Combined multi-objective IRP solve.
+"""FunctionMerge — Combined multi-objective IRP solve.
 
-Scalarization:  minimize  f1 + f2 + f3 + f4
-    f1  Logistics cost       (minimised)
-    f2  CO2 emissions        (minimised)
-    f3  Total travel time    (minimised)
-    f4  Working capital BFR  (minimised)
-
-All four objective expressions are active in a single CPLEX solve, which
-verifies that every model component (variables, constraints, objectives)
-works correctly together end-to-end.
+Scalarization: minimize f1 + f2 + f3 + f4
+Called from app.py via run_function_merge().
 """
 
 import json
@@ -44,7 +36,7 @@ SOLVE_LOG_PATH      = os.path.join(CHECKPOINT_DIR, "solve.log")
 
 
 class _CheckpointListener(SolutionListener):
-    """Saves every new incumbent to its own file in CHECKPOINT_DIR and updates history.json."""
+    """Saves every new incumbent to its own file in CHECKPOINT_DIR."""
 
     def __init__(self):
         super().__init__()
@@ -58,8 +50,7 @@ class _CheckpointListener(SolutionListener):
             return 0
         try:
             with open(CHECKPOINT_HISTORY) as fh:
-                history = json.load(fh)
-            return len(history)
+                return len(json.load(fh))
         except Exception:
             return 0
 
@@ -69,21 +60,15 @@ class _CheckpointListener(SolutionListener):
             return
         self._best_obj = obj
         self._count   += 1
-        ts = time.strftime("%Y%m%d_%H%M%S")
+        ts    = time.strftime("%Y%m%d_%H%M%S")
         fname = f"ckpt_{self._count:04d}_{ts}_obj{obj:.4f}.json"
         fpath = os.path.join(CHECKPOINT_DIR, fname)
-        data = {v.name: val for v, val in s.iter_var_values()
-                if v.is_binary() or v.is_integer()}
-        record = {
-            "n":         self._count,
-            "timestamp": ts,
-            "objective": obj,
-            "file":      fname,
-        }
+        data  = {v.name: val for v, val in s.iter_var_values()
+                 if v.is_binary() or v.is_integer()}
+        record = {"n": self._count, "timestamp": ts, "objective": obj, "file": fname}
         try:
             with open(fpath, "w") as fh:
                 json.dump({"meta": record, "vars": data}, fh)
-            # Update history
             history = []
             if os.path.exists(CHECKPOINT_HISTORY):
                 try:
@@ -100,7 +85,6 @@ class _CheckpointListener(SolutionListener):
 
 
 def _best_checkpoint_path():
-    """Returns the file path of the checkpoint with the lowest objective, or None."""
     if not os.path.exists(CHECKPOINT_HISTORY):
         return None
     try:
@@ -132,14 +116,7 @@ def _get_ordered_path(arcs):
 
 def _build_model(sets_, params_):
     mdl   = Model(name="IRP_FunctionMerge")
-    vars_ = build_variables(
-        mdl,
-        sets_["N"],
-        sets_["A"],
-        sets_["T"],
-        sets_["M"],
-        sets_["clients"],
-    )
+    vars_ = build_variables(mdl, sets_["N"], sets_["A"], sets_["T"], sets_["M"], sets_["clients"])
     objectives = build_all_objectives(mdl, vars_, sets_, params_)
     add_all_constraints(mdl, vars_, sets_, params_)
     add_budget_constraints(
@@ -161,20 +138,18 @@ def run_combined_solve(data_path=None):
     f3 = objectives["f3"]
     f4 = objectives["f4"]
 
-    # Linear scalarization: minimise f1 + f2 + f3 + f4
     composite = f1 + f2 + f3 + f4
     mdl.minimize(composite)
 
-    mdl.parameters.emphasis.mip = 1                   # feasibility first — find any integer solution fast
+    mdl.parameters.emphasis.mip              = 1   # feasibility first
     mdl.parameters.mip.strategy.heuristicfreq = 5
-    mdl.parameters.mip.strategy.fpheur = 1
-    mdl.parameters.mip.tolerances.mipgap = 0.05
-    mdl.parameters.mip.tolerances.absmipgap = 0
-    mdl.parameters.timelimit = 39600
-    mdl.parameters.workmem = 8192
-    mdl.parameters.mip.strategy.file = 2
+    mdl.parameters.mip.strategy.fpheur        = 1
+    mdl.parameters.mip.tolerances.mipgap      = 0.05
+    mdl.parameters.mip.tolerances.absmipgap   = 0
+    mdl.parameters.timelimit                   = 39600
+    mdl.parameters.workmem                     = 8192
+    mdl.parameters.mip.strategy.file          = 2
 
-    # Load warmstart from the best checkpoint of a previous interrupted run
     best_ckpt = _best_checkpoint_path()
     if best_ckpt and os.path.exists(best_ckpt):
         try:
@@ -193,14 +168,12 @@ def run_combined_solve(data_path=None):
 
     mdl.add_progress_listener(_CheckpointListener())
 
-    # Write CPLEX log to file (append so each run is preserved) and to stdout
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     with open(SOLVE_LOG_PATH, "a") as log_fh:
         log_fh.write(f"\n{'='*60}\n  Run started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n{'='*60}\n")
         log_fh.flush()
 
         class _TeeLog:
-            """Writes to both the log file and stdout."""
             def write(self, text):
                 log_fh.write(text)
                 sys.stdout.write(text)
@@ -214,9 +187,8 @@ def run_combined_solve(data_path=None):
         print("[solve] No feasible solution found within time limit.", flush=True)
         return None
 
-    solve_status = mdl.solve_details.status
-    mip_gap = mdl.solve_details.mip_relative_gap
-    print(f"[solve] Status: {solve_status} | MIP gap: {mip_gap:.4%}", flush=True)
+    print(f"[solve] Status: {mdl.solve_details.status} | "
+          f"MIP gap: {mdl.solve_details.mip_relative_gap:.4%}", flush=True)
 
     n_nodes  = sets_["N"]
     arcs     = sets_["A"]
@@ -229,10 +201,7 @@ def run_combined_solve(data_path=None):
     for t in periods:
         trucks = []
         for k in vehicles:
-            arcs_k = [
-                (i, j) for (i, j) in arcs
-                if vars_["x"][i, j, t, k].solution_value > 0.5
-            ]
+            arcs_k = [(i, j) for (i, j) in arcs if vars_["x"][i, j, t, k].solution_value > 0.5]
             if not arcs_k:
                 continue
             path = _get_ordered_path(arcs_k)
@@ -248,8 +217,7 @@ def run_combined_solve(data_path=None):
             trucks.append({"k": k, "path": path, "qty": qty})
 
         shipped_t = round(
-            sum(vars_["f"][0, j, t, k].solution_value for j in clients for k in vehicles),
-            4,
+            sum(vars_["f"][0, j, t, k].solution_value for j in clients for k in vehicles), 4
         )
         routes[str(t)] = {
             "R":          params_["R"].get(t, 0.0),
@@ -268,13 +236,8 @@ def run_combined_solve(data_path=None):
                 outbound  = sum(vars_["f"][l, j, t, k].solution_value for j in n_nodes if j != l)
                 delivered = round(inbound - outbound, 4)
                 if delivered > 1e-4:
-                    deliveries.append({
-                        "l":    l,
-                        "t":    t,
-                        "k":    k,
-                        "recu": delivered,
-                        "dem":  q_lt.get((l, t), 0),
-                    })
+                    deliveries.append({"l": l, "t": t, "k": k, "recu": delivered,
+                                       "dem": q_lt.get((l, t), 0)})
 
     depot_stock = {
         str(t): {

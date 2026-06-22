@@ -12,9 +12,12 @@ Called from app.py via run_nsga3_report().
 import argparse
 import json
 import os
+import random as _random
 import sys
 import time
 import threading
+
+import numpy as np
 
 MODULE_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(MODULE_DIR)
@@ -86,8 +89,6 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base):
     """Evaluate Pareto chromosomes against sets_/params_ and return the report data dict.
     Called both after a fresh NSGA-III run and on every refresh (with potentially updated instance).
     """
-    import numpy as np
-
     solutions = []
     for i, chromosome in enumerate(pareto_X):
         quantities, priorities = decode_chromosome(chromosome, sets_)
@@ -152,8 +153,6 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base):
 
 def _build_report_data(runs_data):
     """Aggregate per-run evaluated data into the final report dict."""
-    import numpy as np
-
     def _stats(vals):
         arr = [v for v in vals if v is not None]
         if not arr:
@@ -216,7 +215,6 @@ def render_from_instance(data_path):
     with open(_CHROM_CACHE_PATH, encoding="utf-8") as f:
         cache = json.load(f)
 
-    import numpy as np
     sets_, params_ = load_instance(data_path)
     n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
 
@@ -243,9 +241,6 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
               crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
               n_runs=1):
     """Run NSGA-III n_runs times with distinct seeds, cache all Pareto fronts, return report data."""
-    import numpy as np
-    import random as _random
-
     n_runs = max(1, min(20, int(n_runs)))
 
     if data_path is None:

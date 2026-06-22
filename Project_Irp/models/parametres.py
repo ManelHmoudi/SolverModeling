@@ -1,17 +1,14 @@
-"""
-Load instance data from JSON and build sets_ / params_ dicts for the IRP model.
-"""
+"""Load instance data from JSON and build sets_ / params_ dicts for the IRP model."""
 
 import json
 import math
 import os
 
-BASE_DIR         = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR          = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data", "instance_15_clients.json")
 
 
 def load_instance(data_path=None):
-    """Load a JSON instance file and return (sets_, params_)."""
     if data_path is None:
         data_path = DEFAULT_DATA_PATH
 
@@ -21,10 +18,6 @@ def load_instance(data_path=None):
     sets_raw   = data["sets"]
     params_raw = data["parameters"]
 
-    # ==========================================================================
-    # SETS
-    # ==========================================================================
-
     N       = sets_raw["N"]
     clients = sets_raw["clients"]
     O       = sets_raw["O"]
@@ -32,50 +25,30 @@ def load_instance(data_path=None):
     M       = sets_raw["M"]
     A       = [(i, j) for i in N for j in N if i != j]
 
-    sets_ = {
-        "N":       N,
-        "A":       A,
-        "T":       T,
-        "M":       M,
-        "O":       O,
-        "clients": clients,
-    }
+    sets_ = {"N": N, "A": A, "T": T, "M": M, "O": O, "clients": clients}
 
-    # ==========================================================================
-    # PARAMETERS
-    # ==========================================================================
-
-    # ── Client demand parameters ───────────────────────────────────────────────
     q_lt = {
         (int(k.split(",")[0]), int(k.split(",")[1])): v
         for k, v in params_raw["q_lt"].items()
     }
 
-    # requires_cold[l,t]: True if client l needs a refrigerated product in period t
-    # The JSON stores the originally-assigned truck id; we use it only to determine the type.
     requires_cold = {
         (int(k.split(",")[0]), int(k.split(",")[1])): v[0] in params_raw["frigo_trucks"]
         for k, v in params_raw["requires_cold"].items()
     }
 
-    # K_lt[l,t]: ALL trucks compatible with the product type needed by client l in period t
-    # The solver is free to pick any one of them — no pre-assignment.
     non_frigo_trucks = [k for k in M if k not in params_raw["frigo_trucks"]]
     K_lt = {
         (l, t): list(params_raw["frigo_trucks"]) if requires_cold[l, t] else non_frigo_trucks
         for (l, t) in requires_cold
     }
 
-    # ── Vehicle parameters ─────────────────────────────────────────────────────
     spd          = {int(k): val for k, val in params_raw["v"].items()}
     v_ms         = {k: spd[k] / 3.6 for k in M}
     v2           = {k: v_ms[k] ** 2 for k in M}
     Q            = {int(k): val for k, val in params_raw["Q"].items()}
     frigo_trucks = set(params_raw["frigo_trucks"])
 
-    # ── Network distance and routing cost parameters ───────────────────────────
-    # Distances Euclidiennes 2D (km) si les coordonnées sont présentes dans le JSON,
-    # sinon formule 1D de repli.
     if "coordinates" in sets_raw:
         coords = {int(k): tuple(v) for k, v in sets_raw["coordinates"].items()}
         d = {
@@ -85,10 +58,10 @@ def load_instance(data_path=None):
         }
     else:
         d = {(i, j): abs(i - j) * 10 for (i, j) in A}
-    d_m     = {(i, j): d[i, j] * 1000  for (i, j) in A}
+
+    d_m     = {(i, j): d[i, j] * 1000 for (i, j) in A}
     c_route = {(i, j): params_raw["c_route_value"] for (i, j) in A}
 
-    # ── Refrigeration and holding cost parameters ──────────────────────────────
     p5      = params_raw["p5"]
     e_stock = params_raw["e_stock"]
     alpha_r = params_raw["alpha_r"]
@@ -96,21 +69,17 @@ def load_instance(data_path=None):
 
     c_ijk = {
         (i, j, k): (
-            c_route[i, j] + p5 / spd[k]
-            if k in frigo_trucks
-            else c_route[i, j]
+            c_route[i, j] + p5 / spd[k] if k in frigo_trucks else c_route[i, j]
         )
         for (i, j) in A for k in M
     }
 
-    # ── Time-window and service time parameters ────────────────────────────────
     ET      = {(l, t): params_raw["ET_value"] for l in clients for t in T}
     LT      = {(l, t): params_raw["LT_value"] for l in clients for t in T}
     tau_min = params_raw["tau_min"]
     tau_max = params_raw["tau_max"]
     s       = {i: params_raw["s_value"] for i in N}
 
-    # ── Depot inventory parameters ─────────────────────────────────────────────
     I_O_init_frigo    = params_raw["I_O_init_frigo"]
     I_O_init_nonfrigo = params_raw["I_O_init_nonfrigo"]
     I_O_max_frigo     = params_raw["I_O_max_frigo"]
@@ -118,14 +87,10 @@ def load_instance(data_path=None):
     I_O_min_frigo     = params_raw["I_O_min_frigo"]
     I_O_min_nonfrigo  = params_raw["I_O_min_nonfrigo"]
 
-    # ── Replenishment parameters ───────────────────────────────────────────────
-    # R_frigo[t]    = total demand from clients needing frigo products in period t
-    # R_nonfrigo[t] = total demand from clients needing non-frigo products in period t
     R_frigo    = {t: sum(q_lt[l, t] for l in clients if     requires_cold[l, t]) for t in T}
     R_nonfrigo = {t: sum(q_lt[l, t] for l in clients if not requires_cold[l, t]) for t in T}
-    R = {t: R_frigo[t] + R_nonfrigo[t] for t in T}
+    R          = {t: R_frigo[t] + R_nonfrigo[t] for t in T}
 
-    # ── Environmental / CO2 emission parameters ────────────────────────────────
     g    = params_raw["g"]
     Cr   = params_raw["Cr"]
     Cd   = params_raw["Cd"]
@@ -139,14 +104,12 @@ def load_instance(data_path=None):
     kg_per_unit    = params_raw["kg_per_unit"]
     fuel_to_joules = params_raw["fuel_to_joules"]
 
-    # ── Financial / working capital parameters ─────────────────────────────────
     DSO        = params_raw["DSO"]
     DPO        = params_raw["DPO"]
     DIO        = params_raw["DIO"]
     P_sale     = {int(k): val for k, val in params_raw["P_sale"].items()}
     P_purchase = {int(k): val for k, val in params_raw["P_purchase"].items()}
 
-    # ── Objective bounds and solver constants ──────────────────────────────────
     c1    = params_raw["c1"]
     c2    = params_raw["c2"]
     C_max = params_raw["C_max"]
@@ -202,7 +165,3 @@ def load_instance(data_path=None):
     }
 
     return sets_, params_
-
-
-# Default instance loaded at import time for backward compatibility
-sets_, params_ = load_instance()

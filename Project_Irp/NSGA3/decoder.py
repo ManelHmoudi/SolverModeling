@@ -3,7 +3,6 @@
 Chromosome layout:
   [0 … n_clients*n_periods - 1]  quantity genes  — q(l,t) for each (client, period)
   [n_clients*n_periods … end]     priority genes  — p(l) ∈ [0,1] per client
-                                   higher priority → visited earlier by the NN
 """
 
 
@@ -26,15 +25,7 @@ def decode_chromosome(chromosome, sets_):
 
 
 def build_routes(quantities, sets_, params_, priorities=None):
-    """
-    Decode quantities into vehicle routes, enforcing all hard constraints
-    (capacity C5, depot inventory C6-C7, demand satisfaction C8, C9, C14).
-
-    One truck type per client per period (except T_last which delivers all remaining).
-    C9 mirror: frigo truck ↔ requires_cold[l,td]=True ; nonfrigo ↔ False.
-
-    priorities: {l: float in [0,1]} — higher means visited earlier by the NN.
-                Derived from the chromosome's priority gene segment.
+    """Decode quantities into vehicle routes, enforcing all hard constraints.
 
     Returns dict: x, f, depot_stock, arrival_times, truck_assign,
                   actual_qty, routes_data, tau_return.
@@ -62,12 +53,10 @@ def build_routes(quantities, sets_, params_, priorities=None):
     R_frigo    = params_["R_frigo"]
     R_nonfrigo = params_["R_nonfrigo"]
 
-    # Total demand split by product type per client (C9 mirror)
     frigo_total    = {l: sum(q_lt[l, t] for t in T if     requires_cold[l, t]) for l in clients}
     nonfrigo_total = {l: sum(q_lt[l, t] for t in T if not requires_cold[l, t]) for l in clients}
 
-    # Cumulative demand by type up to each period t (used to enforce delivery deadlines)
-    cum_frigo_demand    = {
+    cum_frigo_demand = {
         (l, t): sum(q_lt[l, td] for td in T if td <= t and     requires_cold[l, td])
         for l in clients for t in T
     }
@@ -76,7 +65,6 @@ def build_routes(quantities, sets_, params_, priorities=None):
         for l in clients for t in T
     }
 
-    # Separate delivery counters per type (needed to cap pre-delivery correctly)
     frigo_dlv    = {l: 0 for l in clients}
     nonfrigo_dlv = {l: 0 for l in clients}
 
@@ -91,29 +79,20 @@ def build_routes(quantities, sets_, params_, priorities=None):
 
     for t in T:
         if t == T_last:
-            # C8: last period must satisfy ALL remaining demand of both types.
-            # The entire desired amount is mandatory (min_required = desired).
             frigo_desired = {
                 l: max(0, frigo_total[l] - frigo_dlv[l])
-                for l in clients
-                if frigo_total[l] - frigo_dlv[l] > 0
+                for l in clients if frigo_total[l] - frigo_dlv[l] > 0
             }
             nonfrigo_desired = {
                 l: max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
-                for l in clients
-                if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
+                for l in clients if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
             }
             frigo_floor    = dict(frigo_desired)
             nonfrigo_floor = dict(nonfrigo_desired)
         else:
-            # C9 + C14: one truck type per client per period = requires_cold[l, t].
-            # Only pre-deliver demand of the SAME type as the current dispatch period.
-            # DEADLINE RULE: cumulative delivered >= cumulative demand up to t.
-            # A client may receive less than their period demand ONLY if an advance
-            # was made earlier; otherwise the full deficit must be covered now.
             frigo_desired    = {}
             nonfrigo_desired = {}
-            frigo_floor      = {}   # mandatory minimum per client (Bug-1 fix)
+            frigo_floor      = {}
             nonfrigo_floor   = {}
             for l in clients:
                 qty = max(0, int(round(quantities[l, t])))
@@ -132,14 +111,17 @@ def build_routes(quantities, sets_, params_, priorities=None):
                         nonfrigo_desired[l] = actual
                         nonfrigo_floor[l]   = min_needed
 
-        # C6: maximum releasable = available stock above safety level
         max_rel_f  = max(0, int(I_frigo    + R_frigo[t]    - I_min_f))
         max_rel_nf = max(0, int(I_nonfrigo + R_nonfrigo[t] - I_min_nf))
 
-        frigo_qty    = _clamp_to_integer_budget(frigo_desired,    max_rel_f,  frigo_floor)
-        nonfrigo_qty = _clamp_to_integer_budget(nonfrigo_desired, max_rel_nf, nonfrigo_floor)
+        frigo_cap_total = sum(Q[k] for k in frigo_list)
+        nf_cap_total    = sum(Q[k] for k in non_frigo_trucks) if non_frigo_trucks else 0
 
-        # Route first so actual deliveries drive the counters
+        frigo_qty    = _clamp_to_integer_budget(
+            frigo_desired,    min(max_rel_f,  frigo_cap_total), frigo_floor)
+        nonfrigo_qty = _clamp_to_integer_budget(
+            nonfrigo_desired, min(max_rel_nf, nf_cap_total),    nonfrigo_floor)
+
         routes_data[t] = {}
         tau_max = params_.get("tau_max")
         for qty_group, trucks, floor_group in [
@@ -158,7 +140,6 @@ def build_routes(quantities, sets_, params_, priorities=None):
             arrival_times.update(ta)
             truck_assign.update(tassign)
 
-        # Collect quantities actually placed on routes (tau_max may have dropped some clients)
         actually_served_frigo    = {}
         actually_served_nonfrigo = {}
         for k, info in routes_data[t].items():
@@ -170,7 +151,6 @@ def build_routes(quantities, sets_, params_, priorities=None):
                 else:
                     actually_served_nonfrigo[l_int] = actually_served_nonfrigo.get(l_int, 0) + q
 
-        # Update actual_qty and cumulative counters from routed quantities only
         shipped_f = shipped_nf = 0
         for l in clients:
             f  = actually_served_frigo.get(l, 0)
@@ -181,7 +161,6 @@ def build_routes(quantities, sets_, params_, priorities=None):
             shipped_f += f
             shipped_nf += nf
 
-        # C7: depot stock balance — strict equality, same as MIP: I_t = I_{t-1} + R_t - shipped_t
         I_frigo    = I_frigo    + R_frigo[t]    - shipped_f
         I_nonfrigo = I_nonfrigo + R_nonfrigo[t] - shipped_nf
 
@@ -190,7 +169,6 @@ def build_routes(quantities, sets_, params_, priorities=None):
             "nonfrigo": round(I_nonfrigo, 4),
         }
 
-    # C13: latest truck return time per period (used as hard constraint in problem.py)
     tau_return = {}
     for t in T:
         max_ret = 0.0
@@ -217,28 +195,23 @@ def build_routes(quantities, sets_, params_, priorities=None):
 
 
 def _clamp_to_integer_budget(qty_dict, max_total, min_required=None):
-    """
-    Trim allocations until total fits within max_total.
-    min_required: mandatory floor per client — never cut below it.
-    Only the discretionary surplus (qty - floor) is eligible for cutting.
-    """
+    """Trim allocations until total fits within max_total, never cutting below min_required."""
     if not qty_dict:
         return {}
 
-    result   = dict(qty_dict)
-    floors   = min_required or {}
-    total    = sum(result.values())
+    result = dict(qty_dict)
+    floors = min_required or {}
+    total  = sum(result.values())
 
     if total <= max_total:
         return result
 
-    # Sort by discretionary surplus descending: cut optional portion first
     excess = total - max_total
     for l in sorted(result, key=lambda l: result[l] - floors.get(l, 0), reverse=True):
         if excess <= 0:
             break
-        floor     = floors.get(l, 0)
-        surplus   = result[l] - floor
+        floor   = floors.get(l, 0)
+        surplus = result[l] - floor
         if surplus <= 0:
             continue
         cut        = min(surplus, excess)
@@ -252,15 +225,8 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=
                         priorities=None):
     """Build routes for one truck group using greedy nearest-neighbour.
 
-    floors:     mandatory minimum per client — these clients bypass the tau_max check
-                so that the deadline rule (cumulative delivered >= cumulative demand) is
-                never silently violated.  If serving them pushes tau_return above tau_max,
-                pymoo's G constraint penalises the solution and NSGA-III steers away.
-
-    priorities: {l: float in [0,1]} from the chromosome's priority gene segment.
-                Selection score = dist / (0.5 + priority), so higher priority → lower
-                score → visited earlier.  Produces diverse visit orders across chromosomes,
-                widening the Pareto front.
+    Mandatory clients (floor > 0) bypass the tau_max check to preserve delivery deadlines.
+    Priority genes produce diverse visit orders, widening the Pareto front.
     """
     x_vars   = {}
     f_vars   = {}
@@ -268,8 +234,8 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=
     assign   = {}
     routes   = {}
 
-    prios   = priorities or {}
-    pending = dict(qty_dict)
+    prios     = priorities or {}
+    pending   = dict(qty_dict)
     truck_idx = 0
 
     while pending and truck_idx < len(trucks):
@@ -284,34 +250,49 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=
         current      = O
 
         while True:
-            best, best_score = None, float("inf")
-            for l, q in pending.items():
-                if load + q <= cap:
-                    dist = d[current, l]
+            best, best_score, best_qty = None, float("inf"), 0
+            has_mandatory = False
 
-                    if tau_max is not None and (floors or {}).get(l, 0) <= 0:
-                        # Only discretionary (advance) deliveries are time-constrained.
-                        # Mandatory deliveries (floor > 0) are always served — if they
-                        # push tau_return beyond tau_max, pymoo G constraint penalises
-                        # the chromosome and NSGA-III steers away from it.
-                        projected = (current_time
-                                     + s.get(current, 0.0) + dist / speed
-                                     + s.get(l, 0.0) + d[l, O] / speed)
-                        if projected > tau_max:
-                            continue
-                    # Priority-weighted score: high priority → low score → visited first.
-                    # score = dist / (0.5 + p)  with p ∈ [0,1]
-                    #   p=1 → score = dist/1.5  (preferred)
-                    #   p=0 → score = dist/0.5  (deprioritised)
-                    score = dist / (0.5 + prios.get(l, 0.5))
-                    if score < best_score:
-                        best_score, best = score, l
+            any_mandatory_pending = any((floors or {}).get(l2, 0) > 0 for l2 in pending)
+
+            for l, q in pending.items():
+                floor_l      = (floors or {}).get(l, 0)
+                is_mandatory = floor_l > 0
+
+                if not is_mandatory and any_mandatory_pending:
+                    continue
+
+                if load + q <= cap:
+                    q_effective = q
+                elif is_mandatory and load + floor_l <= cap:
+                    q_effective = floor_l
+                else:
+                    continue
+
+                dist = d[current, l]
+
+                if tau_max is not None and not is_mandatory:
+                    projected = (current_time
+                                 + s.get(current, 0.0) + dist / speed
+                                 + s.get(l, 0.0) + d[l, O] / speed)
+                    if projected > tau_max:
+                        continue
+
+                score = dist / (0.5 + prios.get(l, 0.5))
+                if is_mandatory:
+                    if not has_mandatory or score < best_score:
+                        best_score, best, best_qty = score, l, q_effective
+                        has_mandatory = True
+                elif not has_mandatory and score < best_score:
+                    best_score, best, best_qty = score, l, q_effective
+
             if best is None:
                 break
 
-            current_time      += s[current] + d[current, best] / speed
+            current_time      += s.get(current, 0.0) + d[current, best] / speed
             path.append(best)
-            qty_on_route[best] = pending.pop(best)
+            pending.pop(best)
+            qty_on_route[best] = best_qty
             load              += qty_on_route[best]
             arrivals[best, t]  = current_time
             assign[best, t]    = k
@@ -320,7 +301,6 @@ def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=
         path.append(O)
 
         if len(path) > 2:
-            # Suffix sum: flow on arc (i→j) = total qty still on truck from j onwards
             n   = len(path)
             suf = [0] * (n + 1)
             for idx in range(n - 2, -1, -1):
