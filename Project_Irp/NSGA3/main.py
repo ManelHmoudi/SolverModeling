@@ -43,7 +43,9 @@ _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "nsga3_chromosomes.json")
 POP_SIZE       = 200
 N_GEN          = 200
 CROSSOVER_PROB = 0.9
-MUTATION_PROB  = 0.2
+# pm = 1/D (D = number of decision variables) as recommended by Deb & Jain (2014).
+# Computed dynamically in run_nsga3() once the instance is loaded.
+MUTATION_PROB  = None
 N_PARTITIONS   = 8   # Das-Dennis: C(4+8-1,8) = 165 reference points for 4 objectives
 
 # Distinct seeds for up to 20 consecutive runs
@@ -252,6 +254,13 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     sets_, params_ = load_instance(data_path)
     n_clients      = len(sets_["clients"])
 
+    # pm = 1/D where D = total number of decision variables in the chromosome
+    # D = n_clients * n_periods (quantity genes) + n_clients (priority genes)
+    if mutation_prob is None:
+        n_genes       = n_clients * len(sets_["T"]) + n_clients
+        mutation_prob = 1.0 / n_genes
+        print(f"[NSGA3] mutation_prob = 1/D = 1/{n_genes} = {mutation_prob:.6f}", flush=True)
+
     problem  = IRPProblem(sets_, params_)
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=N_PARTITIONS)
 
@@ -367,7 +376,8 @@ if __name__ == "__main__":
     parser.add_argument("--pop",  type=int,   default=POP_SIZE)
     parser.add_argument("--gen",  type=int,   default=N_GEN)
     parser.add_argument("--cx",   type=float, default=CROSSOVER_PROB)
-    parser.add_argument("--mut",  type=float, default=MUTATION_PROB)
+    parser.add_argument("--mut",  type=float, default=None,
+                        help="Mutation probability (default: 1/D, D=number of decision variables)")
     parser.add_argument("--runs", type=int,   default=1)
     args = parser.parse_args()
 
