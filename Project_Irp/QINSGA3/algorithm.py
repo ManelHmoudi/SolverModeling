@@ -170,7 +170,8 @@ def run_qinsga3(
         if callback is not None and (gen % 10 == 0 or gen == max_gen - 1):
             callback(gen, F, G, pareto_idx)
 
-    X_final, F_final, G_final = _evaluate_batch(qpop.measure())
+    X_final        = qpop.measure()
+    F_final, G_final = _evaluate_batch(X_final)
     _archive_update(X_final, F_final, G_final)
 
     if arch_X:
