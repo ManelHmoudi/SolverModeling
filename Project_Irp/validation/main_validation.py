@@ -3,8 +3,10 @@
 Main validation script: runs NSGA-III on DTLZ1-4 (Deb & Jain 2014 protocol).
 
 Usage:
-    python -m validation.main_validation              # 20 runs per problem
-    python -m validation.main_validation --runs 3     # quick smoke test (3 runs)
+    python -m validation.main_validation                      # 20 runs, 4 objectives
+    python -m validation.main_validation --runs 3             # 3 runs, 4 objectives
+    python -m validation.main_validation --n_obj 3            # 20 runs, 3 objectives
+    python -m validation.main_validation --n_obj 3 --runs 20  # full 3-obj validation
 """
 import argparse
 import csv
@@ -21,9 +23,9 @@ from validation.metrics.igd_metric import compute_igd, igd_statistics
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 
 
-def _save_run_csv(problem_name: str, igd_values: list) -> str:
+def _save_run_csv(problem_name: str, igd_values: list, n_obj: int) -> str:
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    path = os.path.join(RESULTS_DIR, f"igd_{problem_name}.csv")
+    path = os.path.join(RESULTS_DIR, f"igd_{problem_name}_M{n_obj}.csv")
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["run", "seed", "igd"])
@@ -32,8 +34,9 @@ def _save_run_csv(problem_name: str, igd_values: list) -> str:
     return path
 
 
-def _save_summary_csv(summary_rows: list) -> str:
-    path = os.path.join(RESULTS_DIR, "summary.csv")
+def _save_summary_csv(summary_rows: list, n_obj: int) -> str:
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    path = os.path.join(RESULTS_DIR, f"summary_M{n_obj}.csv")
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["Problem", "IGD_Best", "IGD_Median", "IGD_Worst"])
@@ -47,11 +50,11 @@ def _save_summary_csv(summary_rows: list) -> str:
     return path
 
 
-def _print_table(summary_rows: list):
+def _print_table(summary_rows: list, n_obj: int):
     header = f"{'Problem':<10} {'IGD Best':>12} {'IGD Median':>12} {'IGD Worst':>12}"
     sep = "-" * len(header)
     print("\n" + sep)
-    print("  NSGA-III on DTLZ1-4 (4 objectives) - Deb & Jain 2014")
+    print(f"  NSGA-III on DTLZ1-4 ({n_obj} objectives) - Deb & Jain 2014")
     print(sep)
     print(header)
     print(sep)
@@ -62,15 +65,24 @@ def _print_table(summary_rows: list):
     print(sep + "\n")
 
 
-def validate(n_runs: int = 20):
+def validate(n_runs: int = 20, n_obj: int = 4):
+    """Run NSGA-III validation on DTLZ1-4.
+
+    Args:
+        n_runs : number of independent runs per problem (1-20).
+        n_obj  : number of objectives (3 or 4).
+
+    Returns:
+        List of summary dicts with keys: problem, best, median, worst.
+    """
     summary_rows = []
 
     for name in PROBLEM_NAMES:
         print(f"\n{'='*50}")
-        print(f"Problem: {name}  ({n_runs} runs)")
+        print(f"Problem: {name}  ({n_runs} runs, {n_obj} objectives)")
         print(f"{'='*50}")
 
-        problem, n_gen = get_problem(name)
+        problem, n_gen = get_problem(name, n_obj=n_obj)
         print(f"  n_var={problem.n_var}, n_obj={problem.n_obj}, n_gen={n_gen}")
 
         t0 = time.time()
@@ -81,7 +93,7 @@ def validate(n_runs: int = 20):
         igd_values = [compute_igd(problem, front) for front in fronts]
         stats = igd_statistics(igd_values)
 
-        csv_path = _save_run_csv(name, igd_values)
+        csv_path = _save_run_csv(name, igd_values, n_obj)
         print(f"  Saved per-run IGD -> {csv_path}")
 
         summary_rows.append({
@@ -91,10 +103,10 @@ def validate(n_runs: int = 20):
             "worst":   stats["worst"],
         })
 
-    summary_path = _save_summary_csv(summary_rows)
+    summary_path = _save_summary_csv(summary_rows, n_obj)
     print(f"\nSummary CSV -> {summary_path}")
 
-    _print_table(summary_rows)
+    _print_table(summary_rows, n_obj)
     return summary_rows
 
 
@@ -106,10 +118,14 @@ if __name__ == "__main__":
         "--runs", type=int, default=20,
         help="Number of independent runs per problem (default: 20)"
     )
+    parser.add_argument(
+        "--n_obj", type=int, default=4, choices=[3, 4],
+        help="Number of objectives (default: 4)"
+    )
     args = parser.parse_args()
 
     if args.runs < 1 or args.runs > 20:
         print("--runs must be between 1 and 20")
         sys.exit(1)
 
-    validate(n_runs=args.runs)
+    validate(n_runs=args.runs, n_obj=args.n_obj)
