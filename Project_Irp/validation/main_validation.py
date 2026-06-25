@@ -12,8 +12,6 @@ import os
 import sys
 import time
 
-import numpy as np
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from validation.benchmarks.dtlz_problems import PROBLEM_NAMES, get_problem
@@ -57,7 +55,7 @@ def _print_table(summary_rows: list):
     header = f"{'Problem':<10} {'IGD Best':>12} {'IGD Median':>12} {'IGD Worst':>12}"
     sep = "-" * len(header)
     print("\n" + sep)
-    print("  NSGA-III on DTLZ1-4 (4 objectives) — Deb & Jain 2014")
+    print("  NSGA-III on DTLZ1-4 (4 objectives) - Deb & Jain 2014")
     print(sep)
     print(header)
     print(sep)
@@ -88,7 +86,7 @@ def validate(n_runs: int = 20):
         stats = igd_statistics(igd_values)
 
         csv_path = _save_run_csv(name, igd_values)
-        print(f"  Saved per-run IGD → {csv_path}")
+        print(f"  Saved per-run IGD -> {csv_path}")
 
         summary_rows.append({
             "problem": name,
@@ -98,7 +96,7 @@ def validate(n_runs: int = 20):
         })
 
     summary_path = _save_summary_csv(summary_rows)
-    print(f"\nSummary CSV → {summary_path}")
+    print(f"\nSummary CSV -> {summary_path}")
 
     _print_table(summary_rows)
     return summary_rows
