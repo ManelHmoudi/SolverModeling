@@ -5,8 +5,9 @@ NSGA-III runner configured for Deb & Jain (2014) DTLZ validation.
 Parameters:
   SBX crossover : eta=30, prob=1.0
   PM mutation   : eta=20, prob=1/n_var
-  Ref dirs      : Das-Dennis p=6 → H=84 directions for 4 objectives
-  Population    : N=88 (smallest multiple of 4 strictly > 84)
+  Ref dirs      : Das-Dennis, p depends on n_obj:
+                    n_obj=3 -> p=12 -> H=C(14,12)=91 -> N=92
+                    n_obj=4 -> p=6  -> H=C(9,6)=84   -> N=88
   Generations   : 400 (DTLZ1) or 600 (DTLZ2/3/4) — passed by caller
 """
 import numpy as np
@@ -18,15 +19,14 @@ from pymoo.optimize import minimize
 from pymoo.termination import get_termination
 from pymoo.util.ref_dirs import get_reference_directions
 
-_P_DIVISIONS = 6
-_N_OBJ = 4
+# Das-Dennis partition count per number of objectives (Deb & Jain 2014, Table I)
+_N_OBJ_TO_P = {3: 12, 4: 6}
 
-_ref_dirs = get_reference_directions("das-dennis", _N_OBJ, n_partitions=_P_DIVISIONS)
-N_REF_DIRS = len(_ref_dirs)  # C(9,6) = 84
-
-# Smallest multiple of 4 strictly greater than N_REF_DIRS
+# Module-level constants for n_obj=4 (backward compatibility and unit tests)
+_ref_dirs_4 = get_reference_directions("das-dennis", 4, n_partitions=6)
+N_REF_DIRS = len(_ref_dirs_4)  # C(9,6) = 84
 _raw = N_REF_DIRS + (4 - N_REF_DIRS % 4) % 4
-POP_SIZE = _raw if _raw > N_REF_DIRS else _raw + 4
+POP_SIZE = _raw if _raw > N_REF_DIRS else _raw + 4  # 88
 
 # 20 distinct deterministic seeds
 _SEEDS = [
@@ -35,23 +35,42 @@ _SEEDS = [
 ]
 
 
+def _get_run_config(n_obj: int):
+    """Return (ref_dirs, pop_size) for the given number of objectives.
+
+    Uses Das-Dennis p from _N_OBJ_TO_P. pop_size is the smallest
+    multiple of 4 strictly greater than len(ref_dirs).
+    """
+    if n_obj not in _N_OBJ_TO_P:
+        raise ValueError(
+            f"n_obj={n_obj} not supported. Supported values: {sorted(_N_OBJ_TO_P)}"
+        )
+    p = _N_OBJ_TO_P[n_obj]
+    ref_dirs = get_reference_directions("das-dennis", n_obj, n_partitions=p)
+    h = len(ref_dirs)
+    raw = h + (4 - h % 4) % 4
+    pop_size = raw if raw > h else raw + 4
+    return ref_dirs, pop_size
+
+
 def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
     """
     Run one NSGA-III optimisation and return the non-dominated objective values.
 
     Args:
-        problem : pymoo Problem instance.
+        problem : pymoo Problem instance (n_obj determines ref_dirs and pop_size).
         n_gen   : number of generations.
         seed    : random seed for reproducibility.
 
     Returns:
-        np.ndarray of shape (n_solutions, n_obj) — objective values of final Pareto front.
+        np.ndarray of shape (n_solutions, n_obj).
     """
     np.random.seed(seed)
+    ref_dirs, pop_size = _get_run_config(problem.n_obj)
 
     algorithm = NSGA3(
-        pop_size=POP_SIZE,
-        ref_dirs=_ref_dirs,
+        pop_size=pop_size,
+        ref_dirs=ref_dirs,
         sampling=FloatRandomSampling(),
         crossover=SBX(prob=1.0, eta=30),
         mutation=PM(prob=1.0 / problem.n_var, eta=20),
@@ -68,7 +87,7 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
     if result.F is None or len(result.F) == 0:
         raise RuntimeError(
             f"NSGA-III returned no solutions for {type(problem).__name__} "
-            f"with seed={seed}. Check problem definition."
+            f"(n_obj={problem.n_obj}) with seed={seed}."
         )
     return result.F
 
@@ -95,5 +114,5 @@ def run_experiment(problem_name: str, problem, n_gen: int, n_runs: int = 20) -> 
         print(f"  [{problem_name}] Run {i+1:02d}/{n_runs}  seed={seed}", flush=True)
         front = run_single(problem, n_gen, seed)
         fronts.append(front)
-        print(f"  [{problem_name}] Run {i+1:02d} done — front size: {len(front)}", flush=True)
+        print(f"  [{problem_name}] Run {i+1:02d} done - front size: {len(front)}", flush=True)
     return fronts
