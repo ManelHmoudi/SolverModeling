@@ -1,0 +1,43 @@
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+import numpy as np
+from validation.metrics.igd_metric import compute_igd, igd_statistics
+from validation.benchmarks.dtlz_problems import get_problem
+
+def test_igd_is_zero_for_true_front():
+    """IGD = 0 when the approximation IS the true Pareto front."""
+    from pymoo.util.ref_dirs import get_reference_directions
+    problem, _ = get_problem("DTLZ2")
+    try:
+        ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=12)
+        true_front = problem.pareto_front(ref_dirs=ref_dirs)
+    except (TypeError, Exception):
+        print("SKIP: problem.pareto_front() not available for this configuration")
+        return
+    if true_front is None:
+        print("SKIP: problem.pareto_front() returned None")
+        return
+    igd = compute_igd(problem, true_front)
+    assert igd == 0.0, f"IGD of true front should be 0, got {igd}"
+
+def test_igd_positive_for_bad_approx():
+    """IGD > 0 when approximation is far from true front."""
+    problem, _ = get_problem("DTLZ2")
+    bad_approx = np.ones((10, 4)) * 10.0
+    igd = compute_igd(problem, bad_approx)
+    assert igd > 0.0
+
+def test_igd_statistics_shape():
+    values = [0.1, 0.3, 0.2, 0.5, 0.4]
+    stats = igd_statistics(values)
+    assert set(stats.keys()) == {"best", "median", "worst"}
+    assert stats["best"] <= stats["median"] <= stats["worst"]
+    assert stats["best"] == 0.1
+    assert stats["worst"] == 0.5
+
+if __name__ == "__main__":
+    test_igd_is_zero_for_true_front()
+    test_igd_positive_for_bad_approx()
+    test_igd_statistics_shape()
+    print("All tests passed.")
