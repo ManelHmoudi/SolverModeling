@@ -15,14 +15,10 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from validation.benchmarks.dtlz_problems import PROBLEM_NAMES, get_problem
-from validation.algorithms.nsga3_runner import run_experiment
+from validation.algorithms.nsga3_runner import run_experiment, _SEEDS
 from validation.metrics.igd_metric import compute_igd, igd_statistics
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
-_SEEDS = [
-    42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123,
-    1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351,
-]
 
 
 def _save_run_csv(problem_name: str, igd_values: list) -> str:
