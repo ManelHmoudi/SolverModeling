@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Generated reports (re-created on each run)
+*.html
+*_chromosomes.json
+
+# Runtime logs and outputs
+validation_output.log
+validation_archetti/validation_report.csv
