@@ -130,3 +130,68 @@ def test_get_ref_path_variant5_n5_low():
         "/ref", "instances_low_cost_H3",
         "absH3low5n5K=1", "absH3low5n5K=1_solution.dat"
     )
+
+
+# ── Integration tests (require CPLEX + external data files) ───────────────────
+
+from validate_irp import build_and_solve, validate_instance
+
+_INST_LOW  = r"C:\Users\Mariem\OneDrive\Bureau\Master\MPIRP\IRP-Research\DataSets\Archetti2007\Instances_lowcost_H3"
+_INST_HIGH = r"C:\Users\Mariem\OneDrive\Bureau\Master\MPIRP\IRP-Research\DataSets\Archetti2007\Instances_highcost_H3"
+_REF_DIR   = (
+    r"C:\Users\Mariem\OneDrive\Bureau\Master\MPIRP\IRP-Research"
+    r"\Results_Reference\Results_Iterative_Matheuristic_Vadseth_2021\Run1"
+)
+
+_data_present = pytest.mark.skipif(
+    not os.path.isdir(_INST_LOW),
+    reason="Archetti instance files not accessible"
+)
+
+
+@_data_present
+def test_solve_abs1n5_lowcost():
+    """Full CPLEX solve: abs1n5 lowcost.
+
+    The MIP finds the provably optimal solution; the Vadseth (2021) reference is
+    a matheuristic and may be sub-optimal.  We therefore assert:
+      - a feasible solution was found (f1_cplex != "")
+      - f1_reference parses correctly
+      - f1_cplex <= f1_reference * 1.001  (our MIP must not be worse than ref by >0.1%)
+    Being strictly better than the heuristic reference is expected and correct.
+    """
+    inst_path = os.path.join(_INST_LOW, "abs1n5.dat")
+    ref_path  = get_ref_path(_REF_DIR, "lowcost", 1, 5)
+
+    row = validate_instance(inst_path, ref_path, timelimit=300, cost_type="lowcost")
+
+    assert row["f1_reference"] == pytest.approx(1235.92, rel=1e-6)
+    assert row["f1_cplex"]     != ""
+    f1_cplex = float(row["f1_cplex"])
+    f1_ref   = float(row["f1_reference"])
+    assert f1_cplex <= f1_ref * 1.001, (
+        f"MIP solution {f1_cplex} is more than 0.1% worse than heuristic ref {f1_ref} "
+        f"— check objective formula"
+    )
+
+
+@_data_present
+def test_solve_abs1n5_highcost():
+    """Full CPLEX solve: abs1n5 highcost.
+
+    Same rationale as lowcost: MIP is exact, reference is heuristic.
+    Assert f1_cplex <= f1_reference * 1.001.
+    """
+    inst_path = os.path.join(_INST_HIGH, "abs1n5.dat")
+    ref_path  = get_ref_path(_REF_DIR, "highcost", 1, 5)
+
+    row = validate_instance(inst_path, ref_path, timelimit=300, cost_type="highcost")
+
+    assert row["f1_reference"] == pytest.approx(2108.34, rel=1e-6)
+    assert row["f1_cplex"]     != ""
+    f1_cplex = float(row["f1_cplex"])
+    f1_ref   = float(row["f1_reference"])
+    assert f1_cplex <= f1_ref * 1.001, (
+        f"MIP solution {f1_cplex} is more than 0.1% worse than heuristic ref {f1_ref} "
+        f"— check t0_offset or distance formula"
+    )
