@@ -32,10 +32,12 @@ from .algorithm        import run_qinsga3
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "qinsga3_report.html")
 _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "qinsga3_chromosomes.json")
 
-POP_SIZE     = 300
+POP_SIZE     = 200
 N_GEN        = 300
-ALPHA_MAX    = 0.05  * np.pi
+ALPHA_MAX    = 0.05  * np.pi   # upper end of recommended range [Li & Wang 2007]
 ALPHA_MIN    = 0.001 * np.pi
+# N_PARTITIONS=8 matches NSGA3 (165 ref dirs) for fair algorithmic comparison.
+# Reducing to 6 (84 dirs) improves per-niche coverage but biases Spacing metrics.
 N_PARTITIONS = 8
 
 SEEDS = [42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123,
@@ -45,14 +47,33 @@ _run_lock = threading.Lock()
 
 
 def run_qinsga3_solver(
-    data_path:  str | None = None,
-    pop_size:   int        = POP_SIZE,
-    n_gen:      int        = N_GEN,
-    alpha_max:  float      = ALPHA_MAX,
-    alpha_min:  float      = ALPHA_MIN,
-    p_mut:      float | None = None,
-    n_runs:     int        = 1,
+    data_path:        str | None = None,
+    pop_size:         int        = POP_SIZE,
+    n_gen:            int        = N_GEN,
+    alpha_max:        float      = ALPHA_MAX,
+    alpha_min:        float      = ALPHA_MIN,
+    p_mut:            float | None = None,
+    p_cross:          float      = 0.9,
+    eta_cross:        float      = 5.0,
+    migration_period: int        = 10,
+    n_migrate:        int        = 10,
+    n_runs:           int        = 1,
 ) -> dict:
+    """Run QINSGA-III and return structured report data.
+
+    Args:
+        data_path:        Path to instance JSON (default: instance_25_clients.json).
+        pop_size:         Population size; auto-bumped to ≥ n_ref_dirs if needed.
+        n_gen:            Number of generations per run.
+        alpha_max:        Max quantum rotation step (radians) — decays linearly to alpha_min.
+        alpha_min:        Min quantum rotation step at last generation.
+        p_mut:            Per-gene mutation probability (default: 2/n_genes).
+        p_cross:          SBX crossover probability.
+        eta_cross:        SBX distribution index (lower = wider offspring spread).
+        migration_period: Every N generations, inject archive solutions into population.
+        n_migrate:        Number of individuals updated per migration event.
+        n_runs:           Independent runs (different seeds); results are merged.
+    """
     n_runs = max(1, min(20, int(n_runs)))
 
     if data_path is None:
@@ -63,8 +84,8 @@ def run_qinsga3_solver(
     n_genes        = n_clients * len(sets_["T"]) + n_clients
 
     if p_mut is None:
-        p_mut = 1.0 / n_genes
-        print(f"[QINSGA3] p_mut = 1/D = 1/{n_genes} = {p_mut:.6f}", flush=True)
+        p_mut = 2.0 / n_genes
+        print(f"[QINSGA3] p_mut = 2/D = 2/{n_genes} = {p_mut:.6f}", flush=True)
 
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=N_PARTITIONS)
 
@@ -76,7 +97,8 @@ def run_qinsga3_solver(
     print(
         f"[QINSGA3] {n_clients} clients | {len(sets_['T'])} periods | "
         f"{len(sets_['M'])} vehicles | {n_genes} genes | "
-        f"pop={effective_pop} gen={n_gen} | α_max={alpha_max:.4f} | runs={n_runs}",
+        f"pop={effective_pop} gen={n_gen} | α_max={alpha_max:.4f} | "
+        f"p_cross={p_cross:.2f} | runs={n_runs}",
         flush=True,
     )
 
@@ -102,16 +124,20 @@ def run_qinsga3_solver(
 
             t_start = time.time()
             pareto_X, pareto_F, pareto_G = run_qinsga3(
-                sets_     = sets_,
-                params_   = params_,
-                ref_dirs  = ref_dirs,
-                pop_size  = effective_pop,
-                max_gen   = n_gen,
-                alpha_max = alpha_max,
-                alpha_min = alpha_min,
-                p_mut     = p_mut,
-                seed      = seed,
-                callback  = _progress,
+                sets_             = sets_,
+                params_           = params_,
+                ref_dirs          = ref_dirs,
+                pop_size          = effective_pop,
+                max_gen           = n_gen,
+                alpha_max         = alpha_max,
+                alpha_min         = alpha_min,
+                p_mut             = p_mut,
+                p_cross           = p_cross,
+                eta_cross         = eta_cross,
+                migration_period  = migration_period,
+                n_migrate         = n_migrate,
+                seed              = seed,
+                callback          = _progress,
             )
             elapsed = time.time() - t_start
 
@@ -124,7 +150,8 @@ def run_qinsga3_solver(
                 f"Pareto front: {len(pareto_X)} solutions",
                 flush=True,
             )
-            raw_runs.append({"seed": seed, "elapsed": elapsed, "pareto_X": pareto_X})
+            raw_runs.append({"seed": seed, "elapsed": elapsed,
+                              "pareto_X": pareto_X, "pareto_F": pareto_F})
     finally:
         _run_lock.release()
 
@@ -140,8 +167,8 @@ def run_qinsga3_solver(
         "n_gen":          n_gen,
         "alpha_max":      round(alpha_max, 6),
         "alpha_min":      round(alpha_min, 6),
-        "p_mut":          round(p_mut, 6),
-        "crossover_prob": 0.0,
+        "crossover_prob": round(p_cross, 6),
+        "eta_cross":      round(float(eta_cross), 6),
         "mutation_prob":  round(p_mut, 6),
         "n_runs":         n_runs,
         "n_completed":    len(raw_runs),
@@ -202,17 +229,27 @@ def render_from_instance(data_path: str) -> dict:
 
 
 def run_qinsga3_report(
-    output_path: str        = DEFAULT_REPORT_PATH,
-    data_path:   str | None = None,
-    pop_size:    int        = POP_SIZE,
-    n_gen:       int        = N_GEN,
-    alpha_max:   float      = ALPHA_MAX,
-    alpha_min:   float      = ALPHA_MIN,
-    p_mut:       float | None = None,
-    n_runs:      int        = 1,
+    output_path:      str        = DEFAULT_REPORT_PATH,
+    data_path:        str | None = None,
+    pop_size:         int        = POP_SIZE,
+    n_gen:            int        = N_GEN,
+    alpha_max:        float      = ALPHA_MAX,
+    alpha_min:        float      = ALPHA_MIN,
+    p_mut:            float | None = None,
+    p_cross:          float      = 0.9,
+    eta_cross:        float      = 5.0,
+    migration_period: int        = 10,
+    n_migrate:        int        = 10,
+    n_runs:           int        = 1,
 ) -> str:
-    data = run_qinsga3_solver(data_path, pop_size, n_gen, alpha_max, alpha_min, p_mut, n_runs)
-    return write_report(data, output_path)
+    data = run_qinsga3_solver(
+        data_path, pop_size, n_gen, alpha_max, alpha_min,
+        p_mut, p_cross, eta_cross,
+        migration_period=migration_period,
+        n_migrate=n_migrate,
+        n_runs=n_runs,
+    )
+    return write_report(data, output_path, algo_label="QI-NSGA-III")
 
 
 if __name__ == "__main__":
@@ -223,13 +260,20 @@ if __name__ == "__main__":
     parser.add_argument("--alpha-max", type=float, default=ALPHA_MAX)
     parser.add_argument("--alpha-min", type=float, default=ALPHA_MIN)
     parser.add_argument("--mut",       type=float, default=None,
-                        help="Per-gene mutation probability (default: 1/D)")
+                        help="Per-gene mutation probability (default: 2/D)")
+    parser.add_argument("--cross",     type=float, default=0.9,
+                        help="SBX crossover probability (default: 0.9)")
+    parser.add_argument("--eta",       type=float, default=5.0,
+                        help="SBX distribution index η (default: 5)")
     parser.add_argument("--runs",      type=int,   default=1)
     args = parser.parse_args()
 
     dp   = os.path.join(PROJECT_DIR, "data", f"instance_{args.instance}_clients.json")
     out  = os.path.join(MODULE_DIR,  f"qinsga3_report_{args.instance}clients.html")
-    data = run_qinsga3_solver(dp, args.pop, args.gen, args.alpha_max, args.alpha_min, args.mut, args.runs)
-    path = write_report(data, out)
+    data = run_qinsga3_solver(
+        dp, args.pop, args.gen, args.alpha_max, args.alpha_min,
+        args.mut, args.cross, args.eta, n_runs=args.runs,
+    )
+    path = write_report(data, out, algo_label="QI-NSGA-III")
     print(f"[QINSGA3] Report → {path}", flush=True)
     generate_and_open(path)

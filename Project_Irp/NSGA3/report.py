@@ -323,12 +323,13 @@ function renderRunsComparison(){
   card.style.display=''; block.style.display='';
 
   // Run selector buttons
-  document.getElementById('runBtns').innerHTML = RUNS.map((r,i) =>
-    `<button class="run-btn${i===currentRunIdx?' active':''}" onclick="switchRun(${i})">
-      Run ${r.meta.run_id||i+1}
+  document.getElementById('runBtns').innerHTML = RUNS.map((r,i) => {
+    const label = `Run ${r.meta.run_id||i+1}`;
+    return `<button class="run-btn${i===currentRunIdx?' active':''}" onclick="switchRun(${i})">
+      ${label}
       <span style="font-size:10px;opacity:.7;margin-left:5px">${r.meta.n_pareto} sol.</span>
-    </button>`
-  ).join('');
+    </button>`;
+  }).join('');
 
   // Comparison table
   const fmt6 = v => (v==null?'—':Number(v).toFixed(6));
@@ -341,8 +342,8 @@ function renderRunsComparison(){
 
   const rows = RUNS.map((r,i) => {
     const q  = r.meta.quality || {};
-    const hl = i===currentRunIdx ? ' style="background:var(--f4-bg)"' : '';
-    return `<tr${hl}>
+    const hl = i === currentRunIdx ? 'background:var(--f4-bg)' : '';
+    return `<tr${hl?' style="'+hl+'"':''}>
       <td><b>Run ${r.meta.run_id||i+1}</b></td>
       <td>${r.meta.seed||'—'}</td>
       <td>${r.meta.n_pareto}</td>
@@ -795,20 +796,25 @@ def _open_chrome(url):
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
-_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "nsga3_data.json")
 
+def render_html(data, algo_label: str = "NSGA-III"):
+    """Return the complete HTML string for the given data dict.
 
-def render_html(data):
-    """Return the complete HTML string for the given data dict."""
-    return _TEMPLATE.replace(
+    algo_label overrides the 'NSGA-III' heading shown in the browser tab
+    and the report title bar (e.g. 'QI-NSGA-III').
+    """
+    html = _TEMPLATE.replace(
         "/*DATA_PLACEHOLDER*/null",
         json.dumps(data, ensure_ascii=False),
     )
+    if algo_label != "NSGA-III":
+        html = html.replace("IRP &mdash; NSGA-III", f"IRP &mdash; {algo_label}", 2)
+    return html
 
 
-def write_report(data, output_path):
+def write_report(data, output_path, algo_label: str = "NSGA-III"):
     """Write HTML report to disk (used by standalone CLI runs)."""
-    html = render_html(data)
+    html = render_html(data, algo_label)
     with open(output_path, "w", encoding="utf-8") as fh:
         fh.write(html)
     return os.path.abspath(output_path)

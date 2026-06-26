@@ -1,12 +1,8 @@
-import sys, os, subprocess
+import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-PYTHON = os.path.join(os.path.dirname(__file__), '..', '.venv', 'Scripts', 'python.exe')
-ROOT   = os.path.join(os.path.dirname(__file__), '..')
 
 def test_validate_3obj_smoke():
     """validate() with n_obj=3 and 1 run should produce _M3 CSV files."""
-    import shutil
     results_dir = os.path.join(os.path.dirname(__file__), 'results')
 
     # Remove M3 CSVs if they exist from a previous run
@@ -16,8 +12,6 @@ def test_validate_3obj_smoke():
         if os.path.exists(path):
             os.remove(path)
 
-    # Import and call validate directly (avoids re-parsing sys.argv)
-    sys.path.insert(0, ROOT)
     from validation.main_validation import validate
     validate(n_runs=1, n_obj=3)
 
@@ -40,7 +34,6 @@ def test_validate_3obj_smoke():
 
 def test_validate_4obj_still_works():
     """validate() with n_obj=4 should produce _M4 CSV files."""
-    sys.path.insert(0, ROOT)
     from validation.main_validation import validate
     validate(n_runs=1, n_obj=4)
 
@@ -50,8 +43,8 @@ def test_validate_4obj_still_works():
     print("test_validate_4obj_still_works passed.")
 
 if __name__ == "__main__":
-    print("Running smoke test (1 run per problem x 4 problems, n_obj=3) ~5-10 min...")
+    print("Smoke test n_obj=3 (1 run x 4 problems)...")
     test_validate_3obj_smoke()
-    print("Running smoke test (1 run per problem x 4 problems, n_obj=4) ~3-5 min...")
+    print("Smoke test n_obj=4 (1 run x 4 problems)...")
     test_validate_4obj_still_works()
     print("All CLI tests passed.")

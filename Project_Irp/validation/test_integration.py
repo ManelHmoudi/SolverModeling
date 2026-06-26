@@ -8,7 +8,7 @@ from validation.metrics.igd_metric import compute_igd, igd_statistics
 def test_full_pipeline_one_run():
     """End-to-end: run 1 generation on each problem, compute IGD."""
     for name in PROBLEM_NAMES:
-        problem, _ = get_problem(name)
+        problem, _ = get_problem(name, n_obj=4)
         front = run_single(problem, n_gen=2, seed=42)
         igd = compute_igd(problem, front)
         assert isinstance(igd, float) and igd >= 0.0, \

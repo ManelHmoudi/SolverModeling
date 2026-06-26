@@ -12,7 +12,7 @@ def test_igd_is_zero_for_true_front():
     try:
         ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=12)
         true_front = problem.pareto_front(ref_dirs=ref_dirs)
-    except (TypeError, Exception):
+    except Exception:
         print("SKIP: problem.pareto_front() not available for this configuration")
         return
     if true_front is None:
@@ -24,7 +24,7 @@ def test_igd_is_zero_for_true_front():
 def test_igd_positive_for_bad_approx():
     """IGD > 0 when approximation is far from true front."""
     problem, _ = get_problem("DTLZ2")
-    bad_approx = np.ones((10, 4)) * 10.0
+    bad_approx = np.ones((10, problem.n_obj)) * 10.0
     igd = compute_igd(problem, bad_approx)
     assert igd > 0.0
 
