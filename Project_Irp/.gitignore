@@ -11,3 +11,4 @@ __pycache__/
 # Runtime logs and outputs
 validation_output.log
 validation_archetti/validation_report.csv
+validation/results/*.csv
