@@ -10,15 +10,10 @@ Usage:
                            [--timelimit 300] [--output validation_report.csv]
 """
 
-import argparse
-import csv
 import math
 import os
-import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
-
-from docplex.mp.model import Model
+from typing import List
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 INST_LOWCOST_DEFAULT = (
@@ -87,9 +82,8 @@ def parse_dat_file(path: str) -> Instance:
         lines = [ln.strip() for ln in fh if ln.strip()]
 
     toks = lines[0].split()
-    n_total = int(toks[0])   # depot + retailers
-    H       = int(toks[1])
-    C       = float(toks[2])
+    H = int(toks[1])
+    C = float(toks[2])
 
     d       = lines[1].split()
     depot   = Depot(
