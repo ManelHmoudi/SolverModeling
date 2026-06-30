@@ -367,7 +367,7 @@ def run_nsga3_report(output_path=DEFAULT_REPORT_PATH, data_path=None,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NSGA-III solver for the many-objective IRP")
-    parser.add_argument("--instance", default="25", choices=["25", "30", "40"])
+    parser.add_argument("--instance", default="25", choices=["25", "30", "40", "100"])
     parser.add_argument("--pop",  type=int,   default=POP_SIZE)
     parser.add_argument("--gen",  type=int,   default=N_GEN)
     parser.add_argument("--cx",   type=float, default=CROSSOVER_PROB)

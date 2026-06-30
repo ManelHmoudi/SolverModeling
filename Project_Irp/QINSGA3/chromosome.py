@@ -1,82 +1,154 @@
 """Quantum chromosome population for QINSGA-III.
 
 Encoding: each gene j is represented by angle θ_j ∈ [0, π/2].
-Measurement: x_j = xl_j + cos²(θ_j) × (xu_j − xl_j)   [Li & Wang 2007, eq. 3]
-Initial state: all individuals at π/4 (maximum superposition) with small
-uniform perturbation ±0.05 to break symmetry  [Han & Kim 2002].
+
+Measurement [Li & Wang 2007, eq. 3]:
+    x_j = xl_j + cos²(θ_j) × (xu_j − xl_j)
+
+Initial state [Han & Kim 2002]:
+    All individuals start at π/4 (maximum superposition) with a small
+    uniform perturbation ±0.05 rad to break symmetry so the first
+    measurement does not collapse all solutions to the same point.
+
+Rotation gate variants (see rotate()):
+    "tanh"      [Li et al. ICNC 2008, aggressive]
+    "tanh_soft" [empirical soft variant]
+    "linear"    [Han & Kim 2002, literature baseline]
+
+Crossover [Deb 2001, §2.3]:
+    Bounded SBX in θ-space.
+
+Mutation [Han & Kim 2002]:
+    Continuous generalisation of the quantum NOT gate — reset selected
+    genes to Uniform(0, π/2).
 """
 
 import numpy as np
 
 
+_ROTATION_TYPES = ("tanh", "tanh_soft", "linear")
+
+
 class QuantumPopulation:
-    """Population of quantum chromosomes stored as angle matrix θ (pop_size, n_genes)."""
+    """Population of quantum chromosomes stored as angle matrix θ (pop_size, n_genes).
+
+    rotation_type controls the quantum rotation gate used in rotate():
+      "tanh"      — Δθ = α × tanh((θ_guide − θ) / (π/8))
+                    Aggressive: saturates at 76 % of α when |diff| = π/8.
+                    Near-constant step for most of [0, π/2].
+                    [Li et al. ICNC 2008]
+
+      "tanh_soft" — Δθ = α × tanh((θ_guide − θ) / (π/4))
+                    Soft: saturates at 76 % of α when |diff| = π/4.
+                    More proportional for moderate angular distances.
+
+      "linear"    — Δθ = α × (θ_guide − θ) / (π/2)
+                    Strictly proportional; max step = α.
+                    Standard adaptation of Han & Kim 2002 for continuous domain.
+    """
 
     def __init__(
         self,
-        pop_size: int,
-        n_genes:  int,
-        xl:       np.ndarray,
-        xu:       np.ndarray,
-        rng:      np.random.Generator | None = None,
+        pop_size:      int,
+        n_genes:       int,
+        xl:            np.ndarray,
+        xu:            np.ndarray,
+        rng:           np.random.Generator | None = None,
+        rotation_type: str = "tanh",
     ) -> None:
-        self.pop_size = pop_size
-        self.n_genes  = n_genes
-        self.xl       = np.asarray(xl, dtype=float)
-        self.xu       = np.asarray(xu, dtype=float)
-        self.rng      = rng if rng is not None else np.random.default_rng()
+        if rotation_type not in _ROTATION_TYPES:
+            raise ValueError(f"rotation_type must be one of {_ROTATION_TYPES}, got '{rotation_type}'")
+        self.pop_size      = pop_size
+        self.n_genes       = n_genes
+        self.xl            = np.asarray(xl, dtype=float)
+        self.xu            = np.asarray(xu, dtype=float)
+        self.rng           = rng if rng is not None else np.random.default_rng()
+        self.rotation_type = rotation_type
 
-        # All individuals start at π/4 (maximum superposition) — Han & Kim 2002.
-        # A small uniform perturbation ±0.05 rad breaks symmetry so that the
-        # first measurement does not collapse all solutions to the same point.
+        # Maximum superposition θ = π/4  [Han & Kim 2002, §II-A]
+        # ±0.05 rad perturbation breaks symmetry so the first measurement
+        # does not collapse all N solutions to the same decoded point.
         self.theta = np.full((pop_size, n_genes), np.pi / 4.0)
         self.theta += self.rng.uniform(-0.05, 0.05, (pop_size, n_genes))
         self.theta  = np.clip(self.theta, 0.0, np.pi / 2.0)
 
+    # ------------------------------------------------------------------
+    # Measurement
+    # ------------------------------------------------------------------
+
     def measure(self) -> np.ndarray:
         """Collapse quantum state → classical decision-variable matrix (pop_size, n_genes).
 
-        x_j = xl_j + cos²(θ_j) × (xu_j − xl_j)   [Li & Wang 2007, eq. 3]
+        Deterministic component [Li & Wang 2007, eq. 3]:
+            x_j = xl_j + cos²(θ_j) × (xu_j − xl_j)
 
-        Small diversity noise σ = 0.02 × |sin(2θ)| × (xu−xl) is added so nearby
-        θ values yield different decoded routes after integer rounding (IRP decoder).
-        Noise vanishes at convergence (θ → 0 or π/2) and peaks at superposition
-        (θ ≈ π/4)  [Platel et al. 2009, §4.2].
+        Diversity noise [Platel et al. 2009, §4.2]:
+            σ_j = 0.02 × |sin(2θ_j)| × (xu_j − xl_j)
+            noise ~ N(0, σ_j)
+
+        The noise amplitude is proportional to |sin(2θ)|, which peaks at
+        superposition (θ ≈ π/4) and vanishes at convergence (θ → 0 or π/2).
+        This prevents nearby θ values from collapsing to identical integer
+        routes after the IRP decoder rounds to integers.
         """
-        p      = np.cos(self.theta) ** 2
-        mu     = self.xl + p * (self.xu - self.xl)
-        sigma  = 0.02 * np.abs(np.sin(2.0 * self.theta)) * (self.xu - self.xl)
-        noise  = self.rng.standard_normal(self.theta.shape) * sigma
+        p     = np.cos(self.theta) ** 2
+        mu    = self.xl + p * (self.xu - self.xl)
+        sigma = 0.02 * np.abs(np.sin(2.0 * self.theta)) * (self.xu - self.xl)
+        noise = self.rng.standard_normal(self.theta.shape) * sigma
         return np.clip(mu + noise, self.xl, self.xu)
+
+    # ------------------------------------------------------------------
+    # Rotation gate
+    # ------------------------------------------------------------------
 
     def rotate(
         self,
         guides_theta: np.ndarray,
         alpha:        float,
     ) -> None:
-        """Adaptive quantum rotation gate (Li & Wang 2007; Platel et al. 2009).
+        """Apply quantum rotation gate toward the guide angles.
 
-        Δθ_ij = α × tanh((θ_guide_ij − θ_ij) / (π/8))
+        All three variants share the same maximum step bound α and are
+        clipped to [0, π/2] after the update.
 
-        tanh scaling gives large steps far from the guide and small steps near it,
-        preventing oscillation at convergence. The |cos(2θ)| damping factor from
-        binary QIEAs is omitted: it vanishes at superposition (θ=π/4), blocking
-        rotation where exploration is most needed.
+        "tanh" (aggressive) [Li et al. ICNC 2008]:
+            Δθ = α × tanh(diff / (π/8))
+            Saturates quickly — nearly constant step ≈ α across most of
+            the domain.  Preferred for fast convergence.
+
+        "tanh_soft":
+            Δθ = α × tanh(diff / (π/4))
+            Gentler saturation — more proportional for moderate distances.
+
+        "linear" [Han & Kim 2002, §II-B]:
+            Δθ = α × diff / (π/2)
+            Strictly proportional; step is zero when already at the guide.
+            Literature baseline — slowest but most stable near convergence.
         """
-        diff       = guides_theta - self.theta
-        self.theta += alpha * np.tanh(diff / (np.pi / 8.0))
-        self.theta  = np.clip(self.theta, 0.0, np.pi / 2.0)
+        diff = guides_theta - self.theta
+        if self.rotation_type == "tanh":
+            self.theta += alpha * np.tanh(diff / (np.pi / 8.0))
+        elif self.rotation_type == "tanh_soft":
+            self.theta += alpha * np.tanh(diff / (np.pi / 4.0))
+        else:  # "linear"
+            self.theta += alpha * diff / (np.pi / 2.0)
+        self.theta = np.clip(self.theta, 0.0, np.pi / 2.0)
+
+    # ------------------------------------------------------------------
+    # Crossover
+    # ------------------------------------------------------------------
 
     def crossover(self, p_cross: float, eta: float) -> None:
-        """Quantum SBX crossover in θ-space — bounded variant (Deb 2001, §2.3).
+        """Quantum SBX crossover in θ-space — bounded variant [Deb 2001, §2.3].
 
         Randomly pairs individuals; each pair crosses with probability p_cross.
-        The bounded SBX computes β_q taking the distance to the domain boundaries
-        [0, π/2] into account, so offspring are never generated outside the
-        feasible angle range and the distribution is correctly shaped near bounds.
+        The bounded SBX spread factor β_q accounts for the distance from each
+        parent to the domain boundary [0, π/2], ensuring offspring never leave
+        the feasible angle range and that the distribution is correctly shaped
+        near the bounds [Deb 2001, eq. 2.13].
 
-        Placing crossover after rotate() and before mutate() follows the standard
-        NSGA-III generation order (Deb & Jain 2014) adapted to the quantum domain.
+        Generation order (rotate → crossover → mutate) follows NSGA-III
+        [Deb & Jain 2014] adapted to the quantum domain.
 
         Recommended: p_cross = 0.9, eta = 5.
         """
@@ -89,14 +161,14 @@ class QuantumPopulation:
                 continue
 
             # p1 ≤ p2 per gene (vectorised)
-            p1 = np.minimum(self.theta[i], self.theta[j])
-            p2 = np.maximum(self.theta[i], self.theta[j])
+            p1   = np.minimum(self.theta[i], self.theta[j])
+            p2   = np.maximum(self.theta[i], self.theta[j])
             diff = p2 - p1
 
             active = diff > 1e-14   # skip genes where parents are identical
 
-            # Boundary-aware spread factor α (Deb 2001, eq. 2.13)
-            # min(p1-lo, hi-p2) ≥ 0 because θ ∈ [lo, hi]
+            # Boundary-aware spread factor α [Deb 2001, eq. 2.13]:
+            # min(p1 − lo, hi − p2) ≥ 0 because θ ∈ [lo, hi]
             beta_a = np.where(
                 active,
                 np.maximum(
@@ -123,21 +195,26 @@ class QuantumPopulation:
             c1 = np.clip(mid - beta_q * half_diff, lo, hi)
             c2 = np.clip(mid + beta_q * half_diff, lo, hi)
 
-            # Where parents were identical keep them unchanged
             c1 = np.where(active, c1, p1)
             c2 = np.where(active, c2, p2)
 
-            # Randomly assign offspring to avoid directional bias
+            # Random offspring assignment avoids directional bias
             swap          = self.rng.random(self.n_genes) < 0.5
             self.theta[i] = np.where(swap, c1, c2)
             self.theta[j] = np.where(swap, c2, c1)
 
+    # ------------------------------------------------------------------
+    # Mutation
+    # ------------------------------------------------------------------
+
     def mutate(self, prob: float) -> None:
         """Quantum mutation: reset selected genes to Uniform(0, π/2).
 
-        Generalises the quantum NOT gate to continuous angles (Han & Kim 2002).
-        Resets across the full angle range [0, π/2] for genuine diversification.
-        Recommended prob = 2/n_genes (two genes mutated per individual on average).
+        Continuous generalisation of the quantum NOT gate [Han & Kim 2002, §II-C].
+        Resetting across the full range [0, π/2] provides genuine diversification
+        rather than a local perturbation.
+
+        Recommended: prob = 2 / n_genes  (two genes mutated per individual on average).
         """
         mask  = self.rng.random(self.theta.shape) < prob
         n_mut = int(mask.sum())

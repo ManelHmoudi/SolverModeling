@@ -139,7 +139,8 @@ INSTANCES = {
     "15": os.path.join(BASE_DIR, "data", "instance_15_clients.json"),
     "25": os.path.join(BASE_DIR, "data", "instance_25_clients.json"),
     "30": os.path.join(BASE_DIR, "data", "instance_30_clients.json"),
-    "40": os.path.join(BASE_DIR, "data", "instance_40_clients.json"),
+    "40":  os.path.join(BASE_DIR, "data", "instance_40_clients.json"),
+    "100": os.path.join(BASE_DIR, "data", "instance_100_clients.json"),
 }
 DEFAULT_INSTANCE = "15"
 
@@ -851,6 +852,7 @@ body {
       <button class="inst-chip" data-instance="25" onclick="selectInstance('25')"><span class="chip-dot"></span>25 clients</button>
       <button class="inst-chip" data-instance="30" onclick="selectInstance('30')"><span class="chip-dot"></span>30 clients</button>
       <button class="inst-chip" data-instance="40" onclick="selectInstance('40')"><span class="chip-dot"></span>40 clients</button>
+      <button class="inst-chip" data-instance="100" onclick="selectInstance('100')"><span class="chip-dot"></span>100 clients</button>
     </div>
   </div>
 

@@ -7,6 +7,10 @@ Usage (standalone):
 
 Called from app.py via run_qinsga3_report().
 Report format is identical to NSGA3 — NSGA3/report.py is reused unchanged.
+
+On Windows, multiprocessing uses the "spawn" start method, which requires all
+worker-callable code to be importable at module level (see algorithm.py).
+The _run_lock prevents concurrent GUI-triggered runs from corrupting shared state.
 """
 
 import argparse
@@ -34,9 +38,10 @@ _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "qinsga3_chromosomes.json")
 
 POP_SIZE     = 200
 N_GEN        = 300
-ALPHA_MAX    = 0.05  * np.pi   # upper end of recommended range [Li & Wang 2007]
-ALPHA_MIN    = 0.001 * np.pi
-# N_PARTITIONS=8 matches NSGA3 (165 ref dirs) for fair algorithmic comparison.
+ALPHA_MAX    = 0.10  * np.pi   # Vmax = ±0.1π   [Li et al. ICNC 2008]
+ALPHA_MIN    = 0.001 * np.pi   # Vmin = ±0.001π [Li et al. ICNC 2008]
+# N_PARTITIONS=8 → 165 reference directions (das-dennis, M=4).
+# Matches NSGA3 for a fair algorithmic comparison.
 # Reducing to 6 (84 dirs) improves per-niche coverage but biases Spacing metrics.
 N_PARTITIONS = 8
 
@@ -58,6 +63,7 @@ def run_qinsga3_solver(
     migration_period: int        = 10,
     n_migrate:        int        = 10,
     n_runs:           int        = 1,
+    rotation_type:    str        = "tanh",
 ) -> dict:
     """Run QINSGA-III and return structured report data.
 
@@ -137,6 +143,7 @@ def run_qinsga3_solver(
                 migration_period  = migration_period,
                 n_migrate         = n_migrate,
                 seed              = seed,
+                rotation_type     = rotation_type,
                 callback          = _progress,
             )
             elapsed = time.time() - t_start
@@ -254,7 +261,7 @@ def run_qinsga3_report(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="QINSGA-III solver for the many-objective IRP")
-    parser.add_argument("--instance", default="25", choices=["3", "5", "15", "25", "30", "40"])
+    parser.add_argument("--instance", default="25", choices=["3", "5", "15", "25", "30", "40", "100"])
     parser.add_argument("--pop",       type=int,   default=POP_SIZE)
     parser.add_argument("--gen",       type=int,   default=N_GEN)
     parser.add_argument("--alpha-max", type=float, default=ALPHA_MAX)
