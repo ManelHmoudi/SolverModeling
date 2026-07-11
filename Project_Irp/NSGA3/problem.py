@@ -3,7 +3,9 @@
 Chromosome: gene[l_idx * n_periods + t_idx] = quantity delivered to client l in period t.
 
 Objectives (all minimised): f1 logistics cost, f2 CO2, f3 travel time, f4 working capital.
-Hard constraints via out["G"] (g <= 0 = feasible): C13 tau_return window, C14 delivery deadlines.
+Hard constraints via out["G"] (g <= 0 = feasible): C13 tau_return window,
+C14 delivery deadlines, C6 depot stock ceiling (safety net — the decoder
+already forces enough shipment to respect it structurally in the common case).
 """
 
 from pymoo.core.problem import ElementwiseProblem
@@ -34,7 +36,7 @@ class IRPProblem(ElementwiseProblem):
         super().__init__(
             n_var        = len(clients) * len(T) + n_prio,
             n_obj        = 4,
-            n_ieq_constr = 2 * len(T) + len(clients) * len(T),
+            n_ieq_constr = 2 * len(T) + len(clients) * len(T) + 2 * len(T),
             xl           = xl,
             xu           = xu,
         )
@@ -55,9 +57,12 @@ class IRPProblem(ElementwiseProblem):
         clients = self.sets_["clients"]
         T       = self.sets_["T"]
         q_lt    = self.params_["q_lt"]
-        tau_min = self.params_["tau_min"]
-        tau_max = self.params_["tau_max"]
-        actual  = route_result["actual_qty"]
+        tau_min  = self.params_["tau_min"]
+        tau_max  = self.params_["tau_max"]
+        I_max_f  = self.params_["I_O_max_frigo"]
+        I_max_nf = self.params_["I_O_max_nonfrigo"]
+        actual      = route_result["actual_qty"]
+        depot_stock = route_result["depot_stock"]
 
         G = []
         for t in T:
@@ -71,5 +76,12 @@ class IRPProblem(ElementwiseProblem):
                 cum_del += actual.get((l, t), 0)
                 cum_dem += q_lt[l, t]
                 G.append(cum_dem - cum_del)
+
+        # C6 upper bound safety net — the decoder already forces enough
+        # shipment to respect I_O_max structurally; this catches the residual
+        # case where remaining demand/truck capacity can't absorb the surplus.
+        for t in T:
+            G.append(depot_stock[t]["frigo"]    - I_max_f)
+            G.append(depot_stock[t]["nonfrigo"] - I_max_nf)
 
         out["G"] = G

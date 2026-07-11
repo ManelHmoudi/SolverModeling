@@ -1,4 +1,3 @@
-# validation/algorithms/nsga3_runner.py
 """
 NSGA-III runner configured for Deb & Jain (2014) DTLZ validation.
 

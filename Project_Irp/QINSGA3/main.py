@@ -28,10 +28,10 @@ if PROJECT_DIR not in sys.path:
 import numpy as np
 from pymoo.util.ref_dirs import get_reference_directions
 
-from models.parametres import load_instance
-from NSGA3.main        import _evaluate_pareto, _build_report_data
-from NSGA3.report      import write_report, generate_and_open
-from .algorithm        import run_qinsga3
+from models.parametres       import load_instance
+from NSGA3.report_builder    import _evaluate_pareto, _build_report_data
+from NSGA3.report            import write_report, generate_and_open
+from .algorithm              import run_qinsga3
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "qinsga3_report.html")
 _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "qinsga3_chromosomes.json")
@@ -44,6 +44,7 @@ ALPHA_MIN    = 0.001 * np.pi   # Vmin = ±0.001π [Li et al. ICNC 2008]
 # Matches NSGA3 for a fair algorithmic comparison.
 # Reducing to 6 (84 dirs) improves per-niche coverage but biases Spacing metrics.
 N_PARTITIONS = 8
+N_OBJ        = 4   # IRP objectives: f1 cost, f2 CO2, f3 time, f4 BFR
 
 SEEDS = [42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123,
          1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351]
@@ -58,6 +59,8 @@ def run_qinsga3_solver(
     alpha_max:        float      = ALPHA_MAX,
     alpha_min:        float      = ALPHA_MIN,
     p_mut:            float | None = None,
+    p_mut_strong:     float      = 0.15,
+    mut_sigma:        float      = 0.05 * np.pi,
     p_cross:          float      = 0.9,
     eta_cross:        float      = 5.0,
     migration_period: int        = 10,
@@ -74,6 +77,8 @@ def run_qinsga3_solver(
         alpha_max:        Max quantum rotation step (radians) — decays linearly to alpha_min.
         alpha_min:        Min quantum rotation step at last generation.
         p_mut:            Per-gene mutation probability (default: 2/n_genes).
+        p_mut_strong:     Fraction of mutated genes reset fully vs perturbed locally.
+        mut_sigma:        Std-dev (radians) of the local perturbation for weak mutation.
         p_cross:          SBX crossover probability.
         eta_cross:        SBX distribution index (lower = wider offspring spread).
         migration_period: Every N generations, inject archive solutions into population.
@@ -93,7 +98,7 @@ def run_qinsga3_solver(
         p_mut = 2.0 / n_genes
         print(f"[QINSGA3] p_mut = 2/D = 2/{n_genes} = {p_mut:.6f}", flush=True)
 
-    ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=N_PARTITIONS)
+    ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
 
     effective_pop = max(pop_size, len(ref_dirs))
     if effective_pop != pop_size:
@@ -138,6 +143,8 @@ def run_qinsga3_solver(
                 alpha_max         = alpha_max,
                 alpha_min         = alpha_min,
                 p_mut             = p_mut,
+                p_mut_strong      = p_mut_strong,
+                mut_sigma         = mut_sigma,
                 p_cross           = p_cross,
                 eta_cross         = eta_cross,
                 migration_period  = migration_period,
@@ -177,6 +184,8 @@ def run_qinsga3_solver(
         "crossover_prob": round(p_cross, 6),
         "eta_cross":      round(float(eta_cross), 6),
         "mutation_prob":  round(p_mut, 6),
+        "mutation_strong_frac": round(p_mut_strong, 6),
+        "mutation_sigma": round(mut_sigma, 6),
         "n_runs":         n_runs,
         "n_completed":    len(raw_runs),
         "algorithm":      "QINSGA3",
@@ -243,18 +252,22 @@ def run_qinsga3_report(
     alpha_max:        float      = ALPHA_MAX,
     alpha_min:        float      = ALPHA_MIN,
     p_mut:            float | None = None,
+    p_mut_strong:     float      = 0.15,
+    mut_sigma:        float      = 0.05 * np.pi,
     p_cross:          float      = 0.9,
     eta_cross:        float      = 5.0,
     migration_period: int        = 10,
     n_migrate:        int        = 10,
     n_runs:           int        = 1,
+    rotation_type:    str        = "tanh",
 ) -> str:
     data = run_qinsga3_solver(
         data_path, pop_size, n_gen, alpha_max, alpha_min,
-        p_mut, p_cross, eta_cross,
+        p_mut, p_mut_strong, mut_sigma, p_cross, eta_cross,
         migration_period=migration_period,
         n_migrate=n_migrate,
         n_runs=n_runs,
+        rotation_type=rotation_type,
     )
     return write_report(data, output_path, algo_label="QI-NSGA-III")
 
@@ -268,6 +281,10 @@ if __name__ == "__main__":
     parser.add_argument("--alpha-min", type=float, default=ALPHA_MIN)
     parser.add_argument("--mut",       type=float, default=None,
                         help="Per-gene mutation probability (default: 2/D)")
+    parser.add_argument("--mut-strong", type=float, default=0.15,
+                        help="Fraction of mutated genes fully reset vs locally perturbed (default: 0.15)")
+    parser.add_argument("--mut-sigma", type=float, default=0.05 * np.pi,
+                        help="Std-dev (radians) of the local perturbation for weak mutation")
     parser.add_argument("--cross",     type=float, default=0.9,
                         help="SBX crossover probability (default: 0.9)")
     parser.add_argument("--eta",       type=float, default=5.0,
@@ -279,7 +296,8 @@ if __name__ == "__main__":
     out  = os.path.join(MODULE_DIR,  f"qinsga3_report_{args.instance}clients.html")
     data = run_qinsga3_solver(
         dp, args.pop, args.gen, args.alpha_max, args.alpha_min,
-        args.mut, args.cross, args.eta, n_runs=args.runs,
+        p_mut=args.mut, p_mut_strong=args.mut_strong, mut_sigma=args.mut_sigma,
+        p_cross=args.cross, eta_cross=args.eta, n_runs=args.runs,
     )
     path = write_report(data, out, algo_label="QI-NSGA-III")
     print(f"[QINSGA3] Report → {path}", flush=True)

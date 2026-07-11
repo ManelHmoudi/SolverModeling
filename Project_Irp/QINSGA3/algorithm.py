@@ -303,34 +303,62 @@ def _archive_update(
     Dominance check vectorised [Zitzler 1999, Def. 2]:
         arr dominates f  ⟺  (arr ≤ f).all(axis=1) & (arr < f).any(axis=1)
 
-    Broadcasting replaces the original O(|arch|) Python inner loop with a single
-    NumPy operation per candidate, keeping the outer loop over candidates only
-    (Pareto front size, typically ≪ pop_size).
+    Performance fix: arr = np.array(arch_F) is built ONCE per call (not once per
+    candidate). Deletions are tracked via a boolean mask and applied in a single
+    O(n) list rebuild instead of repeated O(n) list.pop calls.
     """
     feasible = np.maximum(new_G, 0.0).sum(axis=1) == 0
+    feas_idx = np.where(feasible)[0]
+    if len(feas_idx) == 0:
+        return
 
-    for idx in np.where(feasible)[0]:
-        x, f, th = new_X[idx], new_F[idx], new_theta[idx]
+    cand_X     = new_X[feas_idx]
+    cand_F     = new_F[feas_idx]
+    cand_theta = new_theta[feas_idx]
 
-        if arch_F:
-            arr = np.array(arch_F)  # (arch_size, M)
+    n_arch = len(arch_F)
+    arr    = np.array(arch_F) if n_arch > 0 else None
+    alive  = np.ones(n_arch, dtype=bool)   # tracks which archive entries survive
 
-            # Is f dominated by any archive member?
-            if ((arr <= f).all(axis=1) & (arr < f).any(axis=1)).any():
+    add_X, add_F, add_theta = [], [], []
+
+    for c in range(len(cand_F)):
+        f = cand_F[c]
+
+        if arr is not None:
+            arr_live = arr[alive]
+            if len(arr_live):
+                # Skip if dominated by any surviving archive entry
+                if ((arr_live <= f).all(axis=1) & (arr_live < f).any(axis=1)).any():
+                    continue
+                # Skip duplicate F vectors
+                if (np.abs(arr_live - f).max(axis=1) < 1e-6).any():
+                    continue
+                # Mark archive entries dominated by f (boolean mask, no pop yet)
+                live_idx = np.where(alive)[0]
+                dom = (f <= arr_live).all(axis=1) & (f < arr_live).any(axis=1)
+                alive[live_idx[dom]] = False
+
+        # Avoid within-batch duplicates (candidates from same Pareto front)
+        if add_F:
+            add_arr = np.array(add_F)
+            if (np.abs(add_arr - f).max(axis=1) < 1e-6).any():
                 continue
 
-            # Skip duplicate F vectors (different X can decode to identical routes)
-            if (np.abs(arr - f).max(axis=1) < 1e-6).any():
-                continue
+        add_X.append(cand_X[c].copy())
+        add_F.append(f.copy())
+        add_theta.append(cand_theta[c].copy())
 
-            # Remove archive members dominated by f
-            dom = (f <= arr).all(axis=1) & (f < arr).any(axis=1)
-            for j in np.where(dom)[0][::-1]:
-                arch_X.pop(j); arch_F.pop(j); arch_theta.pop(j)
+    # Apply all deletions in one pass — O(n) list rebuild vs O(n²) repeated pops
+    if n_arch > 0 and not alive.all():
+        keep = np.where(alive)[0].tolist()
+        arch_X[:]     = [arch_X[i]     for i in keep]
+        arch_F[:]     = [arch_F[i]     for i in keep]
+        arch_theta[:] = [arch_theta[i] for i in keep]
 
-        arch_X.append(x.copy())
-        arch_F.append(f.copy())
-        arch_theta.append(th.copy())
+    arch_X.extend(add_X)
+    arch_F.extend(add_F)
+    arch_theta.extend(add_theta)
 
     if len(arch_F) > max_size:
         arr_X, arr_F, arr_theta = _crowding_trim(
@@ -354,6 +382,8 @@ def run_qinsga3(
     alpha_max:        float = 0.10  * np.pi,
     alpha_min:        float = 0.001 * np.pi,
     p_mut:            float | None = None,
+    p_mut_strong:     float = 0.15,
+    mut_sigma:        float = 0.05 * np.pi,
     p_cross:          float = 0.9,
     eta_cross:        float = 5.0,
     migration_period: int   = 10,
@@ -448,7 +478,7 @@ def run_qinsga3(
             if p_cross > 0.0:
                 qpop.crossover(p_cross, eta_cross)
 
-            qpop.mutate(p_mut)
+            qpop.mutate(p_mut, p_mut_strong, mut_sigma)
 
             if (arch_F_norm is not None
                     and migration_period > 0
@@ -461,11 +491,20 @@ def run_qinsga3(
             if callback is not None and (gen % 10 == 0 or gen == max_gen - 1):
                 callback(gen, F, G, pareto_idx)
 
-        # Final measurement after all generations
+        # Final measurement after all generations. Archive update must only see
+        # this generation's own Pareto front (rank 0), not the whole population —
+        # otherwise mutually-dominated individuals from the same batch can both
+        # enter the archive, since _archive_update only screens new candidates
+        # against each other for exact duplicates, never for dominance.
         X_final      = qpop.measure()
         F_final, G_final = _eval_batch(X_final)
-        _archive_update(X_final, F_final, G_final, qpop.theta,
-                        arch_X, arch_F, arch_theta, _MAX_ARCHIVE)
+        F_pen_final      = _penalised_F(F_final, G_final)
+        final_pareto_idx = sorter.do(F_pen_final)[0]
+        _archive_update(
+            X_final[final_pareto_idx], F_final[final_pareto_idx],
+            G_final[final_pareto_idx], qpop.theta[final_pareto_idx],
+            arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
+        )
 
     if arch_X:
         arch_X_arr, arch_F_arr, _ = _crowding_trim(
@@ -473,6 +512,4 @@ def run_qinsga3(
         )
         return arch_X_arr, arch_F_arr, np.zeros((len(arch_X_arr), n_constr))
 
-    F_pen_final = _penalised_F(F_final, G_final)
-    idx_final   = sorter.do(F_pen_final)[0]
-    return X_final[idx_final], F_final[idx_final], G_final[idx_final]
+    return X_final[final_pareto_idx], F_final[final_pareto_idx], G_final[final_pareto_idx]

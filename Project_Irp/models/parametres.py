@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import warnings
 
 BASE_DIR          = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data", "instance_15_clients.json")
@@ -80,16 +81,35 @@ def load_instance(data_path=None):
     tau_max = params_raw["tau_max"]
     s       = {i: params_raw["s_value"] for i in N}
 
-    I_O_init_frigo    = params_raw["I_O_init_frigo"]
-    I_O_init_nonfrigo = params_raw["I_O_init_nonfrigo"]
-    I_O_max_frigo     = params_raw["I_O_max_frigo"]
-    I_O_max_nonfrigo  = params_raw["I_O_max_nonfrigo"]
-    I_O_min_frigo     = params_raw["I_O_min_frigo"]
-    I_O_min_nonfrigo  = params_raw["I_O_min_nonfrigo"]
-
+    # Demand replenishment — computed before inventory params so defaults can reference them.
     R_frigo    = {t: sum(q_lt[l, t] for l in clients if     requires_cold[l, t]) for t in T}
     R_nonfrigo = {t: sum(q_lt[l, t] for l in clients if not requires_cold[l, t]) for t in T}
     R          = {t: R_frigo[t] + R_nonfrigo[t] for t in T}
+
+    # Inventory bounds — fall back to demand-derived defaults so new instances
+    # without these JSON keys still work correctly. A missing/typo'd key warns
+    # (same policy as the P_sale backfill below) so a silent substitution is
+    # never mistaken for an intentionally-configured value.
+    def _get_or_warn(key, default):
+        if key in params_raw:
+            return params_raw[key]
+        warnings.warn(
+            f"[parametres] '{key}' missing from instance JSON — using computed "
+            f"default {default}. Add it to the JSON to remove this warning.",
+            RuntimeWarning, stacklevel=3,
+        )
+        return default
+
+    _n_T         = max(len(T), 1)
+    _avg_R_f     = sum(R_frigo.values())    / _n_T
+    _avg_R_nf    = sum(R_nonfrigo.values()) / _n_T
+
+    I_O_init_frigo    = _get_or_warn("I_O_init_frigo",    round(_avg_R_f  * 2.0))
+    I_O_init_nonfrigo = _get_or_warn("I_O_init_nonfrigo", round(_avg_R_nf * 2.0))
+    I_O_max_frigo     = _get_or_warn("I_O_max_frigo",     round(_avg_R_f  * 4.0))
+    I_O_max_nonfrigo  = _get_or_warn("I_O_max_nonfrigo",  round(_avg_R_nf * 4.0))
+    I_O_min_frigo     = _get_or_warn("I_O_min_frigo",     (max(1, round(_avg_R_f  * 0.25)) if _avg_R_f  > 0 else 0))
+    I_O_min_nonfrigo  = _get_or_warn("I_O_min_nonfrigo",  (max(1, round(_avg_R_nf * 0.25)) if _avg_R_nf > 0 else 0))
 
     g    = params_raw["g"]
     Cr   = params_raw["Cr"]
@@ -110,13 +130,39 @@ def load_instance(data_path=None):
     P_sale     = {int(k): val for k, val in params_raw["P_sale"].items()}
     P_purchase = {int(k): val for k, val in params_raw["P_purchase"].items()}
 
+    # Guarantee every client has a P_sale entry so evaluator.py never crashes on KeyError.
+    # Missing entries get the average sale price with a printed warning.
+    _missing_clients = [l for l in clients if l not in P_sale]
+    if _missing_clients:
+        _avg_price = sum(P_sale.values()) / len(P_sale) if P_sale else 1.0
+        warnings.warn(
+            f"[parametres] P_sale missing for clients {_missing_clients}. "
+            f"Using average price {_avg_price:.4f}. Add them to the JSON to remove this warning.",
+            RuntimeWarning, stacklevel=2,
+        )
+        for _l in _missing_clients:
+            P_sale[_l] = _avg_price
+
     c1    = params_raw["c1"]
     c2    = params_raw["c2"]
-    C_max = params_raw["C_max"]
-    E_max = params_raw["E_max"]
-    T_max = params_raw["T_max"]
-    B     = params_raw["B"]
-    BIG_M = params_raw["BIG_M"]
+    C_max = _get_or_warn("C_max", 99999)
+    E_max = _get_or_warn("E_max", 99999)
+    T_max = _get_or_warn("T_max", 99999)
+    B     = _get_or_warn("B",     99999)
+
+    # BIG_M: the minimum valid value is tau_max + max_arc_time + service_time.
+    # Auto-compute from network geometry so new instances never need to set it manually.
+    # If the JSON supplies a larger value, use that (never go below the valid minimum).
+    _s_val     = params_raw["s_value"]
+    _max_d     = max(d.values()) if d else 0.0
+    _min_v     = min(spd.values()) if spd else 1.0
+    _auto_BIG_M = tau_max + _s_val + _max_d / _min_v + 1.0
+    _json_BIG_M = params_raw.get("BIG_M")
+    BIG_M = max(float(_json_BIG_M), _auto_BIG_M) if _json_BIG_M is not None else _auto_BIG_M
+
+    # Non-mandatory deliveries below this threshold are skipped in the decoder.
+    # Configurable per instance; defaults to 5 (empirically suitable for typical demand scale).
+    min_delivery_threshold = int(params_raw.get("min_delivery_threshold", 5))
 
     params_ = {
         "q_lt":              q_lt,
@@ -162,6 +208,7 @@ def load_instance(data_path=None):
         "T_max":             T_max,
         "B":                 B,
         "BIG_M":             BIG_M,
+        "min_delivery_threshold": min_delivery_threshold,
     }
 
     return sets_, params_

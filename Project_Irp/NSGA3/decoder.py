@@ -43,6 +43,7 @@ def build_routes(quantities, sets_, params_, priorities=None):
     non_frigo_trucks = [k for k in M if k not in frigo_trucks]
     frigo_list       = sorted(frigo_trucks)
     q_lt             = params_["q_lt"]
+    min_delivery     = params_.get("min_delivery_threshold", 5)
 
     I_frigo    = float(params_["I_O_init_frigo"])
     I_nonfrigo = float(params_["I_O_init_nonfrigo"])
@@ -100,14 +101,14 @@ def build_routes(quantities, sets_, params_, priorities=None):
                     remaining  = max(0, frigo_total[l] - frigo_dlv[l])
                     min_needed = max(0, cum_frigo_demand[l, t] - frigo_dlv[l])
                     actual     = max(min_needed, min(qty, remaining))
-                    if actual > 0:
+                    if actual > 0 and (min_needed > 0 or actual >= min_delivery):
                         frigo_desired[l] = actual
                         frigo_floor[l]   = min_needed
                 else:
                     remaining  = max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
                     min_needed = max(0, cum_nonfrigo_demand[l, t] - nonfrigo_dlv[l])
                     actual     = max(min_needed, min(qty, remaining))
-                    if actual > 0:
+                    if actual > 0 and (min_needed > 0 or actual >= min_delivery):
                         nonfrigo_desired[l] = actual
                         nonfrigo_floor[l]   = min_needed
 
@@ -117,13 +118,37 @@ def build_routes(quantities, sets_, params_, priorities=None):
         frigo_cap_total = sum(Q[k] for k in frigo_list)
         nf_cap_total    = sum(Q[k] for k in non_frigo_trucks) if non_frigo_trucks else 0
 
+        # Stock ceiling (C6 upper bound) is a hard constraint: force enough
+        # shipment this period so depot stock cannot exceed I_max_f/I_max_nf.
+        # Under-requested clients are bumped up to cover the deficit, capped
+        # at their own remaining demand so the no-over-delivery guarantee (C8)
+        # still holds — mirrors the existing floor mechanism for I_min.
+        # Also capped at total truck capacity: _clamp_to_integer_budget never
+        # cuts below floor[l], so an uncapped floor total above frigo_cap_total
+        # would make frigo_qty structurally unshippable this period. When
+        # capacity truly can't cover the required release, the residual excess
+        # is left for problem.py's C6 G-constraint to penalise, rather than
+        # silently producing an inconsistent floor here.
+        min_rel_f  = min(max(0, int(I_frigo    + R_frigo[t]    - I_max_f)), frigo_cap_total)
+        min_rel_nf = min(max(0, int(I_nonfrigo + R_nonfrigo[t] - I_max_nf)), nf_cap_total)
+        frigo_remaining = {
+            l: frigo_total[l] - frigo_dlv[l]
+            for l in clients if frigo_total[l] - frigo_dlv[l] > 0
+        }
+        nonfrigo_remaining = {
+            l: nonfrigo_total[l] - nonfrigo_dlv[l]
+            for l in clients if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
+        }
+        _force_min_release(frigo_desired,    frigo_floor,    frigo_remaining,    min_rel_f)
+        _force_min_release(nonfrigo_desired, nonfrigo_floor, nonfrigo_remaining, min_rel_nf)
+
         frigo_qty    = _clamp_to_integer_budget(
             frigo_desired,    min(max_rel_f,  frigo_cap_total), frigo_floor)
         nonfrigo_qty = _clamp_to_integer_budget(
             nonfrigo_desired, min(max_rel_nf, nf_cap_total),    nonfrigo_floor)
 
         routes_data[t] = {}
-        tau_max = params_.get("tau_max")
+        tau_max = params_.get("tau_max", float("inf"))
         for qty_group, trucks, floor_group in [
             (frigo_qty,    frigo_list,       frigo_floor),
             (nonfrigo_qty, non_frigo_trucks, nonfrigo_floor),
@@ -192,6 +217,31 @@ def build_routes(quantities, sets_, params_, priorities=None):
         "routes_data":   routes_data,
         "tau_return":    tau_return,
     }
+
+
+def _force_min_release(desired, floor, remaining, min_release):
+    """Bump desired/floor so their sum reaches at least min_release.
+
+    Never pushes a client beyond its own remaining demand, so the
+    no-over-delivery guarantee (C8) is preserved. Used to keep the depot
+    stock ceiling (I_O_max) a hard constraint: enough must ship out this
+    period to prevent stock from exceeding the cap.
+    """
+    deficit = min_release - sum(desired.values())
+    if deficit <= 0:
+        return
+
+    for l, room in sorted(remaining.items(), key=lambda kv: -kv[1]):
+        if deficit <= 0:
+            break
+        already  = desired.get(l, 0)
+        headroom = room - already
+        if headroom <= 0:
+            continue
+        add        = min(headroom, deficit)
+        desired[l] = already + add
+        floor[l]   = desired[l]
+        deficit   -= add
 
 
 def _clamp_to_integer_budget(qty_dict, max_total, min_required=None):

@@ -18,9 +18,13 @@ Rotation gate variants (see rotate()):
 Crossover [Deb 2001, §2.3]:
     Bounded SBX in θ-space.
 
-Mutation [Han & Kim 2002]:
-    Continuous generalisation of the quantum NOT gate — reset selected
-    genes to Uniform(0, π/2).
+Mutation (two-tier, see mutate()):
+    "strong" [Han & Kim 2002]: continuous generalisation of the quantum NOT
+        gate — reset selected genes to Uniform(0, π/2). Maximum diversification,
+        but can destroy structure the rotation gate has already converged on.
+    "weak": local perturbation θ += N(0, sigma), clipped to [0, π/2] —
+        explores around the current angle instead of discarding it, so the
+        gate's progress is not wiped out. Balances exploration/exploitation.
 """
 
 import numpy as np
@@ -207,16 +211,37 @@ class QuantumPopulation:
     # Mutation
     # ------------------------------------------------------------------
 
-    def mutate(self, prob: float) -> None:
-        """Quantum mutation: reset selected genes to Uniform(0, π/2).
+    def mutate(self, prob: float, p_strong: float = 0.15, sigma: float = 0.05 * np.pi) -> None:
+        """Two-tier quantum mutation on genes selected with probability `prob`.
 
-        Continuous generalisation of the quantum NOT gate [Han & Kim 2002, §II-C].
-        Resetting across the full range [0, π/2] provides genuine diversification
-        rather than a local perturbation.
+        Each selected gene is mutated:
+          - "strong" (probability p_strong) [Han & Kim 2002, §II-C]: reset to
+            Uniform(0, π/2) — continuous generalisation of the quantum NOT
+            gate. Maximum diversification, but can undo structure the
+            rotation gate already converged on.
+          - "weak" (probability 1 − p_strong): θ += N(0, sigma), clipped to
+            [0, π/2] — local perturbation that explores around the current
+            angle instead of discarding it.
 
-        Recommended: prob = 2 / n_genes  (two genes mutated per individual on average).
+        Recommended: prob = 2 / n_genes (two genes mutated per individual on
+        average); p_strong = 0.15 keeps most mutations local while still
+        allowing occasional full resets to escape stagnation. Empirically,
+        p_strong=0.3 caused GD instability across seeds on the 100-client IRP
+        instance (see validation/compare_pstrong.py) — 0.15 improved mean GD,
+        IGD, HV and Spacing over 10 seeds.
         """
-        mask  = self.rng.random(self.theta.shape) < prob
-        n_mut = int(mask.sum())
-        if n_mut > 0:
-            self.theta[mask] = self.rng.uniform(0.0, np.pi / 2.0, n_mut)
+        mask = self.rng.random(self.theta.shape) < prob
+        if not mask.any():
+            return
+
+        strong_mask = mask & (self.rng.random(self.theta.shape) < p_strong)
+        weak_mask   = mask & ~strong_mask
+
+        n_strong = int(strong_mask.sum())
+        if n_strong > 0:
+            self.theta[strong_mask] = self.rng.uniform(0.0, np.pi / 2.0, n_strong)
+
+        n_weak = int(weak_mask.sum())
+        if n_weak > 0:
+            perturbed = self.theta[weak_mask] + self.rng.standard_normal(n_weak) * sigma
+            self.theta[weak_mask] = np.clip(perturbed, 0.0, np.pi / 2.0)

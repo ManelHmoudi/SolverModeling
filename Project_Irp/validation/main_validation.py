@@ -1,4 +1,3 @@
-# validation/main_validation.py
 """
 Main validation script: runs NSGA-III on DTLZ1-4 (Deb & Jain 2014 protocol).
 

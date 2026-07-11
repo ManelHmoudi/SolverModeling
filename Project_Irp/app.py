@@ -133,21 +133,32 @@ def _build_benchmark_data():
             }
     return data
 
-INSTANCES = {
-    "3":  os.path.join(BASE_DIR, "data", "instance_3_clients.json"),
-    "5":  os.path.join(BASE_DIR, "data", "instance_5_clients.json"),
-    "15": os.path.join(BASE_DIR, "data", "instance_15_clients.json"),
-    "25": os.path.join(BASE_DIR, "data", "instance_25_clients.json"),
-    "30": os.path.join(BASE_DIR, "data", "instance_30_clients.json"),
-    "40":  os.path.join(BASE_DIR, "data", "instance_40_clients.json"),
-    "100": os.path.join(BASE_DIR, "data", "instance_100_clients.json"),
-}
-DEFAULT_INSTANCE = "15"
+def _discover_instances():
+    data_dir = os.path.join(BASE_DIR, "data")
+    found = {}
+    if os.path.isdir(data_dir):
+        for fname in os.listdir(data_dir):
+            if fname.startswith("instance_") and fname.endswith("_clients.json"):
+                key = fname[len("instance_"):-len("_clients.json")]
+                if key.isdigit():
+                    found[key] = os.path.join(data_dir, fname)
+    return dict(sorted(found.items(), key=lambda x: int(x[0])))
+
+INSTANCES = _discover_instances()
+DEFAULT_INSTANCE = (
+    "15" if "15" in INSTANCES
+    else (sorted(INSTANCES.keys(), key=int)[0] if INSTANCES else None)
+)
 
 
 def _resolve_instance():
-    key = request.args.get("instance", DEFAULT_INSTANCE)
-    return INSTANCES.get(key, INSTANCES[DEFAULT_INSTANCE]), key
+    key = request.args.get("instance", DEFAULT_INSTANCE or "")
+    if key in INSTANCES:
+        return INSTANCES[key], key
+    if INSTANCES:
+        fallback = sorted(INSTANCES.keys(), key=int)[0]
+        return INSTANCES[fallback], fallback
+    raise ValueError("No instance JSON files found in the data/ directory.")
 
 app = Flask(__name__)
 
@@ -846,13 +857,9 @@ body {
       <span class="panel-title">Instance</span>
     </div>
     <div class="inst-chips" id="instanceBar">
-      <button class="inst-chip" data-instance="3"  onclick="selectInstance('3')"><span class="chip-dot"></span>3 clients</button>
-      <button class="inst-chip" data-instance="5"  onclick="selectInstance('5')"><span class="chip-dot"></span>5 clients</button>
-      <button class="inst-chip selected" data-instance="15" onclick="selectInstance('15')"><span class="chip-dot"></span>15 clients</button>
-      <button class="inst-chip" data-instance="25" onclick="selectInstance('25')"><span class="chip-dot"></span>25 clients</button>
-      <button class="inst-chip" data-instance="30" onclick="selectInstance('30')"><span class="chip-dot"></span>30 clients</button>
-      <button class="inst-chip" data-instance="40" onclick="selectInstance('40')"><span class="chip-dot"></span>40 clients</button>
-      <button class="inst-chip" data-instance="100" onclick="selectInstance('100')"><span class="chip-dot"></span>100 clients</button>
+      {% for key in inst_keys %}
+      <button class="inst-chip{% if key == default_inst %} selected{% endif %}" data-instance="{{ key }}" onclick="selectInstance('{{ key }}')"><span class="chip-dot"></span>{{ key }} clients</button>
+      {% endfor %}
     </div>
   </div>
 
@@ -1066,7 +1073,7 @@ const SUN_SVG  = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2
 const icon  = document.getElementById('themeIcon');
 const label = document.getElementById('themeLabel');
 
-let selectedInstance = localStorage.getItem('irp-instance') || '15';
+let selectedInstance = localStorage.getItem('irp-instance') || '{{ default_inst }}';
 
 function selectInstance(key) {
   selectedInstance = key;
@@ -1093,9 +1100,9 @@ function selectInstance(key) {
 }
 
 (function() {
-  const valid = ['3','5','15','25','30','40'];
-  const saved = localStorage.getItem('irp-instance') || '15';
-  selectInstance(valid.includes(saved) ? saved : '15');
+  const valid = {{ inst_keys | tojson }};
+  const saved = localStorage.getItem('irp-instance') || '{{ default_inst }}';
+  selectInstance(valid.includes(saved) ? saved : '{{ default_inst }}');
 })();
 
 function applyTheme(theme) {
@@ -1127,7 +1134,9 @@ function toggleTheme() {
 
 @app.route("/")
 def menu():
-    return render_template_string(MENU_TEMPLATE)
+    inst_keys   = sorted(INSTANCES.keys(), key=int)
+    default_inst = DEFAULT_INSTANCE or (inst_keys[0] if inst_keys else "15")
+    return render_template_string(MENU_TEMPLATE, inst_keys=inst_keys, default_inst=default_inst)
 
 
 @app.route("/benchmarking")
