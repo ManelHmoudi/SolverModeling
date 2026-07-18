@@ -42,7 +42,7 @@ _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "nsga3_chromosomes.json")
 
 # Algorithm hyper-parameters
 POP_SIZE       = 200
-N_GEN          = 200
+N_GEN          = 300  # matches QINSGA3.N_GEN — equal search budget for a fair comparison
 CROSSOVER_PROB = 0.9
 # pm = 1/D (D = number of decision variables) as recommended by Deb & Jain (2014).
 # Computed dynamically in run_nsga3() once the instance is loaded.

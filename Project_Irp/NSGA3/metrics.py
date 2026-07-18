@@ -48,7 +48,8 @@ def compute_pareto_metrics(
     When global_ideal / global_nadir are supplied (global scale shared across
     all runs), HV/GD/IGD/Spacing are comparable between runs.
     Without them, each run is normalised to its own [0,1]^M — values are NOT
-    cross-run comparable and HV can exceed 1.
+    cross-run comparable, though HV is still reported in [0, 1] (fraction of
+    the ideal-to-nadir volume dominated; see ref_point normalisation below).
     The ideal/nadir reported in the dict always reflect the local run range
     (for informational display in the report).
     """
@@ -73,8 +74,14 @@ def compute_pareto_metrics(
     n_obj   = F_norm.shape[1]
     ref_set = _reference_set(n_obj, n_partitions=12)
 
-    ref_point = np.ones(n_obj) * 1.1
-    hv  = float(HV(ref_point=ref_point)(F_norm))
+    # ref_point sits 10% beyond the nadir (standard HV margin), so the raw
+    # pymoo HV is bounded by ref_point.prod() = 1.1**n_obj (~1.46 for 4
+    # objectives), NOT by 1. Dividing by that bound keeps HV in [0, 1] so
+    # it reads as "fraction of the ideal-to-nadir volume dominated" and
+    # stays comparable across n_obj values.
+    ref_point   = np.ones(n_obj) * 1.1
+    hv_raw      = float(HV(ref_point=ref_point)(F_norm))
+    hv          = hv_raw / float(ref_point.prod())
     gd  = float(GD(pf=ref_set)(F_norm))
     igd = float(IGD(pf=ref_set)(F_norm))
     sp  = _spacing(F_norm)

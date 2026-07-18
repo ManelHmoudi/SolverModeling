@@ -2,7 +2,10 @@
 
 Context (see conversation): on the 100-client instance, 10 seeds, current
 defaults (p_mut_strong=0.3), Run 3 (seed=271) was a clear outlier — GD=0.439
-and HV=0.546, far worse than the other 9 runs (GD mean ~0.21). Hypothesis:
+and HV=0.546, far worse than the other 9 runs (GD mean ~0.21). [HV=0.546 predates
+the 2026-07 fix normalising HV by ref_point.prod() (~1.1**n_obj); on the current
+[0,1] HV scale this run would read ~0.546/1.4641 ≈ 0.373 — re-run to get an
+exact figure before citing it.] Hypothesis:
 p_mut_strong=0.3 (30% of mutated genes get a FULL reset to Uniform(0, pi/2))
 occasionally destroys converged structure late in the run, hurting GD
 (convergence) on some seeds without benefiting Spacing enough to compensate.
