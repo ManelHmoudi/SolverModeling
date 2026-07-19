@@ -1,13 +1,29 @@
 """
-NSGA-III runner configured for Deb & Jain (2014) DTLZ validation.
+NSGA-III runner for Cui et al. (2025) DTLZ validation.
 
-Parameters:
-  SBX crossover : eta=30, prob=1.0
+Parameters — Cui, Shi, Wang, Ding, Li & Li (2025), "Practice of an improved
+many-objective route optimization algorithm in a multimodal transportation
+case under uncertain demand", Complex & Intelligent Systems 11:136, Table 2
+("Relevant parameter settings for the test problems", DTLZ 1-7 row):
+  SBX crossover : eta=30, prob=1.0   (Deb & Jain 2014's classic NSGA-III value)
   PM mutation   : eta=20, prob=1/n_var
-  Ref dirs      : Das-Dennis, p depends on n_obj:
-                    n_obj=3 -> p=12 -> H=C(14,12)=91 -> N=92
-                    n_obj=4 -> p=6  -> H=C(9,6)=84   -> N=88
-  Generations   : 400 (DTLZ1) or 600 (DTLZ2/3/4) — passed by caller
+  Ref dirs      : Das-Dennis, p depends on n_obj — Cui et al. (2025) Table 2
+                  studies exactly M=3 and M=4 (not M=5+), so those are the
+                  only two objective counts supported here:
+                    n_obj=3 -> p=12 -> H=C(14,12)=91  -> N=92
+                    n_obj=4 -> p=7  -> H=C(10,7)=120  -> N=120
+                  (p=12/H=91/N=92 for M=3 originate in Deb & Jain (2014),
+                  IEEE TEVC 18(4), 577-601 — Cui et al. reuse that value and
+                  extend the same Das-Dennis convention to M=4, which Deb &
+                  Jain's own experiments never cover.)
+  Pop size      : smallest multiple of 4 that is >= H (not necessarily > H —
+                  e.g. H=120 for M=4 is already a multiple of 4, so N=120=H).
+  Generations   : Tmax / N, with Tmax = 30000 evaluations (Cui et al. 2025's
+                  fixed evaluation budget, Table 2), computed in
+                  dtlz_problems.py. This is Cui et al.'s termination rule for
+                  both M=3 and M=4 — Deb & Jain (2014) instead uses a
+                  per-problem generation count that this project no longer
+                  follows.
 """
 import numpy as np
 from pymoo.algorithms.moo.nsga3 import NSGA3
@@ -18,14 +34,13 @@ from pymoo.optimize import minimize
 from pymoo.termination import get_termination
 from pymoo.util.ref_dirs import get_reference_directions
 
-# Das-Dennis partition count per number of objectives (Deb & Jain 2014, Table I)
-_N_OBJ_TO_P = {3: 12, 4: 6}
+# Das-Dennis partition count per number of objectives (Cui et al. 2025, Table 2).
+_N_OBJ_TO_P = {3: 12, 4: 7}
 
 # Module-level constants for n_obj=4 (backward compatibility and unit tests)
-_ref_dirs_4 = get_reference_directions("das-dennis", 4, n_partitions=6)
-N_REF_DIRS = len(_ref_dirs_4)  # C(9,6) = 84
-_raw = N_REF_DIRS + (4 - N_REF_DIRS % 4) % 4
-POP_SIZE = _raw if _raw > N_REF_DIRS else _raw + 4  # 88
+_ref_dirs_4 = get_reference_directions("das-dennis", 4, n_partitions=7)
+N_REF_DIRS = len(_ref_dirs_4)  # C(10,7) = 120
+POP_SIZE = N_REF_DIRS + (4 - N_REF_DIRS % 4) % 4  # 120 (already a multiple of 4)
 
 # 20 distinct deterministic seeds
 _SEEDS = [
@@ -34,11 +49,12 @@ _SEEDS = [
 ]
 
 
-def _get_run_config(n_obj: int):
+def get_run_config(n_obj: int):
     """Return (ref_dirs, pop_size) for the given number of objectives.
 
     Uses Das-Dennis p from _N_OBJ_TO_P. pop_size is the smallest
-    multiple of 4 strictly greater than len(ref_dirs).
+    multiple of 4 that is >= len(ref_dirs) (equal when H is itself
+    already a multiple of 4, e.g. M=4's H=120).
     """
     if n_obj not in _N_OBJ_TO_P:
         raise ValueError(
@@ -47,8 +63,7 @@ def _get_run_config(n_obj: int):
     p = _N_OBJ_TO_P[n_obj]
     ref_dirs = get_reference_directions("das-dennis", n_obj, n_partitions=p)
     h = len(ref_dirs)
-    raw = h + (4 - h % 4) % 4
-    pop_size = raw if raw > h else raw + 4
+    pop_size = h + (4 - h % 4) % 4
     return ref_dirs, pop_size
 
 
@@ -65,7 +80,7 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
         np.ndarray of shape (n_solutions, n_obj).
     """
     np.random.seed(seed)
-    ref_dirs, pop_size = _get_run_config(problem.n_obj)
+    ref_dirs, pop_size = get_run_config(problem.n_obj)
 
     algorithm = NSGA3(
         pop_size=pop_size,

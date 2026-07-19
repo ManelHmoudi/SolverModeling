@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import numpy as np
 from validation.metrics.igd_metric import compute_igd, igd_statistics
-from validation.benchmarks.dtlz_problems import get_problem
+from validation.dtlz.dtlz_problems import get_problem
 
 def test_igd_is_zero_for_true_front():
     """IGD = 0 when the approximation IS the true Pareto front."""
@@ -31,10 +31,11 @@ def test_igd_positive_for_bad_approx():
 def test_igd_statistics_shape():
     values = [0.1, 0.3, 0.2, 0.5, 0.4]
     stats = igd_statistics(values)
-    assert set(stats.keys()) == {"best", "median", "worst"}
+    assert set(stats.keys()) == {"best", "median", "worst", "mean", "std"}
     assert stats["best"] <= stats["median"] <= stats["worst"]
     assert stats["best"] == 0.1
     assert stats["worst"] == 0.5
+    assert abs(stats["mean"] - 0.3) < 1e-9
 
 if __name__ == "__main__":
     test_igd_is_zero_for_true_front()

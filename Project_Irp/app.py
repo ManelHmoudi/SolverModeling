@@ -101,36 +101,60 @@ p{{font-size:13.5px;color:var(--text-2);line-height:1.6;}}
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VALIDATION_RESULTS_DIR = os.path.join(BASE_DIR, "validation", "results")
-_BENCHMARK_PROBLEMS = ["DTLZ1", "DTLZ2", "DTLZ3", "DTLZ4"]
+
+# One suite = one validation/<suite>/results/ folder. Both follow the same
+# Cui et al. (2025) protocol (same p/H/N/Tmax, Table 2 gives an identical row
+# for "DTLZ 1-7" and "MaF 1-7"), so they share the M values and the whole
+# card/chart/table rendering — only the problem list and results dir differ.
+_BENCHMARK_SUITES = {
+    "dtlz": {
+        "results_dir": os.path.join(BASE_DIR, "validation", "dtlz", "results"),
+        "problems": ["DTLZ1", "DTLZ2", "DTLZ3", "DTLZ4", "DTLZ5", "DTLZ6", "DTLZ7"],
+    },
+    "maf": {
+        "results_dir": os.path.join(BASE_DIR, "validation", "maf", "results"),
+        "problems": ["MaF1", "MaF2", "MaF3"],
+    },
+}
+_BENCHMARK_M_VALUES = [3, 4]  # Cui et al. (2025), Table 2, only studies M=3 and M=4
 
 
-def _read_igd_runs(problem: str, n_obj: int):
-    path = os.path.join(VALIDATION_RESULTS_DIR, f"igd_{problem}_M{n_obj}.csv")
+def _read_igd_runs(results_dir: str, problem: str, n_obj: int):
+    path = os.path.join(results_dir, f"igd_{problem}_M{n_obj}.csv")
     if not os.path.exists(path):
         return []
     rows = []
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
-            rows.append(float(row["igd"]))
+            rows.append({
+                "run":  int(row["run"]),
+                "seed": int(row["seed"]),
+                "igd":  float(row["igd"]),
+            })
     return rows
 
 
 def _build_benchmark_data():
     data = {}
-    for p in _BENCHMARK_PROBLEMS:
-        data[p] = {}
-        for m in [3, 4]:
-            runs = _read_igd_runs(p, m)
-            if not runs:
-                continue
-            data[p][f"M{m}"] = {
-                "best":   min(runs),
-                "median": float(_statistics.median(runs)),
-                "worst":  max(runs),
-                "runs":   runs,
-                "n_runs": len(runs),
-            }
+    for suite, cfg in _BENCHMARK_SUITES.items():
+        data[suite] = {}
+        for p in cfg["problems"]:
+            data[suite][p] = {}
+            for m in _BENCHMARK_M_VALUES:
+                details = _read_igd_runs(cfg["results_dir"], p, m)
+                if not details:
+                    continue
+                igds = [r["igd"] for r in details]
+                data[suite][p][f"M{m}"] = {
+                    "best":   min(igds),
+                    "median": float(_statistics.median(igds)),
+                    "worst":  max(igds),
+                    "mean":   float(_statistics.mean(igds)),
+                    "std":    float(_statistics.pstdev(igds)),
+                    "runs":   igds,
+                    "run_details": details,
+                    "n_runs": len(igds),
+                }
     return data
 
 def _discover_instances():
@@ -168,7 +192,7 @@ BENCHMARK_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DTLZ Benchmarking &mdash; NSGA-III</title>
+<title>DTLZ / MaF Benchmarking &mdash; NSGA-III</title>
 <style>
 :root {
   --bg:#f2f5f9;--surface:#fff;--surface-2:#f8fafc;--border:#dce3ec;
@@ -201,29 +225,51 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 .btn-theme { display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .15s;outline:none; }
 .btn-theme:hover { border-color:var(--border-focus);color:var(--text); }
 .btn-theme svg { width:14px;height:14px;flex-shrink:0; }
-.tab-bar { display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px; }
-.tab { flex:1;padding:9px 16px;border:none;border-radius:7px;background:transparent;color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s; }
+.suite-bar { display:flex;gap:8px;margin-bottom:16px; }
+.suite-tab { padding:8px 20px;border:1.5px solid var(--border);border-radius:99px;background:var(--surface);color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s; }
+.suite-tab:hover { border-color:var(--border-focus);color:var(--text); }
+.suite-tab.active { background:var(--accent);border-color:var(--accent);color:var(--accent-fg); }
+.tab-bar { display:flex;flex-wrap:wrap;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px; }
+.tab { flex:1;min-width:64px;padding:9px 12px;border:none;border-radius:7px;background:transparent;color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s; }
 .tab:hover { background:var(--surface);color:var(--text); }
 .tab.active { background:var(--surface);color:var(--accent);box-shadow:var(--shadow-sm); }
 .prob-desc { background:var(--accent-dim);border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px; }
 .prob-desc strong { color:var(--text); }
-.grid2 { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
+.grid2 { display:flex;flex-direction:column;gap:20px; }
 .rcard { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden; }
 .rcard-hdr { padding:14px 18px 12px;border-bottom:1px solid var(--border); }
 .rcard-hdr h3 { font-size:13.5px;font-weight:700;color:var(--text); }
-.rcard-sub { font-size:11px;color:var(--text-3);margin-top:3px; }
+.rcard-sub { font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.7; }
+.rcard-sub em { font-style:normal;color:var(--accent);font-weight:600; }
+.param-lbl { color:var(--text-3);font-weight:400;font-style:italic; }
+.param-note { color:var(--text-3);opacity:.8; }
+h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
 .rcard-body { padding:16px 18px; }
-.stat-row { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px; }
+.stat-row { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px; }
 .stat-box { border-radius:8px;padding:10px 12px;text-align:center; }
 .stat-box.best { background:var(--green-bg); }
 .stat-box.med  { background:var(--accent-dim); }
+.stat-box.mean { background:var(--surface-2); }
+.stat-note { font-size:10.5px;color:var(--text-3);margin:-6px 0 14px; }
 .stat-box.worst { background:var(--red-bg); }
 .stat-lbl { font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px; }
 .stat-val { font-size:13px;font-weight:700;font-family:monospace; }
+.stat-val-dec { display:block;font-size:9.5px;font-weight:600;font-family:monospace;color:var(--text-3);margin-top:2px; }
 .stat-box.best .stat-val { color:var(--green); }
 .stat-box.worst .stat-val { color:var(--red); }
 .chart-lbl { font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px; }
+.chart-legend { display:flex;gap:12px;font-size:9.5px;color:var(--text-3);margin-top:6px;flex-wrap:wrap; }
+.chart-legend span { display:inline-flex;align-items:center;gap:4px; }
+.chart-legend i { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .dot-svg { width:100%;overflow:visible; }
+.table-wrap { overflow-x:auto;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-sm); }
+.runs-table { width:100%;border-collapse:collapse;font-size:12.5px; }
+.runs-table th { text-align:left;padding:9px 12px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap; }
+.runs-table td { padding:9px 12px;border-bottom:1px solid var(--border);font-family:monospace;white-space:nowrap; }
+.runs-table tbody tr:last-child td { border-bottom:none; }
+.runs-table tbody tr:hover td { background:var(--surface-2); }
+.run-badge { display:inline-flex;align-items:center;gap:7px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:12px;color:var(--text-2); }
+.run-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .nodata { padding:28px;text-align:center;color:var(--text-3);font-size:13px; }
 @media (max-width:680px) { .grid2 { grid-template-columns:1fr; } .page { padding:16px 12px 40px; } .header { flex-direction:column;align-items:flex-start; } }
 </style>
@@ -237,8 +283,8 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
         <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z"/></svg>
       </div>
       <div>
-        <div class="brand-name">DTLZ Benchmarking</div>
-        <div class="brand-sub">NSGA-III &mdash; Deb &amp; Jain (2014) &mdash; IGD metric &mdash; 20 independent runs</div>
+        <div class="brand-name">Many-Objective Benchmarking</div>
+        <div class="brand-sub">NSGA-III &mdash; Cui et al. (2025) protocol &mdash; IGD metric &mdash; 20 independent runs</div>
       </div>
     </div>
     <div class="hdr-actions">
@@ -259,12 +305,12 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
     </div>
   </header>
 
-  <div class="tab-bar" role="tablist">
-    <button class="tab active" data-prob="DTLZ1" onclick="selectProb('DTLZ1')">DTLZ1</button>
-    <button class="tab"        data-prob="DTLZ2" onclick="selectProb('DTLZ2')">DTLZ2</button>
-    <button class="tab"        data-prob="DTLZ3" onclick="selectProb('DTLZ3')">DTLZ3</button>
-    <button class="tab"        data-prob="DTLZ4" onclick="selectProb('DTLZ4')">DTLZ4</button>
+  <div class="suite-bar" role="tablist">
+    <button class="suite-tab active" data-suite="dtlz" onclick="selectSuite('dtlz')">DTLZ1&ndash;7</button>
+    <button class="suite-tab"        data-suite="maf"  onclick="selectSuite('maf')">MaF1&ndash;3</button>
   </div>
+
+  <div class="tab-bar" role="tablist" id="probTabs"></div>
 
   <div id="prob-desc" class="prob-desc"></div>
   <div class="grid2" id="results"></div>
@@ -274,46 +320,130 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 const DATA = {{ data_json | safe }};
 
 const DESCS = {
-  DTLZ1: '<strong>DTLZ1</strong> — Linear Pareto front (M-1 hyperplane). 3<sup>k-1</sup> local optima &rarr; multimodal landscape. Low IGD = correct convergence; outlier runs converge to wrong fronts.',
-  DTLZ2: '<strong>DTLZ2</strong> — Unit-sphere Pareto front, unimodal. The canonical reference: a well-tuned NSGA-III should converge here reliably across all seeds.',
-  DTLZ3: '<strong>DTLZ3</strong> — Sphere front + DTLZ1 landscape (3<sup>k-1</sup> local optima). Very high median IGD is expected &mdash; most runs are trapped in local optima.',
-  DTLZ4: '<strong>DTLZ4</strong> — Sphere front with density bias (alpha=100). Population clusters at one pole; algorithm must maintain uniform coverage of the full front.',
+  DTLZ1: '<strong>DTLZ1</strong> &mdash; Front de Pareto lin&eacute;aire (un plan inclin&eacute; dans l&rsquo;espace des objectifs). Le probl&egrave;me cache 3<sup>k-1</sup> optima locaux qui pi&egrave;gent facilement l&rsquo;algorithme : c&rsquo;est un terrain multimodal difficile. <em>&Agrave; retenir :</em> un IGD faible signifie que l&rsquo;algorithme a bien converg&eacute; vers le vrai front ; un run isol&eacute; avec un IGD nettement plus &eacute;lev&eacute; s&rsquo;est probablement arr&ecirc;t&eacute; sur un optimum local au lieu du vrai front.',
+  DTLZ2: '<strong>DTLZ2</strong> &mdash; Front de Pareto concave (une sph&egrave;re), sans aucun optimum local : c&rsquo;est le probl&egrave;me de r&eacute;f&eacute;rence, le plus simple des quatre. <em>&Agrave; retenir :</em> un NSGA-III bien r&eacute;gl&eacute; doit converger vers le vrai front sur presque tous les runs, donc les valeurs Best/Median/Worst doivent rester proches. Un grand &eacute;cart entre elles indique un probl&egrave;me de r&eacute;glage.',
+  DTLZ3: '<strong>DTLZ3</strong> &mdash; Combine le front sph&eacute;rique de DTLZ2 avec les 3<sup>k-1</sup> optima locaux de DTLZ1 : c&rsquo;est le plus difficile des quatre probl&egrave;mes. <em>&Agrave; retenir :</em> un IGD m&eacute;dian &eacute;lev&eacute; est normal ici, car la plupart des runs restent bloqu&eacute;s sur un front local avant d&rsquo;atteindre la vraie sph&egrave;re ; seule une minorit&eacute; de runs converge compl&egrave;tement.',
+  DTLZ4: '<strong>DTLZ4</strong> &mdash; M&ecirc;me front sph&eacute;rique que DTLZ2, mais la population de d&eacute;part est pouss&eacute;e artificiellement vers un p&ocirc;le du front (biais &alpha;=100). <em>&Agrave; retenir :</em> la difficult&eacute; n&rsquo;est pas de converger mais de r&eacute;partir les solutions uniform&eacute;ment sur tout le front ; un IGD &eacute;lev&eacute; signale un probl&egrave;me de diversit&eacute; (points group&eacute;s), pas un probl&egrave;me de convergence.',
+  DTLZ5: '<strong>DTLZ5</strong> &mdash; Front de Pareto d&eacute;g&eacute;n&eacute;r&eacute; : la vraie solution optimale n&rsquo;est pas une surface (M-1)-dimensionnelle mais une simple courbe repli&eacute;e dans l&rsquo;espace des objectifs. <em>&Agrave; retenir :</em> un IGD &eacute;lev&eacute; signale ici que la population reste dispers&eacute;e sur toute la surface au lieu de se concentrer sur la courbe r&eacute;elle &mdash; un probl&egrave;me de forme du front, pas seulement de distance.',
+  DTLZ6: '<strong>DTLZ6</strong> &mdash; Le m&ecirc;me front d&eacute;g&eacute;n&eacute;r&eacute; (une courbe) que DTLZ5, mais avec une fonction de distance beaucoup plus punitive qui ralentit fortement la convergence. <em>&Agrave; retenir :</em> c&rsquo;est le test de robustesse le plus dur pour les fronts d&eacute;g&eacute;n&eacute;r&eacute;s &mdash; un IGD &eacute;lev&eacute; reste fr&eacute;quent m&ecirc;me pour un bon algorithme ; on compare surtout la vitesse relative de convergence entre m&eacute;thodes.',
+  DTLZ7: '<strong>DTLZ7</strong> &mdash; Front de Pareto disjoint : la vraie solution optimale se d&eacute;compose en 2<sup>M-1</sup> r&eacute;gions s&eacute;par&eacute;es et d&eacute;connect&eacute;es les unes des autres. <em>&Agrave; retenir :</em> ce probl&egrave;me teste la capacit&eacute; &agrave; maintenir de la diversit&eacute; sur plusieurs r&eacute;gions &agrave; la fois ; un IGD &eacute;lev&eacute; indique souvent qu&rsquo;une partie des runs ne couvre qu&rsquo;une partie des r&eacute;gions du front, pas toutes.',
+  MaF1: '<strong>MaF1</strong> &mdash; DTLZ1 invers&eacute; : m&ecirc;me pi&egrave;ge des 3<sup>k-1</sup> optima locaux que DTLZ1, mais il faut converger vers le coin oppos&eacute; de l&rsquo;hyperplan plut&ocirc;t que vers l&rsquo;origine. <em>&Agrave; retenir :</em> comportement attendu identique &agrave; DTLZ1 &mdash; IGD faible = bonne convergence, IGD &eacute;lev&eacute; = pi&egrave;ge sur un optimum local.',
+  MaF2: '<strong>MaF2</strong> &mdash; Front sph&eacute;rique comme DTLZ2, mais restreint &agrave; une petite r&eacute;gion angulaire de la sph&egrave;re, et chaque objectif poss&egrave;de sa propre fonction de distance (bas&eacute;e sur un groupe distinct de variables). <em>&Agrave; retenir :</em> teste la capacit&eacute; &agrave; localiser une zone &eacute;troite plut&ocirc;t que tout un octant &mdash; un IGD &eacute;lev&eacute; signale que l&rsquo;algorithme peine &agrave; trouver cette r&eacute;gion restreinte.',
+  MaF3: '<strong>MaF3</strong> &mdash; M&ecirc;me pi&egrave;ge multimodal que DTLZ3 (3<sup>k-1</sup> optima locaux), mais le front est rendu convexe au lieu de concave. <em>&Agrave; retenir :</em> comme DTLZ3, un IGD m&eacute;dian &eacute;lev&eacute; est normal ici &mdash; la forme convexe change la g&eacute;om&eacute;trie du front, pas la difficult&eacute; de convergence sous-jacente.',
 };
+
+const SUITE_PROBLEMS = {
+  dtlz: ['DTLZ1', 'DTLZ2', 'DTLZ3', 'DTLZ4', 'DTLZ5', 'DTLZ6', 'DTLZ7'],
+  maf:  ['MaF1', 'MaF2', 'MaF3'],
+};
+let currentSuite = 'dtlz';
 
 const M_TITLE = {
-  M3: 'NSGA-III &mdash; M = 3 objectives',
-  M4: 'NSGA-III &mdash; M = 4 objectives',
-};
-const M_SUB = {
-  M3: 'Das-Dennis p=12 &rarr; H=91 &rarr; N=92 &nbsp;|&nbsp; SBX &eta;=30 &nbsp;|&nbsp; PM &eta;=20',
-  M4: 'Das-Dennis p=6 &rarr; H=84 &rarr; N=88 &nbsp;|&nbsp; SBX &eta;=30 &nbsp;|&nbsp; PM &eta;=20',
+  M3: 'NSGA-III &mdash; M <span class="param-lbl">(objectifs)</span> = 3',
+  M4: 'NSGA-III &mdash; M <span class="param-lbl">(objectifs)</span> = 4',
 };
 
+// Chaque symbole est suivi de sa signification entre parenthèses pour rester lisible
+// sans connaissance préalable de la notation NSGA-III / Das-Dennis. p/H/N et le budget
+// Tmax=30000 (donc G) viennent tous deux de Cui et al. (2025), Table 2, pour M=3 et M=4
+// — Deb & Jain (2014) est la source d'origine des valeurs p=12/H=91/N=92 pour M=3, mais
+// utilise un nombre de générations différent (par problème, pas Tmax/N), donc la ligne
+// affichée ici cite Cui et al., dont c'est réellement le protocole reproduit.
+function paramLine({ p, H, N, G }) {
+  return [
+    `Das-Dennis&nbsp;: p <span class="param-lbl">(divisions)</span> = ${p}`,
+    `H <span class="param-lbl">(points de r&eacute;f&eacute;rence)</span> = ${H}`,
+    `N <span class="param-lbl">(taille de population)</span> = ${N}`,
+    `G <span class="param-lbl">(g&eacute;n&eacute;rations)</span> = ${G} <span class="param-note">(Tmax = 30 000 &divide; N)</span>`,
+    `SBX &eta; <span class="param-lbl">(croisement)</span> = 30`,
+    `PM &eta; <span class="param-lbl">(mutation)</span> = 20`,
+    `<em>Cui et al. 2025</em>`,
+  ].join(' &nbsp;|&nbsp; ');
+}
+
+const M_SUB = {
+  M3: paramLine({ p: 12, H: 91,  N: 92,  G: 326 }),
+  M4: paramLine({ p: 7,  H: 120, N: 120, G: 250 }),
+};
+
+// Format décimal court, en complément de la notation scientifique.
+function fmtDec(v) {
+  if (v === 0) return '0';
+  const abs = Math.abs(v);
+  const dec = abs < 0.001 ? 6 : abs < 0.01 ? 5 : abs < 1 ? 4 : 3;
+  return v.toFixed(dec);
+}
+
+// Seuils absolus (indépendants du run) : vert = succès, orange = optimum local, rouge = échec de convergence.
+const IGD_GREEN = [13, 122, 85], IGD_ORANGE = [217, 119, 6], IGD_RED = [185, 28, 28];
+function _lerpRgb(c0, c1, t) {
+  t = Math.min(1, Math.max(0, t));
+  return `rgb(${Math.round(c0[0] + (c1[0] - c0[0]) * t)},${Math.round(c0[1] + (c1[1] - c0[1]) * t)},${Math.round(c0[2] + (c1[2] - c0[2]) * t)})`;
+}
+function igdColor(v) {
+  if (v <= 0.06) return `rgb(${IGD_GREEN.join(',')})`;
+  if (v <= 0.25) return _lerpRgb(IGD_GREEN, IGD_ORANGE, (v - 0.06) / (0.25 - 0.06));
+  if (v <= 0.55) return `rgb(${IGD_ORANGE.join(',')})`;
+  if (v <= 0.75) return _lerpRgb(IGD_ORANGE, IGD_RED, (v - 0.55) / (0.75 - 0.55));
+  return `rgb(${IGD_RED.join(',')})`;
+}
+function igdStatus(v) {
+  if (v <= 0.06) return 'Succ&egrave;s';
+  if (v <= 0.25) return 'Convergence partielle';
+  if (v <= 0.55) return 'Optimum local';
+  if (v <= 0.75) return 'Convergence faible';
+  return '&Eacute;chec';
+}
+
+// Nuage de points en "marches d'escalier" : rang (x, trié) x valeur (y, échelle log)
+// pour rendre visibles les paliers (optima locaux) et les décrochages, avec un code
+// couleur à seuils fixes plutôt qu'un dégradé relatif au run affiché.
 function drawDots(runs, svgEl) {
   if (!runs || !runs.length) return;
   const s = [...runs].sort((a, b) => a - b), n = s.length;
   const mn = s[0], mx = s[n - 1];
-  const W = 360, H = 50, PX = 16, R = 5;
+  const W = 360, PLOT_H = 56, LABEL_H = 18, H = PLOT_H + LABEL_H, PX = 16, PY = 8, R = 4.5;
   const logMn = Math.log10(Math.max(mn, 1e-12));
   const logMx = Math.log10(Math.max(mx, 1e-12));
   const rng = logMx - logMn || 1;
-  let dots = '';
-  s.forEach((v, i) => {
-    const x = (PX + (n > 1 ? i / (n - 1) : 0.5) * (W - 2 * PX)).toFixed(1);
+  const pts = s.map((v, i) => {
     const t = (Math.log10(Math.max(v, 1e-12)) - logMn) / rng;
-    const r = Math.round(Math.min(220, t * 220));
-    const g = Math.round(Math.max(50, (1 - t) * 160 + 50));
-    dots += `<circle cx="${x}" cy="${H / 2}" r="${R}" fill="rgb(${r},${g},50)" opacity=".85" stroke="rgba(0,0,0,.1)" stroke-width=".5"><title>IGD = ${v.toExponential(4)}</title></circle>`;
+    const x = PX + (n > 1 ? i / (n - 1) : 0.5) * (W - 2 * PX);
+    const y = PY + (1 - t) * (PLOT_H - 2 * PY);
+    return { v, x, y };
   });
+  const line = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const dots = pts.map(p =>
+    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${R}" fill="${igdColor(p.v)}" opacity=".92" stroke="rgba(0,0,0,.18)" stroke-width=".5"><title>IGD = ${p.v.toExponential(4)} (${fmtDec(p.v)})</title></circle>`
+  ).join('');
   svgEl.innerHTML = `
-    <line x1="${PX}" y1="${H / 2}" x2="${W - PX}" y2="${H / 2}" stroke="var(--border)" stroke-width="1.5"/>
+    <polyline points="${line}" fill="none" stroke="var(--border)" stroke-width="1.25"/>
     ${dots}
-    <text x="${PX}" y="${H - 2}" font-size="8.5" fill="var(--text-3)">${mn.toExponential(2)}</text>
-    <text x="${W - PX}" y="${H - 2}" font-size="8.5" fill="var(--text-3)" text-anchor="end">${mx.toExponential(2)}</text>`;
+    <text x="${PX}" y="${PLOT_H + 13}" font-size="8.5" fill="var(--text-3)">${mn.toExponential(2)} <tspan font-size="7">(${fmtDec(mn)})</tspan></text>
+    <text x="${W - PX}" y="${PLOT_H + 13}" font-size="8.5" fill="var(--text-3)" text-anchor="end">${mx.toExponential(2)} <tspan font-size="7">(${fmtDec(mx)})</tspan></text>`;
+}
+
+function renderRunsTable(details) {
+  if (!details || !details.length) return '';
+  const rows = [...details].sort((a, b) => a.run - b.run).map(r => `
+        <tr>
+          <td>#${r.run}</td>
+          <td>${r.seed}</td>
+          <td>${r.igd.toExponential(3)}</td>
+          <td>${fmtDec(r.igd)}</td>
+          <td><span class="run-badge"><i class="run-dot" style="background:${igdColor(r.igd)}"></i>${igdStatus(r.igd)}</span></td>
+        </tr>`).join('');
+  return `
+      <div class="chart-lbl" style="margin-top:20px">D&eacute;tail des ${details.length} runs (num&eacute;ro, seed, IGD)</div>
+      <div class="table-wrap">
+        <table class="runs-table">
+          <thead><tr><th>Run</th><th>Seed</th><th>IGD (sci.)</th><th>IGD (d&eacute;c.)</th><th>Statut</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
 }
 
 function renderCard(key, d) {
-  if (!d) return `<div class="rcard"><div class="nodata">No data for ${key}.</div></div>`;
   return `<div class="rcard">
     <div class="rcard-hdr">
       <h3>${M_TITLE[key]}</h3>
@@ -321,21 +451,58 @@ function renderCard(key, d) {
     </div>
     <div class="rcard-body">
       <div class="stat-row">
-        <div class="stat-box best"><div class="stat-lbl">Best</div><div class="stat-val">${d.best.toExponential(3)}</div></div>
-        <div class="stat-box med"><div class="stat-lbl">Median</div><div class="stat-val">${d.median.toExponential(3)}</div></div>
-        <div class="stat-box worst"><div class="stat-lbl">Worst</div><div class="stat-val">${d.worst.toExponential(3)}</div></div>
+        <div class="stat-box best"><div class="stat-lbl">Best</div><div class="stat-val">${d.best.toExponential(3)}<span class="stat-val-dec">${fmtDec(d.best)}</span></div></div>
+        <div class="stat-box med"><div class="stat-lbl">Median</div><div class="stat-val">${d.median.toExponential(3)}<span class="stat-val-dec">${fmtDec(d.median)}</span></div></div>
+        <div class="stat-box mean"><div class="stat-lbl">Mean <span class="param-lbl">(&plusmn;&sigma;)</span></div><div class="stat-val">${d.mean.toExponential(3)}<span class="stat-val-dec">${fmtDec(d.mean)} &plusmn; ${fmtDec(d.std)}</span></div></div>
+        <div class="stat-box worst"><div class="stat-lbl">Worst</div><div class="stat-val">${d.worst.toExponential(3)}<span class="stat-val-dec">${fmtDec(d.worst)}</span></div></div>
       </div>
-      <div class="chart-lbl">Run distribution &mdash; ${d.n_runs} dots sorted by IGD (green = low, red = high)</div>
-      <svg class="dot-svg" viewBox="0 0 360 50" style="height:50px" data-key="${key}"></svg>
+      <div class="stat-note">Mean = statistique compar&eacute;e dans Cui et al. 2025 (PlatEMO) &mdash; Median = statistique la plus robuste aux runs rat&eacute;s</div>
+      <div class="chart-lbl">Run distribution &mdash; ${d.n_runs} runs, tri&eacute;s par IGD (rang &times; valeur, &eacute;chelle log)</div>
+      <svg class="dot-svg" viewBox="0 0 360 74" style="height:74px" data-key="${key}"></svg>
+      <div class="chart-legend">
+        <span><i style="background:rgb(${IGD_GREEN.join(',')})"></i>Succ&egrave;s (IGD &le; 0.06)</span>
+        <span><i style="background:rgb(${IGD_ORANGE.join(',')})"></i>Optimum local (0.25&ndash;0.55)</span>
+        <span><i style="background:rgb(${IGD_RED.join(',')})"></i>&Eacute;chec de convergence (&gt; 0.75)</span>
+      </div>
+      ${renderRunsTable(d.run_details)}
     </div>
   </div>`;
 }
 
+// DTLZ5/6 have a degenerate (curve) true front and DTLZ7 a disconnected one;
+// pymoo only ships a precomputed reference front for these three at M=3
+// (pareto_front() raises "Not implemented yet." otherwise) — so M=4 is
+// structurally unavailable here, not just "not run yet".
+const DEGENERATE_PROBLEMS = new Set(['DTLZ5', 'DTLZ6', 'DTLZ7']);
+
+function renderProbTabs() {
+  const probs = SUITE_PROBLEMS[currentSuite];
+  document.getElementById('probTabs').innerHTML = probs
+    .map((p, i) => `<button class="tab${i === 0 ? ' active' : ''}" data-prob="${p}" onclick="selectProb('${p}')">${p}</button>`)
+    .join('');
+}
+
+function selectSuite(suite) {
+  currentSuite = suite;
+  document.querySelectorAll('.suite-tab').forEach(b => b.classList.toggle('active', b.dataset.suite === suite));
+  renderProbTabs();
+  selectProb(SUITE_PROBLEMS[suite][0]);
+}
+
 function selectProb(name) {
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.prob === name));
+  document.querySelectorAll('#probTabs .tab').forEach(b => b.classList.toggle('active', b.dataset.prob === name));
   document.getElementById('prob-desc').innerHTML = DESCS[name] || '';
-  const pd = DATA[name] || {};
-  document.getElementById('results').innerHTML = ['M3', 'M4'].map(k => renderCard(k, pd[k])).join('');
+  const pd = (DATA[currentSuite] || {})[name] || {};
+  const keys = ['M3', 'M4'].filter(k => pd[k]);
+  const results = document.getElementById('results');
+  const isDegenerate = DEGENERATE_PROBLEMS.has(name);
+  let html = keys.length
+    ? keys.map(k => renderCard(k, pd[k])).join('')
+    : `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m validation.${currentSuite}.main_validation</code> to generate them.</div></div>`;
+  if (isDegenerate) {
+    html += `<div class="rcard"><div class="nodata">M=4 is not shown for ${name}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
+  }
+  results.innerHTML = html;
   document.querySelectorAll('[data-key]').forEach(svg => {
     const d = pd[svg.dataset.key];
     if (d) drawDots(d.runs, svg);
@@ -355,7 +522,8 @@ function applyTheme(t) {
 function toggleTheme() { applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
 (function () { applyTheme(localStorage.getItem('irp-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); })();
 
-selectProb('DTLZ1');
+renderProbTabs();
+selectProb(SUITE_PROBLEMS[currentSuite][0]);
 </script>
 </body>
 </html>"""
@@ -1024,13 +1192,13 @@ body {
     <div class="section-hdr-line"></div>
   </div>
 
-  <a class="blink" href="{{ url_for('benchmarking') }}">
+  <a class="blink" href="{{ url_for('benchmarking') }}" target="_blank" rel="noopener noreferrer">
     <div class="blink-icon">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </div>
     <div>
-      <div class="blink-title">DTLZ Benchmarking</div>
-      <div class="blink-sub">NSGA-III on DTLZ1&ndash;4 &mdash; IGD results &mdash; 20 runs &mdash; M=3 and M=4 objectives (Deb &amp; Jain 2014)</div>
+      <div class="blink-title">DTLZ / MaF Benchmarking</div>
+      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;3 &mdash; IGD results &mdash; 20 runs &mdash; M=3/4 objectives (Cui et al. 2025)</div>
     </div>
     <svg class="blink-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </a>
