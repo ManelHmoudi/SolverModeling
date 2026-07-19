@@ -5,7 +5,7 @@ Parameters — Cui, Shi, Wang, Ding, Li & Li (2025), "Practice of an improved
 many-objective route optimization algorithm in a multimodal transportation
 case under uncertain demand", Complex & Intelligent Systems 11:136, Table 2
 ("Relevant parameter settings for the test problems", DTLZ 1-7 row):
-  SBX crossover : eta=30, prob=1.0   (Deb & Jain 2014's classic NSGA-III value)
+  SBX crossover : eta=20, prob=1.0   (Cui et al. 2025: nc=nm=20, pc=1.0)
   PM mutation   : eta=20, prob=1/n_var
   Ref dirs      : Das-Dennis, p depends on n_obj — Cui et al. (2025) Table 2
                   studies exactly M=3 and M=4 (not M=5+), so those are the
@@ -86,7 +86,7 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
         pop_size=pop_size,
         ref_dirs=ref_dirs,
         sampling=FloatRandomSampling(),
-        crossover=SBX(prob=1.0, eta=30),
+        crossover=SBX(prob=1.0, eta=20),
         mutation=PM(prob=1.0 / problem.n_var, eta=20),
     )
 

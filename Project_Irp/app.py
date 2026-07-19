@@ -12,7 +12,7 @@ import webbrowser
 import time
 from html import escape
 
-from flask import Flask, jsonify, redirect, render_template_string, request, send_file, url_for
+from flask import Flask, jsonify, render_template_string, request, send_file, url_for
 
 from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
 from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
@@ -113,7 +113,7 @@ _BENCHMARK_SUITES = {
     },
     "maf": {
         "results_dir": os.path.join(BASE_DIR, "validation", "maf", "results"),
-        "problems": ["MaF1", "MaF2", "MaF3"],
+        "problems": ["MaF1", "MaF2", "MaF3", "MaF4", "MaF5", "MaF6", "MaF7"],
     },
 }
 _BENCHMARK_M_VALUES = [3, 4]  # Cui et al. (2025), Table 2, only studies M=3 and M=4
@@ -229,6 +229,11 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 .suite-tab { padding:8px 20px;border:1.5px solid var(--border);border-radius:99px;background:var(--surface);color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s; }
 .suite-tab:hover { border-color:var(--border-focus);color:var(--text); }
 .suite-tab.active { background:var(--accent);border-color:var(--accent);color:var(--accent-fg); }
+.m-bar { display:flex;gap:8px;margin-bottom:20px; }
+.m-tab { padding:7px 20px;border:1.5px solid var(--border);border-radius:99px;background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s; }
+.m-tab:hover:not(:disabled) { border-color:var(--border-focus);color:var(--text); }
+.m-tab.active { background:var(--text);border-color:var(--text);color:var(--bg); }
+.m-tab:disabled { opacity:.35;cursor:not-allowed; }
 .tab-bar { display:flex;flex-wrap:wrap;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px; }
 .tab { flex:1;min-width:64px;padding:9px 12px;border:none;border-radius:7px;background:transparent;color:var(--text-2);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s; }
 .tab:hover { background:var(--surface);color:var(--text); }
@@ -271,6 +276,23 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
 .run-badge { display:inline-flex;align-items:center;gap:7px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:12px;color:var(--text-2); }
 .run-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .nodata { padding:28px;text-align:center;color:var(--text-3);font-size:13px; }
+
+/* ── Article-style parameter table (Cui et al. 2025, Table 2) ── */
+.lit-table-block { margin-bottom:28px; }
+.lit-table-caption { font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:2px; }
+.lit-table-cite { font-size:11px;color:var(--text-3);margin-bottom:10px; }
+.lit-table-scroll { overflow-x:auto; }
+.lit-table { width:100%;min-width:520px;border-collapse:collapse;font-size:13px; }
+.lit-table thead tr { border-top:2px solid var(--text);border-bottom:1.5px solid var(--text); }
+.lit-table th { padding:8px 14px;text-align:center;font-weight:700;color:var(--text);white-space:nowrap; }
+.lit-table th:first-child { text-align:left; }
+.lit-table td { padding:7px 14px;text-align:center;color:var(--text);font-variant-numeric:tabular-nums;font-family:monospace; }
+.lit-table td:first-child { text-align:left;font-weight:700;font-family:inherit; }
+.lit-table tbody tr.grp-end td { border-bottom:1px solid var(--border); }
+.lit-table tbody tr:last-child td { border-bottom:2px solid var(--text); }
+.lit-table-note { font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.65; }
+.lit-table-note b { color:var(--text-2); }
+
 @media (max-width:680px) { .grid2 { grid-template-columns:1fr; } .page { padding:16px 12px 40px; } .header { flex-direction:column;align-items:flex-start; } }
 </style>
 </head>
@@ -305,14 +327,36 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
     </div>
   </header>
 
+  <div class="lit-table-block">
+    <div class="lit-table-caption">Tableau 2 &mdash; Param&egrave;tres exp&eacute;rimentaux reproduits</div>
+    <div class="lit-table-scroll">
+      <table class="lit-table">
+        <thead>
+          <tr><th>Suite</th><th>M</th><th>p</th><th>H</th><th>N</th><th>G</th><th>T<sub>max</sub></th></tr>
+        </thead>
+        <tbody>
+          <tr><td>DTLZ 1&ndash;7</td><td>3</td><td>12</td><td>91</td><td>92</td><td>326</td><td>30 000</td></tr>
+          <tr class="grp-end"><td></td><td>4</td><td>7</td><td>120</td><td>120</td><td>250</td><td></td></tr>
+          <tr><td>MaF 1&ndash;7</td><td>3</td><td>12</td><td>91</td><td>92</td><td>326</td><td>30 000</td></tr>
+          <tr><td></td><td>4</td><td>7</td><td>120</td><td>120</td><td>250</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="lit-table-note">
+      <b>p</b> = divisions Das-Dennis &middot; <b>H</b> = points de r&eacute;f&eacute;rence &middot; <b>N</b> = taille de population (plus petit multiple de 4 &ge; H) &middot; <b>G</b> = g&eacute;n&eacute;rations (T<sub>max</sub>&nbsp;&divide;&nbsp;N) &middot; SBX &eta;=20, PM &eta;=20, p<sub>c</sub>=1.0, p<sub>m</sub>=1/D &middot; 20 runs ind&eacute;pendants, IGD sur P*&asymp;10&thinsp;000 points de r&eacute;f&eacute;rence.<br>
+      <b>D</b> (variables de d&eacute;cision) suit ici la convention standard de la litt&eacute;rature, D = M + k &minus; 1 (k=5/10/20 selon le probl&egrave;me DTLZ, k=10 pour MaF1&ndash;6, k=20 pour MaF7), et non la valeur fixe D=54 du Tableau 2 original &mdash; propre au cas d&rsquo;&eacute;tude r&eacute;el des auteurs, sans rapport avec les suites de test synth&eacute;tiques.
+    </div>
+  </div>
+
   <div class="suite-bar" role="tablist">
     <button class="suite-tab active" data-suite="dtlz" onclick="selectSuite('dtlz')">DTLZ1&ndash;7</button>
-    <button class="suite-tab"        data-suite="maf"  onclick="selectSuite('maf')">MaF1&ndash;3</button>
+    <button class="suite-tab"        data-suite="maf"  onclick="selectSuite('maf')">MaF1&ndash;7</button>
   </div>
 
   <div class="tab-bar" role="tablist" id="probTabs"></div>
 
   <div id="prob-desc" class="prob-desc"></div>
+  <div class="m-bar" id="mBar" role="tablist"></div>
   <div class="grid2" id="results"></div>
 
 </main>
@@ -327,14 +371,18 @@ const DESCS = {
   DTLZ5: '<strong>DTLZ5</strong> &mdash; Front de Pareto d&eacute;g&eacute;n&eacute;r&eacute; : la vraie solution optimale n&rsquo;est pas une surface (M-1)-dimensionnelle mais une simple courbe repli&eacute;e dans l&rsquo;espace des objectifs. <em>&Agrave; retenir :</em> un IGD &eacute;lev&eacute; signale ici que la population reste dispers&eacute;e sur toute la surface au lieu de se concentrer sur la courbe r&eacute;elle &mdash; un probl&egrave;me de forme du front, pas seulement de distance.',
   DTLZ6: '<strong>DTLZ6</strong> &mdash; Le m&ecirc;me front d&eacute;g&eacute;n&eacute;r&eacute; (une courbe) que DTLZ5, mais avec une fonction de distance beaucoup plus punitive qui ralentit fortement la convergence. <em>&Agrave; retenir :</em> c&rsquo;est le test de robustesse le plus dur pour les fronts d&eacute;g&eacute;n&eacute;r&eacute;s &mdash; un IGD &eacute;lev&eacute; reste fr&eacute;quent m&ecirc;me pour un bon algorithme ; on compare surtout la vitesse relative de convergence entre m&eacute;thodes.',
   DTLZ7: '<strong>DTLZ7</strong> &mdash; Front de Pareto disjoint : la vraie solution optimale se d&eacute;compose en 2<sup>M-1</sup> r&eacute;gions s&eacute;par&eacute;es et d&eacute;connect&eacute;es les unes des autres. <em>&Agrave; retenir :</em> ce probl&egrave;me teste la capacit&eacute; &agrave; maintenir de la diversit&eacute; sur plusieurs r&eacute;gions &agrave; la fois ; un IGD &eacute;lev&eacute; indique souvent qu&rsquo;une partie des runs ne couvre qu&rsquo;une partie des r&eacute;gions du front, pas toutes.',
-  MaF1: '<strong>MaF1</strong> &mdash; DTLZ1 invers&eacute; : m&ecirc;me pi&egrave;ge des 3<sup>k-1</sup> optima locaux que DTLZ1, mais il faut converger vers le coin oppos&eacute; de l&rsquo;hyperplan plut&ocirc;t que vers l&rsquo;origine. <em>&Agrave; retenir :</em> comportement attendu identique &agrave; DTLZ1 &mdash; IGD faible = bonne convergence, IGD &eacute;lev&eacute; = pi&egrave;ge sur un optimum local.',
+  MaF1: '<strong>MaF1</strong> &mdash; DTLZ1 invers&eacute; : m&ecirc;me front lin&eacute;aire (un hyperplan) que DTLZ1, orient&eacute; vers le coin oppos&eacute; plut&ocirc;t que vers l&rsquo;origine, mais avec la fonction de distance simple de DTLZ2 (pas de pi&egrave;ge multimodal). <em>&Agrave; retenir :</em> nettement plus facile que DTLZ1 malgr&eacute; la forme similaire &mdash; un IGD &eacute;lev&eacute; signale ici un probl&egrave;me de r&eacute;partition sur l&rsquo;hyperplan, pas un blocage sur un optimum local.',
   MaF2: '<strong>MaF2</strong> &mdash; Front sph&eacute;rique comme DTLZ2, mais restreint &agrave; une petite r&eacute;gion angulaire de la sph&egrave;re, et chaque objectif poss&egrave;de sa propre fonction de distance (bas&eacute;e sur un groupe distinct de variables). <em>&Agrave; retenir :</em> teste la capacit&eacute; &agrave; localiser une zone &eacute;troite plut&ocirc;t que tout un octant &mdash; un IGD &eacute;lev&eacute; signale que l&rsquo;algorithme peine &agrave; trouver cette r&eacute;gion restreinte.',
   MaF3: '<strong>MaF3</strong> &mdash; M&ecirc;me pi&egrave;ge multimodal que DTLZ3 (3<sup>k-1</sup> optima locaux), mais le front est rendu convexe au lieu de concave. <em>&Agrave; retenir :</em> comme DTLZ3, un IGD m&eacute;dian &eacute;lev&eacute; est normal ici &mdash; la forme convexe change la g&eacute;om&eacute;trie du front, pas la difficult&eacute; de convergence sous-jacente.',
+  MaF4: '<strong>MaF4</strong> &mdash; DTLZ3 invers&eacute; et &agrave; l&rsquo;&eacute;chelle : m&ecirc;me pi&egrave;ge multimodal que DTLZ3/MaF3, mais chaque objectif est en plus multipli&eacute; par 2<sup>i</sup> (de 2 &agrave; 2<sup>M</sup>). <em>&Agrave; retenir :</em> les objectifs vivent sur des &eacute;chelles tr&egrave;s diff&eacute;rentes &mdash; comparez l&rsquo;IGD relativement &agrave; 2<sup>M</sup>, pas en valeur brute, sous peine de surestimer la difficult&eacute; par rapport &agrave; DTLZ3.',
+  MaF5: '<strong>MaF5</strong> &mdash; DTLZ4 &agrave; l&rsquo;&eacute;chelle : m&ecirc;me biais de diversit&eacute; que DTLZ4 (population pouss&eacute;e vers un p&ocirc;le, &alpha;=100), avec en plus des objectifs multipli&eacute;s par 2<sup>M</sup>&hellip;2. <em>&Agrave; retenir :</em> un IGD &eacute;lev&eacute; refl&egrave;te surtout un manque de diversit&eacute; (comme DTLZ4), amplifi&eacute; par l&rsquo;&eacute;chelle &mdash; &agrave; lire relativement &agrave; 2<sup>M</sup>.',
+  MaF6: '<strong>MaF6</strong> &mdash; Front d&eacute;g&eacute;n&eacute;r&eacute; comme DTLZ5 (une courbe repli&eacute;e, pas une surface), mais d&eacute;fini analytiquement pour n&rsquo;importe quel M &mdash; contrairement &agrave; DTLZ5/6 ici limit&eacute;s &agrave; M=3, MaF6 est donc aussi &eacute;valu&eacute; &agrave; M=4. <em>&Agrave; retenir :</em> un IGD &eacute;lev&eacute; signale que la population reste &eacute;tal&eacute;e sur la surface au lieu de se concentrer sur la courbe r&eacute;elle.',
+  MaF7: '<strong>MaF7</strong> &mdash; Strictement identique &agrave; DTLZ7 (front disjoint en 2<sup>M-1</sup> r&eacute;gions), mais &eacute;valu&eacute; ici &agrave; M=4 en plus de M=3 &mdash; l&agrave; o&ugrave; DTLZ7 s&rsquo;arr&ecirc;te &agrave; M=3 faute de front de r&eacute;f&eacute;rence pymoo au-del&agrave;. <em>&Agrave; retenir :</em> un IGD &eacute;lev&eacute; indique souvent qu&rsquo;une partie des runs ne couvre qu&rsquo;une partie des r&eacute;gions du front.',
 };
 
 const SUITE_PROBLEMS = {
   dtlz: ['DTLZ1', 'DTLZ2', 'DTLZ3', 'DTLZ4', 'DTLZ5', 'DTLZ6', 'DTLZ7'],
-  maf:  ['MaF1', 'MaF2', 'MaF3'],
+  maf:  ['MaF1', 'MaF2', 'MaF3', 'MaF4', 'MaF5', 'MaF6', 'MaF7'],
 };
 let currentSuite = 'dtlz';
 
@@ -343,28 +391,9 @@ const M_TITLE = {
   M4: 'NSGA-III &mdash; M <span class="param-lbl">(objectifs)</span> = 4',
 };
 
-// Chaque symbole est suivi de sa signification entre parenthèses pour rester lisible
-// sans connaissance préalable de la notation NSGA-III / Das-Dennis. p/H/N et le budget
-// Tmax=30000 (donc G) viennent tous deux de Cui et al. (2025), Table 2, pour M=3 et M=4
-// — Deb & Jain (2014) est la source d'origine des valeurs p=12/H=91/N=92 pour M=3, mais
-// utilise un nombre de générations différent (par problème, pas Tmax/N), donc la ligne
-// affichée ici cite Cui et al., dont c'est réellement le protocole reproduit.
-function paramLine({ p, H, N, G }) {
-  return [
-    `Das-Dennis&nbsp;: p <span class="param-lbl">(divisions)</span> = ${p}`,
-    `H <span class="param-lbl">(points de r&eacute;f&eacute;rence)</span> = ${H}`,
-    `N <span class="param-lbl">(taille de population)</span> = ${N}`,
-    `G <span class="param-lbl">(g&eacute;n&eacute;rations)</span> = ${G} <span class="param-note">(Tmax = 30 000 &divide; N)</span>`,
-    `SBX &eta; <span class="param-lbl">(croisement)</span> = 30`,
-    `PM &eta; <span class="param-lbl">(mutation)</span> = 20`,
-    `<em>Cui et al. 2025</em>`,
-  ].join(' &nbsp;|&nbsp; ');
-}
-
-const M_SUB = {
-  M3: paramLine({ p: 12, H: 91,  N: 92,  G: 326 }),
-  M4: paramLine({ p: 7,  H: 120, N: 120, G: 250 }),
-};
+// Paramètres complets (p/H/N/G/η/...) affichés une seule fois dans le Tableau 2
+// en haut de page — ici on ne rappelle que N et G pour situer la carte sans dupliquer.
+const M_META = { M3: { N: 92, G: 326 }, M4: { N: 120, G: 250 } };
 
 // Format décimal court, en complément de la notation scientifique.
 function fmtDec(v) {
@@ -447,7 +476,7 @@ function renderCard(key, d) {
   return `<div class="rcard">
     <div class="rcard-hdr">
       <h3>${M_TITLE[key]}</h3>
-      <div class="rcard-sub">${M_SUB[key]} &nbsp;|&nbsp; ${d.n_runs} runs</div>
+      <div class="rcard-sub">N=${M_META[key].N}, G=${M_META[key].G} &nbsp;|&nbsp; ${d.n_runs} runs</div>
     </div>
     <div class="rcard-body">
       <div class="stat-row">
@@ -482,6 +511,10 @@ function renderProbTabs() {
     .join('');
 }
 
+let currentProb = null;
+let currentM = 'M3';
+let currentPd = {};
+
 function selectSuite(suite) {
   currentSuite = suite;
   document.querySelectorAll('.suite-tab').forEach(b => b.classList.toggle('active', b.dataset.suite === suite));
@@ -490,22 +523,47 @@ function selectSuite(suite) {
 }
 
 function selectProb(name) {
+  currentProb = name;
   document.querySelectorAll('#probTabs .tab').forEach(b => b.classList.toggle('active', b.dataset.prob === name));
   document.getElementById('prob-desc').innerHTML = DESCS[name] || '';
-  const pd = (DATA[currentSuite] || {})[name] || {};
-  const keys = ['M3', 'M4'].filter(k => pd[k]);
+  currentPd = (DATA[currentSuite] || {})[name] || {};
+  const keys = ['M3', 'M4'].filter(k => currentPd[k]);
+  if (!keys.includes(currentM)) currentM = keys[0] || 'M3';
+  renderMBar(keys);
+  renderResultsForM();
+}
+
+// M3/M4 sont des onglets exclusifs : un seul jeu de résultats (graphe + tableau) affiché à la fois.
+function renderMBar(keys) {
+  document.getElementById('mBar').innerHTML = ['M3', 'M4'].map(k => {
+    const n = k === 'M3' ? 3 : 4;
+    const disabled = !keys.includes(k);
+    return `<button class="m-tab${k === currentM ? ' active' : ''}" ${disabled ? 'disabled' : ''} onclick="selectM('${k}')">M&nbsp;=&nbsp;${n}</button>`;
+  }).join('');
+}
+
+function selectM(k) {
+  currentM = k;
+  document.querySelectorAll('#mBar .m-tab').forEach((b, i) => b.classList.toggle('active', (i === 0 ? 'M3' : 'M4') === k));
+  renderResultsForM();
+}
+
+function renderResultsForM() {
   const results = document.getElementById('results');
-  const isDegenerate = DEGENERATE_PROBLEMS.has(name);
-  let html = keys.length
-    ? keys.map(k => renderCard(k, pd[k])).join('')
-    : `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m validation.${currentSuite}.main_validation</code> to generate them.</div></div>`;
-  if (isDegenerate) {
-    html += `<div class="rcard"><div class="nodata">M=4 is not shown for ${name}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
+  const d = currentPd[currentM];
+  const isDegenerateM4 = DEGENERATE_PROBLEMS.has(currentProb) && currentM === 'M4';
+  let html;
+  if (d) {
+    html = renderCard(currentM, d);
+  } else if (isDegenerateM4) {
+    html = `<div class="rcard"><div class="nodata">M=4 is not shown for ${currentProb}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
+  } else {
+    html = `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m validation.${currentSuite}.main_validation</code> to generate them.</div></div>`;
   }
   results.innerHTML = html;
   document.querySelectorAll('[data-key]').forEach(svg => {
-    const d = pd[svg.dataset.key];
-    if (d) drawDots(d.runs, svg);
+    const dd = currentPd[svg.dataset.key];
+    if (dd) drawDots(dd.runs, svg);
   });
 }
 
@@ -747,6 +805,51 @@ body {
   white-space: nowrap;
 }
 
+/* ── Part (academic section) header ── */
+.part { margin-top: 44px; }
+.part:first-of-type { margin-top: 0; }
+.part-hdr {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--text);
+}
+.part-num {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--accent-fg);
+  background: var(--text);
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.part-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+.part-title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+  color: var(--text);
+}
+.part-sub {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 4px;
+  line-height: 1.6;
+  max-width: 640px;
+}
+
 /* ── Grid ── */
 .modules {
   display: grid;
@@ -922,7 +1025,7 @@ body {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -1016,6 +1119,16 @@ body {
       </button>
     </div>
   </header>
+
+  <div class="part">
+  <div class="part-hdr">
+    <div class="part-num">1</div>
+    <div>
+      <div class="part-eyebrow">Partie 1</div>
+      <div class="part-title">Résolution &amp; validation par instance</div>
+      <div class="part-sub">Quatre méthodes appliquées aux instances du problème de tournées avec gestion des stocks (IRP) — un solveur exact par objectif, un solveur scalarisé, et deux métaheuristiques many-objective (NSGA-III et sa variante quantique-inspirée QI-NSGA-III).</div>
+    </div>
+  </div>
 
   <div class="panel">
     <div class="panel-hdr">
@@ -1186,10 +1299,16 @@ body {
     </article>
 
   </section>
+  </div>
 
-  <div class="section-hdr" style="margin-top:28px">
-    <span class="section-hdr-label">Validation</span>
-    <div class="section-hdr-line"></div>
+  <div class="part">
+  <div class="part-hdr">
+    <div class="part-num">2</div>
+    <div>
+      <div class="part-eyebrow">Partie 2</div>
+      <div class="part-title">Benchmarking académique</div>
+      <div class="part-sub">Validation de l'implémentation NSGA-III sur les suites de test de référence de la littérature (DTLZ1&ndash;7, MaF1&ndash;7), en reproduisant le protocole expérimental de Cui et al. (2025) &mdash; population, opérateurs, budget d'évaluations et métrique IGD.</div>
+    </div>
   </div>
 
   <a class="blink" href="{{ url_for('benchmarking') }}" target="_blank" rel="noopener noreferrer">
@@ -1198,13 +1317,13 @@ body {
     </div>
     <div>
       <div class="blink-title">DTLZ / MaF Benchmarking</div>
-      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;3 &mdash; IGD results &mdash; 20 runs &mdash; M=3/4 objectives (Cui et al. 2025)</div>
+      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; IGD results &mdash; 20 runs &mdash; M=3/4 objectives</div>
     </div>
     <svg class="blink-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </a>
+  </div>
 
   <footer class="page-footer">
-    <span class="footer-text">IRP Solver Suite &mdash; Many-objective Inventory Routing</span>
     <div class="footer-pills">
       <span class="footer-pill">f1 Cost</span>
       <span class="footer-pill">f2 CO₂</span>

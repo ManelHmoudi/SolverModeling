@@ -13,13 +13,19 @@ import numpy as np
 from pymoo.indicators.igd import IGD
 from pymoo.util.ref_dirs import get_reference_directions
 
+# Das-Dennis partition count whose point count H(p)=C(p+M-1,M-1) is closest to
+# Cui et al. (2025)'s P*=10,000 IGD reference-point budget ("Evaluation
+# indicators"): p=140 -> H=10,011 for M=3; p=37 -> H=9,880 for M=4.
+_P_STAR_PARTITIONS = {3: 140, 4: 37}
+
 
 def _get_true_front(problem):
     """
     Retrieve or approximate the true Pareto front for a DTLZ problem.
     pymoo's DTLZ pareto_front() accepts ref_dirs for 4-objective problems.
     """
-    ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=12)
+    p = _P_STAR_PARTITIONS.get(problem.n_obj, 12)
+    ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=p)
     try:
         pf = problem.pareto_front(ref_dirs=ref_dirs)
     except TypeError:

@@ -409,7 +409,6 @@ def run_qinsga3(
     xl       = np.asarray(problem.xl, dtype=float)
     xu       = np.asarray(problem.xu, dtype=float)
     n_genes  = problem.n_var
-    n_obj    = problem.n_obj
     n_constr = problem.n_ieq_constr
 
     if p_mut is None:

@@ -1,5 +1,5 @@
 """
-MaF validation CLI — runs NSGA-III on MaF1-3 (Cui et al. 2025 protocol, M=3/M=4).
+MaF validation CLI — runs NSGA-III on MaF1-7 (Cui et al. 2025 protocol, M=3/M=4).
 
 Usage:
     python -m validation.maf.main_validation                      # 20 runs, 4 objectives
@@ -21,7 +21,7 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Validate NSGA-III on MaF1-3 (Cui et al. 2025 protocol, M=3/M=4)"
+        description="Validate NSGA-III on MaF1-7 (Cui et al. 2025 protocol, M=3/M=4)"
     )
     parser.add_argument(
         "--runs", type=int, default=20,
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     validate(
         problems_module=maf_problems,
         results_dir=RESULTS_DIR,
-        suite_label="MaF1-3",
+        suite_label="MaF1-7",
         n_runs=args.runs,
         n_obj=args.n_obj,
     )

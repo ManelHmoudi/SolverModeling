@@ -2,16 +2,14 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 import numpy as np
-from validation.metrics.igd_metric import compute_igd, igd_statistics
+from validation.metrics.igd_metric import compute_igd, igd_statistics, _get_true_front
 from validation.dtlz.dtlz_problems import get_problem
 
 def test_igd_is_zero_for_true_front():
     """IGD = 0 when the approximation IS the true Pareto front."""
-    from pymoo.util.ref_dirs import get_reference_directions
     problem, _ = get_problem("DTLZ2")
     try:
-        ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=12)
-        true_front = problem.pareto_front(ref_dirs=ref_dirs)
+        true_front = _get_true_front(problem)
     except Exception:
         print("SKIP: problem.pareto_front() not available for this configuration")
         return

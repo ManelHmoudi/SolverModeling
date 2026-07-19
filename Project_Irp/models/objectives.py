@@ -20,7 +20,6 @@ def build_f1_logistics_cost(mdl, vars_, sets_, params_):
         y3 -- time-window penalty: linearised via non-negative slack variables
 
     """
-    x            = vars_["x"]
     f_var        = vars_["f"]
     I_O_frigo    = vars_["I_O_frigo"]
     I_O_nonfrigo = vars_["I_O_nonfrigo"]

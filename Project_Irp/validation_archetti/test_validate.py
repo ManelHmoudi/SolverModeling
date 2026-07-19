@@ -1,7 +1,6 @@
 """Unit tests for validate_irp parsers and distance function."""
 import os
 import sys
-import tempfile
 
 import pytest
 
@@ -134,7 +133,7 @@ def test_get_ref_path_variant5_n5_low():
 
 # ── Integration tests (require CPLEX + external data files) ───────────────────
 
-from validate_irp import build_and_solve, validate_instance
+from validate_irp import validate_instance
 
 _INST_LOW  = r"C:\Users\Mariem\OneDrive\Bureau\Master\MPIRP\IRP-Research\DataSets\Archetti2007\Instances_lowcost_H3"
 _INST_HIGH = r"C:\Users\Mariem\OneDrive\Bureau\Master\MPIRP\IRP-Research\DataSets\Archetti2007\Instances_highcost_H3"
