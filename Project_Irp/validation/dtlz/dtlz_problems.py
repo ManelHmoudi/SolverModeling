@@ -24,7 +24,7 @@ crashing after running the optimisation.
 """
 from pymoo.problems import get_problem as _pymoo_get_problem
 
-from validation.algorithms.nsga3_runner import get_run_config
+from validation.algorithms.nsga3.runner import get_run_config
 
 PROBLEM_NAMES = ["DTLZ1", "DTLZ2", "DTLZ3", "DTLZ4", "DTLZ5", "DTLZ6", "DTLZ7"]
 

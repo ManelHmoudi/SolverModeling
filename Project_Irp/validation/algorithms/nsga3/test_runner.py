@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from validation.algorithms.nsga3_runner import run_single, run_experiment, POP_SIZE, N_REF_DIRS
+from validation.algorithms.nsga3.runner import run_single, run_experiment, POP_SIZE, N_REF_DIRS
 from validation.dtlz.dtlz_problems import get_problem
 
 def test_ref_dirs_count_4obj():

@@ -15,7 +15,8 @@ import csv
 import os
 import time
 
-from validation.algorithms.nsga3_runner import run_experiment, _SEEDS
+from validation.algorithms.nsga3.runner import run_experiment as _default_run_experiment
+from validation.algorithms.seeds import SEEDS as _SEEDS
 from validation.metrics.igd_metric import compute_igd, igd_statistics
 
 
@@ -64,7 +65,8 @@ def _print_table(suite_label: str, summary_rows: list, n_obj: int):
     print(sep + "\n")
 
 
-def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 30, n_obj: int = 4):
+def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 30, n_obj: int = 4,
+             run_experiment_fn=_default_run_experiment):
     """Run NSGA-III validation on every problem in problems_module.PROBLEM_NAMES.
 
     Args:
@@ -97,7 +99,7 @@ def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 
         print(f"  n_var={problem.n_var}, n_obj={problem.n_obj}, n_gen={n_gen}")
 
         t0 = time.time()
-        fronts = run_experiment(name, problem, n_gen, n_runs)
+        fronts = run_experiment_fn(name, problem, n_gen, n_runs)
         elapsed = time.time() - t0
         print(f"  {name}: {n_runs} runs completed in {elapsed:.1f}s", flush=True)
 

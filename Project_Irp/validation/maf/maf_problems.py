@@ -38,7 +38,7 @@ import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.util.ref_dirs import get_reference_directions
 
-from validation.algorithms.nsga3_runner import get_run_config
+from validation.algorithms.nsga3.runner import get_run_config
 
 PROBLEM_NAMES = ["MaF1", "MaF2", "MaF3", "MaF4", "MaF5", "MaF6", "MaF7"]
 
