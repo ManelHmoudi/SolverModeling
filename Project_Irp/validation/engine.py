@@ -77,6 +77,8 @@ def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 
         suite_label       : display name for progress printing (e.g. "DTLZ1-7").
         n_runs            : number of independent runs per problem (1-30).
         n_obj             : number of objectives.
+        run_experiment_fn : callable(problem_name, problem, n_gen, n_runs) -> list of fronts;
+                             defaults to the classic NSGA-III runner.
 
     Returns:
         List of summary dicts with keys: problem, best, median, worst, mean, std.
