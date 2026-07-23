@@ -59,6 +59,7 @@ class QuantumPopulation:
         xu:            np.ndarray,
         rng:           np.random.Generator | None = None,
         rotation_type: str = "tanh",
+        noise_scale:   float = 0.02,
     ) -> None:
         if rotation_type not in _ROTATION_TYPES:
             raise ValueError(f"rotation_type must be one of {_ROTATION_TYPES}, got '{rotation_type}'")
@@ -68,6 +69,7 @@ class QuantumPopulation:
         self.xu            = np.asarray(xu, dtype=float)
         self.rng           = rng if rng is not None else np.random.default_rng()
         self.rotation_type = rotation_type
+        self.noise_scale   = noise_scale
 
         # Maximum superposition θ = π/4  [Han & Kim 2002, §II-A]
         # ±0.05 rad perturbation breaks symmetry so the first measurement
@@ -87,17 +89,21 @@ class QuantumPopulation:
             x_j = xl_j + cos²(θ_j) × (xu_j − xl_j)
 
         Diversity noise [Platel et al. 2009, §4.2]:
-            σ_j = 0.02 × |sin(2θ_j)| × (xu_j − xl_j)
+            σ_j = noise_scale × |sin(2θ_j)| × (xu_j − xl_j)
             noise ~ N(0, σ_j)
 
         The noise amplitude is proportional to |sin(2θ)|, which peaks at
         superposition (θ ≈ π/4) and vanishes at convergence (θ → 0 or π/2).
         This prevents nearby θ values from collapsing to identical integer
-        routes after the IRP decoder rounds to integers.
+        routes after the IRP decoder rounds to integers — noise_scale
+        defaults to 0.02 (the value this was originally tuned at for the
+        IRP) so every existing caller is unaffected; it exists as a
+        parameter so continuous-domain callers (no integer rounding to
+        protect against) can set it to 0 without touching this file again.
         """
         p     = np.cos(self.theta) ** 2
         mu    = self.xl + p * (self.xu - self.xl)
-        sigma = 0.02 * np.abs(np.sin(2.0 * self.theta)) * (self.xu - self.xl)
+        sigma = self.noise_scale * np.abs(np.sin(2.0 * self.theta)) * (self.xu - self.xl)
         noise = self.rng.standard_normal(self.theta.shape) * sigma
         return np.clip(mu + noise, self.xl, self.xu)
 

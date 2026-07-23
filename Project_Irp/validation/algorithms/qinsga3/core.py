@@ -53,15 +53,27 @@ def run_qinsga3_generic(
     n_migrate: int,
     seed: int,
     rotation_type: str = "tanh",
+    noise_scale: float = 0.02,
 ) -> np.ndarray:
-    """Run one QINSGA-III instance on a pymoo Problem. Returns the final Pareto front's F."""
+    """Run one QINSGA-III instance on a pymoo Problem. Returns the final Pareto front's F.
+
+    noise_scale controls QuantumPopulation's measurement diversity noise
+    (default 0.02, the IRP-tuned value — see QINSGA3/chromosome.py). That
+    noise exists to stop nearby theta values collapsing to identical
+    integer routes after the IRP decoder rounds to integers; DTLZ/MaF have
+    no such rounding step, so it can be set to 0 here without affecting the
+    IRP path (whose QuantumPopulation calls never pass this argument).
+    """
     rng = np.random.default_rng(seed)
 
     xl = np.asarray(problem.xl, dtype=float)
     xu = np.asarray(problem.xu, dtype=float)
     n_genes = problem.n_var
 
-    qpop = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type)
+    qpop = QuantumPopulation(
+        pop_size, n_genes, xl, xu, rng=rng,
+        rotation_type=rotation_type, noise_scale=noise_scale,
+    )
     sorter = NonDominatedSorting()
 
     arch_X: list[np.ndarray] = []
