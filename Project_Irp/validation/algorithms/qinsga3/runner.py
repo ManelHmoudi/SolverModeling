@@ -4,10 +4,18 @@ Same run_single/run_experiment signatures as
 validation/algorithms/nsga3/runner.py, so validation/engine.py's validate()
 can call either interchangeably. Reference directions and population size
 come from nsga3.runner.get_run_config() — the Cui et al. (2025) protocol,
-identical to the classic NSGA-III validation. Only the quantum-operator
-parameters below are QINSGA3-specific, copied verbatim from
-QINSGA3/main.py's IRP defaults (there is no classic-NSGA-III equivalent to
-compare them against).
+identical to the classic NSGA-III validation.
+
+Parameters with a direct NSGA-III equivalent (P_CROSS, ETA_CROSS, and the
+mutation probability computed in run_single) are set to the SAME values
+used by the classic NSGA-III validation (pc=1.0, eta=20, p_mut=1/D) rather
+than QINSGA3's own IRP-tuned defaults (pc=0.9, eta=5, p_mut=2/D) — this
+isolates the effect of the quantum rotation-gate mechanism from the
+crossover/mutation operators' own tuning, for an apples-to-apples
+comparison. The remaining parameters below are intrinsic to the quantum
+encoding (rotation gate, two-tier mutation split, external-archive
+migration) and have no classic-NSGA-III equivalent to align to — they stay
+at QINSGA3's own IRP-tuned defaults, copied verbatim from QINSGA3/main.py.
 """
 import numpy as np
 
@@ -18,8 +26,8 @@ from .core import run_qinsga3_generic
 
 ALPHA_MAX = 0.10 * np.pi
 ALPHA_MIN = 0.001 * np.pi
-P_CROSS = 0.9
-ETA_CROSS = 5.0
+P_CROSS = 1.0    # aligned to NSGA-III's pc=1.0 (Cui et al. 2025) — was 0.9 (QINSGA3/main.py default)
+ETA_CROSS = 20.0  # aligned to NSGA-III's eta=20 (Cui et al. 2025) — was 5.0 (QINSGA3/main.py default)
 P_MUT_STRONG = 0.15
 MUT_SIGMA = 0.05 * np.pi
 MIGRATION_PERIOD = 10
@@ -39,7 +47,7 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
         np.ndarray of shape (n_solutions, n_obj).
     """
     ref_dirs, pop_size = get_run_config(problem.n_obj)
-    p_mut = 2.0 / problem.n_var
+    p_mut = 1.0 / problem.n_var  # aligned to NSGA-III's p_mut=1/D (Cui et al. 2025) — was 2/D (QINSGA3/main.py default)
 
     return run_qinsga3_generic(
         problem, ref_dirs, pop_size, max_gen=n_gen,
