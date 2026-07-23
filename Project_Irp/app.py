@@ -119,8 +119,11 @@ _BENCHMARK_SUITES = {
 _BENCHMARK_M_VALUES = [3, 4]  # Cui et al. (2025), Table 2, only studies M=3 and M=4
 
 
-def _read_igd_runs(results_dir: str, problem: str, n_obj: int):
-    path = os.path.join(results_dir, "nsga3", f"igd_{problem}_M{n_obj}.csv")
+_BENCHMARK_ALGOS = ["nsga3", "qinsga3"]
+
+
+def _read_igd_runs(results_dir: str, algo: str, problem: str, n_obj: int):
+    path = os.path.join(results_dir, algo, f"igd_{problem}_M{n_obj}.csv")
     if not os.path.exists(path):
         return []
     rows = []
@@ -141,20 +144,24 @@ def _build_benchmark_data():
         for p in cfg["problems"]:
             data[suite][p] = {}
             for m in _BENCHMARK_M_VALUES:
-                details = _read_igd_runs(cfg["results_dir"], p, m)
-                if not details:
-                    continue
-                igds = [r["igd"] for r in details]
-                data[suite][p][f"M{m}"] = {
-                    "best":   min(igds),
-                    "median": float(_statistics.median(igds)),
-                    "worst":  max(igds),
-                    "mean":   float(_statistics.mean(igds)),
-                    "std":    float(_statistics.pstdev(igds)),
-                    "runs":   igds,
-                    "run_details": details,
-                    "n_runs": len(igds),
-                }
+                m_data = {}
+                for algo in _BENCHMARK_ALGOS:
+                    details = _read_igd_runs(cfg["results_dir"], algo, p, m)
+                    if not details:
+                        continue
+                    igds = [r["igd"] for r in details]
+                    m_data[algo] = {
+                        "best":   min(igds),
+                        "median": float(_statistics.median(igds)),
+                        "worst":  max(igds),
+                        "mean":   float(_statistics.mean(igds)),
+                        "std":    float(_statistics.pstdev(igds)),
+                        "runs":   igds,
+                        "run_details": details,
+                        "n_runs": len(igds),
+                    }
+                if m_data:
+                    data[suite][p][f"M{m}"] = m_data
     return data
 
 def _discover_instances():
@@ -241,6 +248,8 @@ body { min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
 .prob-desc { background:var(--accent-dim);border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px; }
 .prob-desc strong { color:var(--text); }
 .grid2 { display:flex;flex-direction:column;gap:20px; }
+.algo-compare { display:flex;flex-wrap:wrap;gap:16px; }
+.algo-compare .rcard { flex:1 1 380px;min-width:320px; }
 .rcard { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden; }
 .rcard-hdr { padding:14px 18px 12px;border-bottom:1px solid var(--border); }
 .rcard-hdr h3 { font-size:13.5px;font-weight:700;color:var(--text); }
@@ -386,10 +395,11 @@ const SUITE_PROBLEMS = {
 };
 let currentSuite = 'dtlz';
 
-const M_TITLE = {
-  M3: 'NSGA-III &mdash; M <span class="param-lbl">(objectifs)</span> = 3',
-  M4: 'NSGA-III &mdash; M <span class="param-lbl">(objectifs)</span> = 4',
+const ALGO_LABEL = {
+  nsga3:   'NSGA-III (classique)',
+  qinsga3: 'QI-NSGA-III (quantum-inspired)',
 };
+const ALGO_ORDER = ['nsga3', 'qinsga3'];
 
 // Paramètres complets (p/H/N/G/η/...) affichés une seule fois dans le Tableau 2
 // en haut de page — ici on ne rappelle que N et G pour situer la carte sans dupliquer.
@@ -472,11 +482,13 @@ function renderRunsTable(details) {
       </div>`;
 }
 
-function renderCard(key, d) {
+function renderCard(mKey, algo, d) {
+  const dataKey = `${mKey}:${algo}`;
+  const nObj = mKey === 'M3' ? 3 : 4;
   return `<div class="rcard">
     <div class="rcard-hdr">
-      <h3>${M_TITLE[key]}</h3>
-      <div class="rcard-sub">N=${M_META[key].N}, G=${M_META[key].G} &nbsp;|&nbsp; ${d.n_runs} runs</div>
+      <h3>${ALGO_LABEL[algo]} &mdash; M <span class="param-lbl">(objectifs)</span> = ${nObj}</h3>
+      <div class="rcard-sub">N=${M_META[mKey].N}, G=${M_META[mKey].G} &nbsp;|&nbsp; ${d.n_runs} runs</div>
     </div>
     <div class="rcard-body">
       <div class="stat-row">
@@ -487,7 +499,7 @@ function renderCard(key, d) {
       </div>
       <div class="stat-note">Mean = statistique compar&eacute;e dans Cui et al. 2025 (PlatEMO) &mdash; Median = statistique la plus robuste aux runs rat&eacute;s</div>
       <div class="chart-lbl">Run distribution &mdash; ${d.n_runs} runs, tri&eacute;s par IGD (rang &times; valeur, &eacute;chelle log)</div>
-      <svg class="dot-svg" viewBox="0 0 360 74" style="height:74px" data-key="${key}"></svg>
+      <svg class="dot-svg" viewBox="0 0 360 74" style="height:74px" data-key="${dataKey}"></svg>
       <div class="chart-legend">
         <span><i style="background:rgb(${IGD_GREEN.join(',')})"></i>Succ&egrave;s (IGD &le; 0.06)</span>
         <span><i style="background:rgb(${IGD_ORANGE.join(',')})"></i>Optimum local (0.25&ndash;0.55)</span>
@@ -550,11 +562,12 @@ function selectM(k) {
 
 function renderResultsForM() {
   const results = document.getElementById('results');
-  const d = currentPd[currentM];
+  const mData = currentPd[currentM] || {};
   const isDegenerateM4 = DEGENERATE_PROBLEMS.has(currentProb) && currentM === 'M4';
+  const availableAlgos = ALGO_ORDER.filter(a => mData[a]);
   let html;
-  if (d) {
-    html = renderCard(currentM, d);
+  if (availableAlgos.length) {
+    html = `<div class="algo-compare">${availableAlgos.map(a => renderCard(currentM, a, mData[a])).join('')}</div>`;
   } else if (isDegenerateM4) {
     html = `<div class="rcard"><div class="nodata">M=4 is not shown for ${currentProb}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
   } else {
@@ -562,7 +575,8 @@ function renderResultsForM() {
   }
   results.innerHTML = html;
   document.querySelectorAll('[data-key]').forEach(svg => {
-    const dd = currentPd[svg.dataset.key];
+    const [mKey, algo] = svg.dataset.key.split(':');
+    const dd = (currentPd[mKey] || {})[algo];
     if (dd) drawDots(dd.runs, svg);
   });
 }
