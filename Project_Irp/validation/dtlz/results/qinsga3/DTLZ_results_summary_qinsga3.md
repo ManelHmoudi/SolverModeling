@@ -493,4 +493,15 @@ M3 = 3 objectifs, M4 = 4 objectifs. DTLZ5–DTLZ7 ne sont validés qu'en M3 (pas
 | DTLZ6 | 3 | 0.716894 | 5.276403 | 6.466358 | 7.014231 (légère dégradation) |
 | DTLZ7 | 3 | 0.113257 | 0.429444 | 0.371840 | 3.092533 (**forte dégradation — front disjoint**) |
 
-Désactiver le bruit rapproche fortement QINSGA3 de NSGA-III sur DTLZ1 (×42 → ×1.7), DTLZ3 (×24-28 → ×1.9-2.2) et DTLZ4 M4, sans changer grand-chose sur DTLZ2/DTLZ5. En revanche DTLZ6 et surtout DTLZ7 (front disjoint en 2^(M-1) régions) se dégradent : le bruit de diversité semblait y jouer un rôle utile de maintien de la couverture entre régions séparées du front, que la suppression totale perd. Piste d'amélioration suivante : un `noise_scale` intermédiaire (ex. 0.005-0.01) plutôt que 0, pour garder un peu de diversité sans trop dégrader la précision.
+Désactiver le bruit rapproche fortement QINSGA3 de NSGA-III sur DTLZ1 (×42 → ×1.7), DTLZ3 (×24-28 → ×1.9-2.2) et DTLZ4 M4, sans changer grand-chose sur DTLZ2/DTLZ5. En revanche DTLZ6 et surtout DTLZ7 (front disjoint en 2^(M-1) régions) se dégradent : le bruit de diversité semblait y jouer un rôle utile de maintien de la couverture entre régions séparées du front, que la suppression totale perd.
+
+**Piste explorée et écartée : `noise_scale` intermédiaire.** Un test à 5 runs sur DTLZ7 et DTLZ3 avec noise_scale ∈ {0.02, 0.01, 0.005, 0.0} montre deux tendances strictement monotones et opposées :
+
+| noise_scale | DTLZ7 (mean IGD) | DTLZ3 (mean IGD) |
+|---|---|---|
+| 0.02 | **0.368** | 181.9 |
+| 0.01 | 0.476 | 94.1 |
+| 0.005 | 0.559 | 48.0 |
+| 0.00 | 2.979 | **31.7** |
+
+Aucune valeur intermédiaire n'est un compromis favorable — 0.005 et 0.01 sont pires que les deux extrêmes pour chacun des deux problèmes. Ce n'est pas un réglage à affiner mais un vrai dilemme structurel (précision de convergence vs maintien de la diversité entre régions disjointes), sans solution à un seul paramètre global. `noise_scale=0` reste donc le réglage retenu pour ce rapport, avec la régression sur DTLZ7 documentée comme limite connue plutôt que corrigée.

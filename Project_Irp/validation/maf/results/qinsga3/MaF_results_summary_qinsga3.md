@@ -619,3 +619,14 @@ M3 = 3 objectifs, M4 = 4 objectifs.
 | MaF7 | 4 | 0.269907 | 2.458176 | 3.327366 | 7.977170 (**forte dégradation — front disjoint**) |
 
 Désactiver le bruit rapproche fortement QINSGA3 de NSGA-III sur MaF3 (÷10 à ÷15) et MaF4 (÷7 à ÷17), et fait même passer QINSGA3 **devant** NSGA-III sur MaF1 et MaF6 (nouveau !). Seul MaF7 (front disjoint comme DTLZ7) se dégrade nettement — confirmation du même phénomène observé sur DTLZ7 : le bruit de diversité aide à couvrir les fronts en plusieurs régions séparées, sa suppression totale y est contre-productive.
+
+**Piste explorée et écartée : `noise_scale` intermédiaire.** Un test à 5 runs sur MaF7 avec noise_scale ∈ {0.02, 0.01, 0.005, 0.0} confirme exactement le même schéma monotone que sur DTLZ7 (voir `validation/dtlz/results/qinsga3/DTLZ_results_summary_qinsga3.md`) :
+
+| noise_scale | MaF7 (mean IGD) |
+|---|---|
+| 0.02 | **0.364** |
+| 0.01 | 0.472 |
+| 0.005 | 0.555 |
+| 0.00 | 2.976 |
+
+Aucune valeur intermédiaire n'améliore MaF7 par rapport au bruit complet — et une valeur intermédiaire dégraderait en même temps les gains obtenus sur DTLZ3/MaF3/MaF4 (schéma inverse, voir le rapport DTLZ). `noise_scale=0` reste donc le réglage retenu, la régression sur MaF7 étant un compromis assumé plutôt qu'un problème résolu.
