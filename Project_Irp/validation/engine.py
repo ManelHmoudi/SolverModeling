@@ -64,7 +64,7 @@ def _print_table(suite_label: str, summary_rows: list, n_obj: int):
     print(sep + "\n")
 
 
-def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 20, n_obj: int = 4):
+def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 30, n_obj: int = 4):
     """Run NSGA-III validation on every problem in problems_module.PROBLEM_NAMES.
 
     Args:
@@ -73,7 +73,7 @@ def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 
                            IGD can't be scored at this n_obj).
         results_dir      : directory to write igd_*.csv / summary_M{n}.csv into.
         suite_label       : display name for progress printing (e.g. "DTLZ1-7").
-        n_runs            : number of independent runs per problem (1-20).
+        n_runs            : number of independent runs per problem (1-30).
         n_obj             : number of objectives.
 
     Returns:

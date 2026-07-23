@@ -306,7 +306,7 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
       </div>
       <div>
         <div class="brand-name">Many-Objective Benchmarking</div>
-        <div class="brand-sub">NSGA-III &mdash; Cui et al. (2025) protocol &mdash; IGD metric &mdash; 20 independent runs</div>
+        <div class="brand-sub">NSGA-III &mdash; Cui et al. (2025) protocol &mdash; IGD metric &mdash; 30 independent runs</div>
       </div>
     </div>
     <div class="hdr-actions">
@@ -343,7 +343,7 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
       </table>
     </div>
     <div class="lit-table-note">
-      <b>p</b> = divisions Das-Dennis &middot; <b>H</b> = points de r&eacute;f&eacute;rence &middot; <b>N</b> = taille de population (plus petit multiple de 4 &ge; H) &middot; <b>G</b> = g&eacute;n&eacute;rations (T<sub>max</sub>&nbsp;&divide;&nbsp;N) &middot; SBX &eta;=20, PM &eta;=20, p<sub>c</sub>=1.0, p<sub>m</sub>=1/D &middot; 20 runs ind&eacute;pendants, IGD sur P*&asymp;10&thinsp;000 points de r&eacute;f&eacute;rence.<br>
+      <b>p</b> = divisions Das-Dennis &middot; <b>H</b> = points de r&eacute;f&eacute;rence &middot; <b>N</b> = taille de population (plus petit multiple de 4 &ge; H) &middot; <b>G</b> = g&eacute;n&eacute;rations (T<sub>max</sub>&nbsp;&divide;&nbsp;N) &middot; SBX &eta;=20, PM &eta;=20, p<sub>c</sub>=1.0, p<sub>m</sub>=1/D &middot; 30 runs ind&eacute;pendants, IGD sur P*&asymp;10&thinsp;000 points de r&eacute;f&eacute;rence.<br>
       <b>D</b> (variables de d&eacute;cision) suit ici la convention standard de la litt&eacute;rature, D = M + k &minus; 1 (k=5/10/20 selon le probl&egrave;me DTLZ, k=10 pour MaF1&ndash;6, k=20 pour MaF7), et non la valeur fixe D=54 du Tableau 2 original &mdash; propre au cas d&rsquo;&eacute;tude r&eacute;el des auteurs, sans rapport avec les suites de test synth&eacute;tiques.
     </div>
   </div>
@@ -1317,7 +1317,7 @@ body {
     </div>
     <div>
       <div class="blink-title">DTLZ / MaF Benchmarking</div>
-      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; IGD results &mdash; 20 runs &mdash; M=3/4 objectives</div>
+      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; IGD results &mdash; 30 runs &mdash; M=3/4 objectives</div>
     </div>
     <svg class="blink-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </a>

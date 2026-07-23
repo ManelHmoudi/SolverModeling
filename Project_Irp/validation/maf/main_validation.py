@@ -2,10 +2,10 @@
 MaF validation CLI — runs NSGA-III on MaF1-7 (Cui et al. 2025 protocol, M=3/M=4).
 
 Usage:
-    python -m validation.maf.main_validation                      # 20 runs, 4 objectives
+    python -m validation.maf.main_validation                      # 30 runs, 4 objectives
     python -m validation.maf.main_validation --runs 3             # 3 runs, 4 objectives
-    python -m validation.maf.main_validation --n_obj 3            # 20 runs, 3 objectives
-    python -m validation.maf.main_validation --n_obj 3 --runs 20  # full 3-obj validation
+    python -m validation.maf.main_validation --n_obj 3            # 30 runs, 3 objectives
+    python -m validation.maf.main_validation --n_obj 3 --runs 30  # full 3-obj validation
 """
 import argparse
 import os
@@ -24,8 +24,8 @@ if __name__ == "__main__":
         description="Validate NSGA-III on MaF1-7 (Cui et al. 2025 protocol, M=3/M=4)"
     )
     parser.add_argument(
-        "--runs", type=int, default=20,
-        help="Number of independent runs per problem (default: 20)"
+        "--runs", type=int, default=30,
+        help="Number of independent runs per problem (default: 30)"
     )
     parser.add_argument(
         "--n_obj", type=int, default=4, choices=[3, 4],
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.runs < 1 or args.runs > 20:
-        print("--runs must be between 1 and 20")
+    if args.runs < 1 or args.runs > 30:
+        print("--runs must be between 1 and 30")
         sys.exit(1)
 
     validate(
