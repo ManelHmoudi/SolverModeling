@@ -1,6 +1,6 @@
 # Résultats de validation — DTLZ (NSGA-III, IGD)
 
-Protocole : 30 exécutions indépendantes par problème/dimension (seeds fixes), moteur `validation/algorithms/nsga3_runner.py`.
+Protocole : 30 exécutions indépendantes par problème/dimension (seeds fixes), moteur `validation/algorithms/nsga3/runner.py`.
 M3 = 3 objectifs, M4 = 4 objectifs. DTLZ5–DTLZ7 ne sont validés qu'en M3 (pas de fichier M4 disponible).
 
 ---

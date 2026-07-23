@@ -1,6 +1,6 @@
 # Résultats de validation — MaF (NSGA-III, IGD)
 
-Protocole : 30 exécutions indépendantes par problème/dimension (seeds fixes), moteur `validation/algorithms/nsga3_runner.py` (identique au moteur DTLZ).
+Protocole : 30 exécutions indépendantes par problème/dimension (seeds fixes), moteur `validation/algorithms/nsga3/runner.py` (identique au moteur DTLZ).
 M3 = 3 objectifs, M4 = 4 objectifs.
 
 ---

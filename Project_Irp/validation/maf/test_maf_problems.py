@@ -6,7 +6,7 @@ from pymoo.indicators.igd import IGD
 from pymoo.util.ref_dirs import get_reference_directions
 from validation.maf.maf_problems import get_problem, PROBLEM_NAMES
 
-# n_gen = TMAX(30000) // pop_size, pop_size from nsga3_runner.get_run_config:
+# n_gen = TMAX(30000) // pop_size, pop_size from nsga3.runner.get_run_config:
 #   M=3 -> N=92 -> n_gen=326 ; M=4 -> N=120 -> n_gen=250
 # (same protocol as DTLZ, Cui et al. 2025, Table 2 — identical row for MaF 1-7.)
 

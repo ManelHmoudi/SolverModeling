@@ -10,7 +10,7 @@ Termination — fixed evaluation budget (Cui et al. 2025, Complex & Intelligent
 Systems 11:136, Table 2): Tmax = 30000 evaluations, n_gen = Tmax // pop_size.
 This gives the same compute budget to every problem at a given M, and covers
 DTLZ5-7 (not studied by Deb & Jain 2014's per-problem generation table, which
-this project no longer follows). pop_size comes from nsga3_runner.get_run_config
+this project no longer follows). pop_size comes from nsga3.runner.get_run_config
 (Das-Dennis reference directions; M=3 and M=4 only, matching Cui et al.'s own
 scope), so the actual generation count depends on M: M=3 (N=92) -> 326 gens,
 M=4 (N=120) -> 250 gens.

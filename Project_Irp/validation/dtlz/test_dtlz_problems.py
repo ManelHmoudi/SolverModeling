@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from validation.dtlz.dtlz_problems import get_problem, PROBLEM_NAMES
 
-# n_gen = TMAX(30000) // pop_size, pop_size from nsga3_runner.get_run_config:
+# n_gen = TMAX(30000) // pop_size, pop_size from nsga3.runner.get_run_config:
 #   M=3 -> N=92 -> n_gen=326 ; M=4 -> N=120 -> n_gen=250
 # (Cui et al. 2025, Table 2, only studies M=3 and M=4.)
 
