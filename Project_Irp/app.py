@@ -120,7 +120,7 @@ _BENCHMARK_M_VALUES = [3, 4]  # Cui et al. (2025), Table 2, only studies M=3 and
 
 
 def _read_igd_runs(results_dir: str, problem: str, n_obj: int):
-    path = os.path.join(results_dir, f"igd_{problem}_M{n_obj}.csv")
+    path = os.path.join(results_dir, "nsga3", f"igd_{problem}_M{n_obj}.csv")
     if not os.path.exists(path):
         return []
     rows = []
