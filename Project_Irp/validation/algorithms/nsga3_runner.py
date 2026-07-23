@@ -42,14 +42,7 @@ _ref_dirs_4 = get_reference_directions("das-dennis", 4, n_partitions=7)
 N_REF_DIRS = len(_ref_dirs_4)  # C(10,7) = 120
 POP_SIZE = N_REF_DIRS + (4 - N_REF_DIRS % 4) % 4  # 120 (already a multiple of 4)
 
-# 30 distinct deterministic seeds (first 20 match Cui et al. 2025's protocol;
-# 10 more appended to extend the run count beyond the article without
-# invalidating the original 20 runs' results).
-_SEEDS = [
-    42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123,
-    1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351,
-    2467, 2593, 2711, 2837, 2953, 3079, 3191, 3313, 3433, 3557,
-]
+from validation.algorithms.seeds import SEEDS as _SEEDS
 
 
 def get_run_config(n_obj: int):
