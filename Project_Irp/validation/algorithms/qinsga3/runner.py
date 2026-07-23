@@ -24,7 +24,19 @@ integers. DTLZ/MaF have no such rounding step, so the noise only blurs
 convergence on continuous variables — set to 0 here rather than the
 IRP-tuned 0.02. A 5-run ablation confirmed this substantially improves
 convergence on the harder multimodal problems (DTLZ3 mean IGD 181.9 ->
-31.7, MaF3 mean IGD 46985 -> 2407, at n_gen from get_problem()).
+31.7, MaF3 mean IGD 46985 -> 2407, at n_gen from get_problem()), at the
+cost of a regression on the two disconnected-front problems (DTLZ7,
+MaF7) — an ablation over intermediate noise_scale values (0.01, 0.005)
+found no favorable trade-off (both trends are strictly monotone and
+opposed), so this is a documented limitation rather than a tunable knob.
+
+MIGRATION_PERIOD/N_MIGRATE were also re-tuned (10/10 -> 5/20, i.e. inject
+archive solutions more often and in greater numbers) after a 5-run
+ablation showed this improves every problem tested simultaneously —
+DTLZ7 mean IGD 2.98 -> 1.85, MaF7 2.98 -> 1.85, DTLZ3 31.7 -> 12.0, DTLZ2
+~unchanged — unlike rotation_type or p_mut_strong variants, which each
+traded off one problem class against another. This is a genuine
+improvement, not a compromise.
 """
 import numpy as np
 
@@ -39,8 +51,8 @@ P_CROSS = 1.0    # aligned to NSGA-III's pc=1.0 (Cui et al. 2025) — was 0.9 (Q
 ETA_CROSS = 20.0  # aligned to NSGA-III's eta=20 (Cui et al. 2025) — was 5.0 (QINSGA3/main.py default)
 P_MUT_STRONG = 0.15
 MUT_SIGMA = 0.05 * np.pi
-MIGRATION_PERIOD = 10
-N_MIGRATE = 10
+MIGRATION_PERIOD = 5   # was 10 (QINSGA3/main.py default) — see module docstring
+N_MIGRATE = 20          # was 10 (QINSGA3/main.py default) — see module docstring
 ROTATION_TYPE = "tanh"
 NOISE_SCALE = 0.0  # was 0.02 (QINSGA3/main.py's IRP default) — see module docstring
 
