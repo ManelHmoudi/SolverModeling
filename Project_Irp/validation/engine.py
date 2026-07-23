@@ -49,11 +49,11 @@ def _save_summary_csv(results_dir: str, summary_rows: list, n_obj: int) -> str:
     return path
 
 
-def _print_table(suite_label: str, summary_rows: list, n_obj: int):
+def _print_table(suite_label: str, summary_rows: list, n_obj: int, algorithm_label: str):
     header = f"{'Problem':<10} {'IGD Best':>12} {'IGD Median':>12} {'IGD Worst':>12} {'IGD Mean':>12} {'IGD Std':>12}"
     sep = "-" * len(header)
     print("\n" + sep)
-    print(f"  NSGA-III on {suite_label} ({n_obj} objectives) - Cui et al. 2025 protocol")
+    print(f"  {algorithm_label} on {suite_label} ({n_obj} objectives) - Cui et al. 2025 protocol")
     print(sep)
     print(header)
     print(sep)
@@ -66,8 +66,8 @@ def _print_table(suite_label: str, summary_rows: list, n_obj: int):
 
 
 def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 30, n_obj: int = 4,
-             run_experiment_fn=_default_run_experiment):
-    """Run NSGA-III validation on every problem in problems_module.PROBLEM_NAMES.
+             run_experiment_fn=_default_run_experiment, algorithm_label: str = "NSGA-III"):
+    """Run many-objective validation on every problem in problems_module.PROBLEM_NAMES.
 
     Args:
         problems_module : module exposing PROBLEM_NAMES, get_problem(name, n_obj),
@@ -79,6 +79,7 @@ def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 
         n_obj             : number of objectives.
         run_experiment_fn : callable(problem_name, problem, n_gen, n_runs) -> list of fronts;
                              defaults to the classic NSGA-III runner.
+        algorithm_label   : display name for the printed results table (e.g. "NSGA-III", "QINSGA3").
 
     Returns:
         List of summary dicts with keys: problem, best, median, worst, mean, std.
@@ -123,5 +124,5 @@ def validate(problems_module, results_dir: str, suite_label: str, n_runs: int = 
     summary_path = _save_summary_csv(results_dir, summary_rows, n_obj)
     print(f"\nSummary CSV -> {summary_path}")
 
-    _print_table(suite_label, summary_rows, n_obj)
+    _print_table(suite_label, summary_rows, n_obj, algorithm_label)
     return summary_rows

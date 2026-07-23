@@ -42,8 +42,10 @@ if __name__ == "__main__":
 
     if args.algorithm == "qinsga3":
         from validation.algorithms.qinsga3.runner import run_experiment
+        algorithm_label = "QINSGA3"
     else:
         from validation.algorithms.nsga3.runner import run_experiment
+        algorithm_label = "NSGA-III"
 
     RESULTS_DIR_ALGO = os.path.join(os.path.dirname(__file__), "results", args.algorithm)
 
@@ -54,4 +56,5 @@ if __name__ == "__main__":
         n_runs=args.runs,
         n_obj=args.n_obj,
         run_experiment_fn=run_experiment,
+        algorithm_label=algorithm_label,
     )
