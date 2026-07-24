@@ -235,7 +235,7 @@ def _migrate(
     """Inject best archive θ per niche into n_migrate individuals [Han & Kim 2002].
 
     arch_F_norm is pre-normalised by the caller (same array as passed to
-    _supplement_from_archive) — no additional _normalise_F call needed here.
+    _select_guides) — no additional _normalise_F call needed here.
     """
     arch_assoc = _assign_ref_dirs(arch_F_norm, ref_dirs)
 
