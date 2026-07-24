@@ -54,7 +54,7 @@ def test_select_guides_front_beats_worse_archive():
         [0.0, 0.0],
     ])
     arch_theta  = np.array([[0.9]])
-    arch_F_norm = np.array([[0.5, 0.95]])   # d_perp^2 = 0.9025 > front's 0.81
+    arch_F_norm = np.array([[1.5, 0.95]])   # d_perp^2 to ray0 = 0.9025 > front's 0.81
 
     guides = _select_guides(
         assoc, pareto_idx, F_norm, REF_DIRS_2, qpop_theta,
@@ -106,3 +106,26 @@ def test_select_guides_without_archive_matches_front_only_behaviour():
 
     assert guides[0, 0] == 0.1
     assert guides[2, 0] == 0.3
+
+
+def test_select_guides_niche_with_neither_front_nor_archive_uses_global_fallback():
+    """A niche with no Pareto-front representative and no archive representative
+    either (even though the archive itself is available) -> falls back to the
+    global fallback (closest-to-origin Pareto member), same as when there's no
+    archive at all."""
+    assoc      = np.array([0, 1])
+    pareto_idx = np.array([0])       # only niche 0 covered by the front
+    qpop_theta = np.array([[0.1], [0.2]])
+    F_norm     = np.array([
+        [0.5, 0.1],
+        [0.0, 0.0],
+    ])
+    arch_theta  = np.array([[0.9]])
+    arch_F_norm = np.array([[0.5, 0.05]])   # assigned to niche 0, not niche 1
+
+    guides = _select_guides(
+        assoc, pareto_idx, F_norm, REF_DIRS_2, qpop_theta,
+        arch_theta=arch_theta, arch_F_norm=arch_F_norm,
+    )
+
+    assert guides[1, 0] == 0.1   # niche 1: neither front nor archive -> global fallback
