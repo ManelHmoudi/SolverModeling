@@ -510,4 +510,17 @@ Le réglage final (crossover aligné + bruit désactivé + migration réajustée
 
 Aucune valeur intermédiaire n'est un compromis favorable — 0.005 et 0.01 sont pires que les deux extrêmes pour chacun des deux problèmes. Ce n'est pas un réglage à affiner mais un vrai dilemme structurel (précision de convergence vs maintien de la diversité entre régions disjointes), sans solution à un seul paramètre global. `noise_scale=0` reste donc le réglage retenu pour ce rapport, avec la régression sur DTLZ7 documentée comme limite connue plutôt que corrigée.
 
+**Piste explorée et écartée : guide élitiste par niche.** Conception détaillée dans `docs/superpowers/specs/2026-07-24-qinsga3-elitist-guide-design.md` et implémentation dans `docs/superpowers/plans/2026-07-24-qinsga3-elitist-guide.md` (Tâches 1-4, mergées et testées) : `_select_guides` compare, pour chaque niche, le meilleur représentant du front Pareto courant à celui de l'archive externe (élitiste par construction) et garde le plus proche de la direction de référence — au lieu de recalculer sans mémoire à chaque génération. Un test d'ablation à 5 runs sur DTLZ1 et DTLZ3 (mêmes 5 premiers seeds que ci-dessus) donne :
+
+| Problème | Métrique | Réglage actuel (30 runs) | Guide élitiste (5 runs) |
+|---|---|---|---|
+| DTLZ1 | mean | 0.228982 | 0.240365 (comparable) |
+| DTLZ1 | worst | 1.536838 | **0.346592** (nettement plus serré) |
+| DTLZ1 | std | 0.285543 | 0.078104 (nettement plus serré) |
+| DTLZ3 | mean | 8.116732 | 24.765429 (×3 pire) |
+| DTLZ3 | worst | 24.535356 | 71.955994 (pire) |
+| DTLZ3 | std | 5.553143 | 26.872776 (×5 pire) |
+
+DTLZ1 s'améliore comme prévu (le guide élitiste réduit nettement la variance et le pire cas — c'était l'objectif). Mais DTLZ3 régresse nettement sur mean/worst/std, pas seulement du bruit d'échantillon 5-runs. Hypothèse : DTLZ3 est fortement multimodal — un guide élitiste sans mécanisme d'échappement (catastrophe / diversity-preserving operator, cf. littérature QEA citée dans la spec) peut se verrouiller sur un optimum local pour tout le run, un piège classique de l'élitisme en évolution différentielle/quantique. Décision : **non retenu** — le code des Tâches 1-4 reste committé sur la branche (testé, revu, approuvé) mais la campagne complète à 30 runs n'a pas été lancée et ce réglage n'est pas adopté dans ce rapport ; le réglage en vigueur reste celui du tableau "Comparaison avec NSGA-III classique" ci-dessus (étape 4, migration réajustée).
+
 **Piste retenue : migration réajustée.** Un test à 5 runs comparant `rotation_type` (linear, tanh_soft), `p_mut_strong=0.30` et `migration_period=5/n_migrate=20` contre la configuration de base montre que seule la migration réajustée améliore **simultanément** DTLZ7, MaF7 ET DTLZ3, sans dégrader DTLZ2 — contrairement aux autres variantes qui améliorent un problème en dégradant l'autre. C'est le réglage final retenu (voir tableau ci-dessus).
