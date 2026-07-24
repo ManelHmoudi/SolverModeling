@@ -459,23 +459,23 @@ def run_qinsga3(
                 arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
             )
 
-            F_norm = _normalise_F(F_pen)
+            ideal, denom = _normalise_stats(F_pen)
+            F_norm = (F_pen - ideal) / denom
             assoc  = _assign_ref_dirs(F_norm, ref_dirs)
 
-            guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
-
-            # arch_F_norm computed once and shared by both _supplement_from_archive
-            # and _migrate — avoids a redundant _normalise_F call per generation
+            # arch_F_norm projected into the SAME ideal/denom as F_norm (not its
+            # own) so _select_guides can validly compare front vs archive
+            # distances; also reused by _migrate below.
             arch_theta_arr = None
             arch_F_norm    = None
             if len(arch_X) >= 4:
                 arch_theta_arr = np.array(arch_theta)
-                arch_F_norm    = _normalise_F(np.array(arch_F))
-                pareto_assoc   = assoc[pareto_idx]
-                guides_theta   = _supplement_from_archive(
-                    guides_theta, assoc, pareto_assoc,
-                    arch_theta_arr, arch_F_norm, ref_dirs,
-                )
+                arch_F_norm    = (np.array(arch_F) - ideal) / denom
+
+            guides_theta = _select_guides(
+                assoc, pareto_idx, F_norm, ref_dirs, qpop.theta,
+                arch_theta=arch_theta_arr, arch_F_norm=arch_F_norm,
+            )
 
             alpha = alpha_min + (alpha_max - alpha_min) * (1.0 - gen / max_gen)
 
