@@ -100,11 +100,23 @@ def _compute_nadir(F: np.ndarray, ideal: np.ndarray) -> np.ndarray:
     return F.max(axis=0)
 
 
-def _normalise_F(F: np.ndarray) -> np.ndarray:
-    """Normalise F: ideal point + nadir from hyperplane (Deb & Jain 2014, §IV-A)."""
+def _normalise_stats(F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Ideal point + nadir-minus-ideal span for F (Deb & Jain 2014, §IV-A).
+
+    Split out of _normalise_F so callers that need to project a SECOND array
+    (e.g. an external archive) into the exact same normalised frame as F can
+    reuse (ideal, denom) instead of recomputing their own — required for a
+    valid distance comparison between the two arrays.
+    """
     ideal = F.min(axis=0)
     nadir = _compute_nadir(F, ideal)
     denom = np.where(nadir - ideal > 1e-9, nadir - ideal, 1.0)
+    return ideal, denom
+
+
+def _normalise_F(F: np.ndarray) -> np.ndarray:
+    """Normalise F: ideal point + nadir from hyperplane (Deb & Jain 2014, §IV-A)."""
+    ideal, denom = _normalise_stats(F)
     return (F - ideal) / denom
 
 
