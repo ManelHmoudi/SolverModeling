@@ -3,7 +3,8 @@
 Mirrors QINSGA3/algorithm.py::run_qinsga3()'s algorithm exactly (same
 generation order: measure -> evaluate -> penalise -> non-dominated sort ->
 archive update -> normalise -> assign ref dirs -> select guides (elitist:
-front + archive) -> rotate -> crossover -> mutate -> migrate), but:
+front + archive) -> rotate -> crossover -> mutate -> diversity preserve ->
+migrate), but:
 
   - evaluates the whole population in one vectorised pymoo
     Problem.evaluate() call per generation instead of a multiprocessing
@@ -28,10 +29,12 @@ from QINSGA3.algorithm import (
     _archive_update,
     _assign_ref_dirs,
     _crowding_trim,
+    _diversity_preserve_mask,
     _migrate,
     _normalise_stats,
     _penalised_F,
     _select_guides,
+    _update_niche_stagnation,
 )
 from QINSGA3.chromosome import QuantumPopulation
 
@@ -50,6 +53,9 @@ def run_qinsga3_generic(
     eta_cross: float,
     migration_period: int,
     n_migrate: int,
+    gamma_converge: float,
+    delta_similar: float,
+    t_stagnation: int,
     seed: int,
     rotation_type: str = "tanh",
     noise_scale: float = 0.02,
@@ -79,6 +85,9 @@ def run_qinsga3_generic(
     arch_F: list[np.ndarray] = []
     arch_theta: list[np.ndarray] = []
     _MAX_ARCHIVE = 500
+
+    niche_guide_history: dict = {}
+    niche_stagnation:    dict = {}
 
     def _eval_batch(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         F, G = problem.evaluate(X, return_values_of=["F", "G"])
@@ -121,6 +130,16 @@ def run_qinsga3_generic(
             qpop.crossover(p_cross, eta_cross)
 
         qpop.mutate(p_mut, p_mut_strong, mut_sigma)
+
+        niche_guide_history, niche_stagnation, stagnant = _update_niche_stagnation(
+            assoc, guides_theta, niche_guide_history, niche_stagnation, t_stagnation,
+        )
+        if t_stagnation > 0 and stagnant:
+            reset_mask = _diversity_preserve_mask(
+                assoc, qpop.theta, F_norm, ref_dirs, stagnant,
+                gamma_converge, delta_similar,
+            )
+            qpop.theta[reset_mask] = np.pi / 4.0
 
         if (arch_F_norm is not None
                 and migration_period > 0
