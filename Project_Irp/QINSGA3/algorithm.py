@@ -507,7 +507,7 @@ def run_qinsga3(
     eta_cross:        float = 5.0,
     migration_period: int   = 10,
     n_migrate:        int   = 10,
-    gamma_converge:   float = 0.99,
+    gamma_converge:   float = 0.5,
     delta_similar:    float = 0.1,
     t_stagnation:     int   = 5,
     seed:             int   = 42,

@@ -50,6 +50,19 @@ tested. Starting values are the paper's own empirically-found good ranges
 docs/superpowers/specs/2026-07-24-qinsga3-diversity-preserving-design.md
 for the full formula derivation and the ablation methodology used to
 validate (or reject) them before any adoption.
+
+GAMMA_CONVERGE was recalibrated from the paper's own 0.99 to 0.5 after a
+5-run DTLZ1/DTLZ3 ablation showed the operator never triggered a single
+reset at 0.99 — diagnostic instrumentation found the population-wide
+convergence score (mean |cos(2*theta)| across genes) never exceeds ~0.6-0.77
+(DTLZ1) or ~0.57-0.61 (DTLZ3) even at the final generation of a 326-generation
+run, since QINSGA3's continuous SBX crossover and two-tier mutation
+continuously reintroduce exploration that the paper's crossover-free QEA
+does not have, preventing theta from ever collapsing as tightly toward
+0/pi/2. 0.5 is comfortably below the observed late-run upper tail (so the
+operator can engage) while staying above typical early/mid-run scores
+(~0.15-0.4) -- itself a starting point pending re-validation via the same
+ablation methodology, not a proven-final value.
 """
 import numpy as np
 
@@ -68,7 +81,7 @@ MIGRATION_PERIOD = 5   # was 10 (QINSGA3/main.py default) — see module docstri
 N_MIGRATE = 20          # was 10 (QINSGA3/main.py default) — see module docstring
 ROTATION_TYPE = "tanh"
 NOISE_SCALE = 0.0  # was 0.02 (QINSGA3/main.py's IRP default) — see module docstring
-GAMMA_CONVERGE = 0.99   # Tayarani-N & Akbarzadeh-T (2014) diversity-preserving operator — see module docstring
+GAMMA_CONVERGE = 0.5    # recalibrated from the paper's 0.99 — see module docstring
 DELTA_SIMILAR = 0.1     # most problem-sensitive parameter per the paper's own Table 4 — primary ablation target
 T_STAGNATION = 5        # generations a niche's guide must be unchanged before the operator applies
 
