@@ -179,3 +179,66 @@ def test_update_niche_stagnation_resets_when_guide_changes():
         assoc, guide_b, history, counters, t_stagnation)
     assert counters[0] == 0
     assert 0 not in stagnant
+
+
+from QINSGA3.algorithm import _diversity_preserve_mask
+
+
+def test_diversity_preserve_mask_resets_similar_converged_neighbour():
+    """Within a stagnant niche: the champion (closest to the reference ray)
+    is kept; a converged individual similar to it (eq. 12) is reset; a
+    converged individual NOT similar to it is left alone; an unconverged
+    individual (eq. 11) is left alone regardless of proximity."""
+    assoc = np.array([0, 0, 0, 0])
+    ref_dirs = np.array([[1.0, 0.0], [0.0, 1.0]])
+    qpop_theta = np.array([
+        [0.05],   # champion: converged, closest to ray0
+        [0.06],   # converged AND similar to champion -> reset
+        [1.52],   # converged but NOT similar to champion -> kept
+        [0.78],   # NOT converged (near pi/4) -> kept regardless of distance
+    ])
+    F_norm = np.array([
+        [0.9, 0.05],
+        [0.5, 0.5],
+        [0.5, 0.6],
+        [0.0, 0.0],
+    ])
+
+    mask = _diversity_preserve_mask(
+        assoc, qpop_theta, F_norm, ref_dirs, stagnant_niches={0},
+        gamma=0.99, delta=0.1,
+    )
+
+    assert mask.tolist() == [False, True, False, False]
+
+
+def test_diversity_preserve_mask_ignores_non_stagnant_niches():
+    """A niche not in stagnant_niches is never touched, even if its
+    individuals would otherwise satisfy the converged+similar criteria."""
+    assoc = np.array([0, 0])
+    ref_dirs = np.array([[1.0, 0.0], [0.0, 1.0]])
+    qpop_theta = np.array([[0.05], [0.06]])
+    F_norm = np.array([[0.9, 0.05], [0.5, 0.5]])
+
+    mask = _diversity_preserve_mask(
+        assoc, qpop_theta, F_norm, ref_dirs, stagnant_niches=set(),
+        gamma=0.99, delta=0.1,
+    )
+
+    assert mask.tolist() == [False, False]
+
+
+def test_diversity_preserve_mask_skips_niche_with_fewer_than_two_converged():
+    """A stagnant niche with fewer than 2 converged individuals has nothing
+    to compare, so nothing is reset."""
+    assoc = np.array([0, 0])
+    ref_dirs = np.array([[1.0, 0.0], [0.0, 1.0]])
+    qpop_theta = np.array([[0.05], [0.78]])   # only one converged (0.78 is not)
+    F_norm = np.array([[0.9, 0.05], [0.0, 0.0]])
+
+    mask = _diversity_preserve_mask(
+        assoc, qpop_theta, F_norm, ref_dirs, stagnant_niches={0},
+        gamma=0.99, delta=0.1,
+    )
+
+    assert mask.tolist() == [False, False]

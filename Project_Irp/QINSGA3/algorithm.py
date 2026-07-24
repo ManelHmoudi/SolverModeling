@@ -297,6 +297,72 @@ def _update_niche_stagnation(
     return new_history, new_counters, stagnant
 
 
+def _diversity_preserve_mask(
+    assoc:           np.ndarray,
+    qpop_theta:      np.ndarray,
+    F_norm:          np.ndarray,
+    ref_dirs:        np.ndarray,
+    stagnant_niches: set,
+    gamma:           float,
+    delta:           float,
+) -> np.ndarray:
+    """Diversity Preserving operator [Tayarani-N & Akbarzadeh-T 2014, eq.
+    11-14], restricted to niches whose guide has been stagnant for
+    t_stagnation generations (see _update_niche_stagnation).
+
+    Convergence (eq. 11, exact port -- QINSGA3 already uses
+    |alpha_ik|^2 = cos^2(theta_ik), and 1 - 2cos^2(theta) == -cos(2*theta)):
+        (1/n_genes) * sum_k |cos(2*theta_ik)| > gamma
+
+    Similarity (eq. 12, adapted from Hamming distance on observed bits to
+    normalised distance on continuous theta):
+        (1/n_genes) * sum_k |theta_ik - theta_jk| / (pi/2) < delta
+
+    Within each stagnant niche, "best" (kept, eq. 14) is the converged
+    individual closest to the niche's reference ray -- the same criterion
+    _select_guides already uses to pick a niche's own representative.
+    Similarity is checked against this best individual specifically
+    (rather than fully general pairwise clustering): the champion IS the
+    attractor this operator exists to help individuals escape from, so
+    comparing everyone else in the niche against it directly targets the
+    diagnosed failure mode.
+
+    Returns a boolean mask of shape (pop_size,): True for individuals the
+    caller should reset to pi/4 (eq. 14's reinitialisation value, which is
+    QINSGA3's own "maximum superposition" constant -- see
+    QuantumPopulation.__init__).
+    """
+    pop_size = len(assoc)
+    reset    = np.zeros(pop_size, dtype=bool)
+
+    if not stagnant_niches:
+        return reset
+
+    conv_score = np.abs(np.cos(2.0 * qpop_theta)).mean(axis=1)
+    converged  = conv_score > gamma
+
+    ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
+    ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)
+
+    for rd in stagnant_niches:
+        niche_idx = np.where((assoc == rd) & converged)[0]
+        if len(niche_idx) < 2:
+            continue
+
+        proj    = F_norm[niche_idx] @ ref_unit[rd]
+        d_perp2 = np.maximum((F_norm[niche_idx] ** 2).sum(axis=1) - proj ** 2, 0.0)
+        best_local = niche_idx[d_perp2.argmin()]
+
+        best_theta   = qpop_theta[best_local]
+        dist         = np.abs(qpop_theta[niche_idx] - best_theta).mean(axis=1) / (np.pi / 2.0)
+        similar_mask = dist < delta
+
+        losers = niche_idx[similar_mask & (niche_idx != best_local)]
+        reset[losers] = True
+
+    return reset
+
+
 # ---------------------------------------------------------------------------
 # Crowding distance and archive trimming (vectorised)
 # ---------------------------------------------------------------------------
