@@ -8,7 +8,9 @@ Algorithm per generation  [Li et al. ICNC 2008; Deb & Jain 2014]:
   4. NSGA-III non-dominated sort on penalised F
   5. Normalise F via ideal + nadir hyperplane  [Deb & Jain 2014 §IV-A]
   6. Assign each solution to nearest reference direction
-  7. Guide selection: best Pareto member in same niche; archive fills empty niches
+  7. Guide selection: elitist per niche — best of (current Pareto front,
+     archive), archive normalised in the same ideal/nadir frame as the
+     population [Han & Kim 2002 elitism principle]
   8. Adaptive rotation: Δθ = α(g) × tanh((θ_guide − θ) / (π/8)),  α linear decay
   9. SBX crossover + quantum mutation
 
@@ -16,11 +18,12 @@ Performance:
   - Population evaluation is parallelised via ProcessPoolExecutor.  Each worker
     process holds one IRPProblem singleton (created once in _worker_init, not
     recreated per evaluation call) — eliminates repeated construction overhead.
-  - _crowding_distance, _select_guides, _supplement_from_archive, and
-    _archive_update are fully vectorised with NumPy broadcasting — no Python
-    inner loops over population or archive members.
-  - arch_F_norm is computed once per generation and shared by both
-    _supplement_from_archive and _migrate, removing a redundant _normalise_F call.
+  - _crowding_distance, _select_guides, and _archive_update are fully
+    vectorised with NumPy broadcasting — no Python inner loops over
+    population or archive members.
+  - arch_F_norm is computed once per generation (projected into the
+    population's ideal/nadir frame via _normalise_stats) and shared by both
+    _select_guides and _migrate.
 """
 
 from __future__ import annotations
@@ -138,88 +141,80 @@ def _assign_ref_dirs(F_norm: np.ndarray, ref_dirs: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def _select_guides(
-    assoc:      np.ndarray,
-    pareto_idx: np.ndarray,
-    F_norm:     np.ndarray,
-    ref_dirs:   np.ndarray,
-    qpop_theta: np.ndarray,
+    assoc:       np.ndarray,
+    pareto_idx:  np.ndarray,
+    F_norm:      np.ndarray,
+    ref_dirs:    np.ndarray,
+    qpop_theta:  np.ndarray,
+    arch_theta:  np.ndarray | None = None,
+    arch_F_norm: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Return guide θ angles for each individual from the current Pareto front.
+    """Return elitist guide theta angles for each individual, one per niche.
 
-    Vectorised variant: iterates over unique occupied niches (≤ n_ref_dirs ≪ N)
-    instead of all N individuals.  For each occupied niche the best Pareto member
-    (minimum perpendicular distance to its reference ray) is broadcast to every
-    population member in that niche [Deb & Jain 2014, §IV-B].
-    Population members whose niche has no Pareto representative receive the
-    Pareto member closest to the origin as a global fallback.
+    For every niche present in `assoc`, compares the current Pareto front's
+    best representative (smallest perpendicular distance to the reference
+    ray) against the archive's best representative in the same niche, and
+    keeps whichever is closer. A niche with a representative on only one
+    side uses that side; a niche with neither uses the global fallback
+    (closest-to-origin Pareto member) — same fallback as before.
+
+    `arch_theta`/`arch_F_norm` are optional (default None, meaning "no
+    archive yet" — same output as before this function had archive support).
+    When provided, `arch_F_norm` MUST already be normalised in the SAME
+    ideal/nadir frame as `F_norm` — the caller's responsibility — otherwise
+    the two perpendicular distances are not on a comparable scale.
+
+    This generalises the old split between front-only `_select_guides` and
+    archive-only-for-empty-niches `_supplement_from_archive`: the archive is
+    elitist by construction (`_archive_update` never lets a dominated
+    solution survive), so consulting it for every niche — not just
+    uncovered ones — stops a niche's guide from regressing across
+    generations [Han & Kim 2002 elitism principle; Zhang 2011 survey,
+    "attractor replaced only if better"].
     """
-    N            = len(assoc)
-    F_par_n      = F_norm[pareto_idx]
-    global_fb    = qpop_theta[pareto_idx[np.linalg.norm(F_par_n, axis=1).argmin()]]
-    pareto_assoc = assoc[pareto_idx]
-
-    # Pre-normalise all reference directions once — reused for every niche iteration
-    ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
-    ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)  # (n_dirs, M)
-
-    guides_theta = np.tile(global_fb, (N, 1))   # default: global fallback
-
-    for rd in np.unique(pareto_assoc):
-        same_mask = pareto_assoc == rd
-        same_idx  = pareto_idx[same_mask]
-
-        if len(same_idx) == 1:
-            best_theta = qpop_theta[same_idx[0]]
-        else:
-            F_same  = F_norm[same_idx]
-            proj    = F_same @ ref_unit[rd]
-            d_perp2 = np.maximum((F_same ** 2).sum(axis=1) - proj ** 2, 0.0)
-            best_theta = qpop_theta[same_idx[d_perp2.argmin()]]
-
-        guides_theta[assoc == rd] = best_theta  # broadcast to whole niche at once
-
-    return guides_theta
-
-
-def _supplement_from_archive(
-    guides_theta: np.ndarray,
-    assoc:        np.ndarray,
-    pareto_assoc: np.ndarray,
-    arch_theta:   np.ndarray,
-    arch_F_norm:  np.ndarray,
-    ref_dirs:     np.ndarray,
-) -> np.ndarray:
-    """Fill empty-niche guides from the external archive [Li & Wang 2007, §III-C].
-
-    arch_F_norm is pre-normalised by the caller — the same array is reused by
-    _migrate in the same generation, so _normalise_F is called only once total.
-
-    Vectorised: iterates only over niches that are (a) not covered by the current
-    Pareto front and (b) present in the population — typically a small subset of
-    n_ref_dirs.
-    """
-    arch_assoc = _assign_ref_dirs(arch_F_norm, ref_dirs)
-    covered    = set(pareto_assoc.tolist())
+    N         = len(assoc)
+    F_par_n   = F_norm[pareto_idx]
+    global_fb = qpop_theta[pareto_idx[np.linalg.norm(F_par_n, axis=1).argmin()]]
 
     ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
     ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)
 
-    pop_rds           = np.unique(assoc)
-    uncovered_pop_rds = pop_rds[~np.isin(pop_rds, list(covered))]
+    have_archive = arch_theta is not None and arch_F_norm is not None and len(arch_theta) > 0
+    arch_assoc   = _assign_ref_dirs(arch_F_norm, ref_dirs) if have_archive else None
 
-    for rd in uncovered_pop_rds:
-        in_niche = np.where(arch_assoc == rd)[0]
-        if len(in_niche) == 0:
-            continue
-        if len(in_niche) == 1:
-            best_theta = arch_theta[in_niche[0]]
+    def _best_in_niche(cand_theta: np.ndarray, cand_F: np.ndarray, rd: int):
+        proj    = cand_F @ ref_unit[rd]
+        d_perp2 = np.maximum((cand_F ** 2).sum(axis=1) - proj ** 2, 0.0)
+        best    = d_perp2.argmin()
+        return cand_theta[best], d_perp2[best]
+
+    guides_theta = np.tile(global_fb, (N, 1))   # default: global fallback
+
+    for rd in np.unique(assoc):
+        front_idx = pareto_idx[assoc[pareto_idx] == rd]
+        front_theta, front_dist = (
+            _best_in_niche(qpop_theta[front_idx], F_norm[front_idx], rd)
+            if len(front_idx) > 0 else (None, None)
+        )
+
+        arch_theta_best, arch_dist = (None, None)
+        if have_archive:
+            in_niche = np.where(arch_assoc == rd)[0]
+            if len(in_niche) > 0:
+                arch_theta_best, arch_dist = _best_in_niche(
+                    arch_theta[in_niche], arch_F_norm[in_niche], rd
+                )
+
+        if front_theta is None and arch_theta_best is None:
+            continue   # keep the global fallback already in guides_theta
+        if front_theta is None:
+            best_theta = arch_theta_best
+        elif arch_theta_best is None:
+            best_theta = front_theta
         else:
-            F_cand  = arch_F_norm[in_niche]
-            proj    = F_cand @ ref_unit[rd]
-            d_perp2 = np.maximum((F_cand ** 2).sum(axis=1) - proj ** 2, 0.0)
-            best_theta = arch_theta[in_niche[d_perp2.argmin()]]
+            best_theta = front_theta if front_dist <= arch_dist else arch_theta_best
 
-        guides_theta[assoc == rd] = best_theta
+        guides_theta[assoc == rd] = best_theta   # broadcast to whole niche at once
 
     return guides_theta
 

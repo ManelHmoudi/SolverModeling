@@ -1,6 +1,6 @@
 import numpy as np
 
-from QINSGA3.algorithm import _normalise_F, _normalise_stats
+from QINSGA3.algorithm import _normalise_F, _normalise_stats, _select_guides
 
 
 def test_normalise_F_matches_normalise_stats_composition():
@@ -12,3 +12,97 @@ def test_normalise_F_matches_normalise_stats_composition():
     expected = (F - ideal) / denom
 
     np.testing.assert_allclose(_normalise_F(F), expected)
+
+
+REF_DIRS_2 = np.array([[1.0, 0.0], [0.0, 1.0]])
+
+
+def test_select_guides_archive_better_than_front_wins():
+    """Archive holds a strictly closer representative for niche 0 than the
+    current Pareto front -> the guide for niche 0 comes from the archive."""
+    assoc      = np.array([0, 0, 1, 1])
+    pareto_idx = np.array([0, 2])
+    qpop_theta = np.array([[0.1], [0.2], [0.3], [0.4]])
+    F_norm     = np.array([
+        [0.5, 0.9],   # individual 0: front's niche-0 pick, d_perp^2 to ray0 = 0.81
+        [0.0, 0.0],
+        [0.9, 0.5],   # individual 2: front's niche-1 pick, d_perp^2 to ray1 = 0.81
+        [0.0, 0.0],
+    ])
+    arch_theta  = np.array([[0.9]])
+    arch_F_norm = np.array([[0.5, 0.1]])   # d_perp^2 to ray0 = 0.01 < front's 0.81
+
+    guides = _select_guides(
+        assoc, pareto_idx, F_norm, REF_DIRS_2, qpop_theta,
+        arch_theta=arch_theta, arch_F_norm=arch_F_norm,
+    )
+
+    assert guides[0, 0] == 0.9   # niche 0 -> archive wins
+    assert guides[1, 0] == 0.9
+    assert guides[2, 0] == 0.3   # niche 1 -> unaffected, front's own pick
+    assert guides[3, 0] == 0.3
+
+
+def test_select_guides_front_beats_worse_archive():
+    """Archive's representative for niche 0 is farther than the front's ->
+    guide stays on the front's pick (no regression from today's behaviour)."""
+    assoc      = np.array([0, 0])
+    pareto_idx = np.array([0])
+    qpop_theta = np.array([[0.1], [0.2]])
+    F_norm     = np.array([
+        [0.5, 0.9],   # front pick, d_perp^2 to ray0 = 0.81
+        [0.0, 0.0],
+    ])
+    arch_theta  = np.array([[0.9]])
+    arch_F_norm = np.array([[0.5, 0.95]])   # d_perp^2 = 0.9025 > front's 0.81
+
+    guides = _select_guides(
+        assoc, pareto_idx, F_norm, REF_DIRS_2, qpop_theta,
+        arch_theta=arch_theta, arch_F_norm=arch_F_norm,
+    )
+
+    assert guides[0, 0] == 0.1
+    assert guides[1, 0] == 0.1
+
+
+def test_select_guides_uncovered_niche_uses_archive():
+    """A niche with no Pareto-front representative but an archive one ->
+    guide comes from the archive (matches old _supplement_from_archive)."""
+    ref_dirs   = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+    assoc      = np.array([0, 2, 2])
+    pareto_idx = np.array([0])       # only niche 0 covered by the front
+    qpop_theta = np.array([[0.1], [0.2], [0.3]])
+    F_norm     = np.array([
+        [0.5, 0.9],
+        [0.0, 0.0],
+        [0.0, 0.0],
+    ])
+    arch_theta  = np.array([[0.7]])
+    arch_F_norm = np.array([[1.0, 1.0]])   # exactly on ray2 = (1,1)
+
+    guides = _select_guides(
+        assoc, pareto_idx, F_norm, ref_dirs, qpop_theta,
+        arch_theta=arch_theta, arch_F_norm=arch_F_norm,
+    )
+
+    assert guides[1, 0] == 0.7
+    assert guides[2, 0] == 0.7
+
+
+def test_select_guides_without_archive_matches_front_only_behaviour():
+    """No archive passed (None) -> identical output to front-only selection,
+    i.e. the behaviour used before the archive reaches its 4-entry threshold."""
+    assoc      = np.array([0, 0, 1, 1])
+    pareto_idx = np.array([0, 2])
+    qpop_theta = np.array([[0.1], [0.2], [0.3], [0.4]])
+    F_norm     = np.array([
+        [0.5, 0.9],
+        [0.0, 0.0],
+        [0.9, 0.5],
+        [0.0, 0.0],
+    ])
+
+    guides = _select_guides(assoc, pareto_idx, F_norm, REF_DIRS_2, qpop_theta)
+
+    assert guides[0, 0] == 0.1
+    assert guides[2, 0] == 0.3
