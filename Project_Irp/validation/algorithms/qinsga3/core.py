@@ -2,8 +2,8 @@
 
 Mirrors QINSGA3/algorithm.py::run_qinsga3()'s algorithm exactly (same
 generation order: measure -> evaluate -> penalise -> non-dominated sort ->
-archive update -> normalise -> assign ref dirs -> select guides -> supplement
-from archive -> rotate -> crossover -> mutate -> migrate), but:
+archive update -> normalise -> assign ref dirs -> select guides (elitist:
+front + archive) -> rotate -> crossover -> mutate -> migrate), but:
 
   - evaluates the whole population in one vectorised pymoo
     Problem.evaluate() call per generation instead of a multiprocessing
@@ -29,10 +29,9 @@ from QINSGA3.algorithm import (
     _assign_ref_dirs,
     _crowding_trim,
     _migrate,
-    _normalise_F,
+    _normalise_stats,
     _penalised_F,
     _select_guides,
-    _supplement_from_archive,
 )
 from QINSGA3.chromosome import QuantumPopulation
 
@@ -100,21 +99,20 @@ def run_qinsga3_generic(
             arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
         )
 
-        F_norm = _normalise_F(F_pen)
+        ideal, denom = _normalise_stats(F_pen)
+        F_norm = (F_pen - ideal) / denom
         assoc = _assign_ref_dirs(F_norm, ref_dirs)
-
-        guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
 
         arch_theta_arr = None
         arch_F_norm = None
         if len(arch_X) >= 4:
             arch_theta_arr = np.array(arch_theta)
-            arch_F_norm = _normalise_F(np.array(arch_F))
-            pareto_assoc = assoc[pareto_idx]
-            guides_theta = _supplement_from_archive(
-                guides_theta, assoc, pareto_assoc,
-                arch_theta_arr, arch_F_norm, ref_dirs,
-            )
+            arch_F_norm = (np.array(arch_F) - ideal) / denom
+
+        guides_theta = _select_guides(
+            assoc, pareto_idx, F_norm, ref_dirs, qpop.theta,
+            arch_theta=arch_theta_arr, arch_F_norm=arch_F_norm,
+        )
 
         alpha = alpha_min + (alpha_max - alpha_min) * (1.0 - gen / max_gen)
         qpop.rotate(guides_theta, alpha)
