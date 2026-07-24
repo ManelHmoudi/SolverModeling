@@ -13,6 +13,10 @@ Algorithm per generation  [Li et al. ICNC 2008; Deb & Jain 2014]:
      population [Han & Kim 2002 elitism principle]
   8. Adaptive rotation: Δθ = α(g) × tanh((θ_guide − θ) / (π/8)),  α linear decay
   9. SBX crossover + quantum mutation
+  10. Diversity preserving: in niches whose guide has been stagnant for
+      t_stagnation generations, converged individuals similar to the
+      niche's best are reinitialised to pi/4, breaking premature
+      convergence [Tayarani-N & Akbarzadeh-T 2014, §5]
 
 Performance:
   - Population evaluation is parallelised via ProcessPoolExecutor.  Each worker
@@ -503,6 +507,9 @@ def run_qinsga3(
     eta_cross:        float = 5.0,
     migration_period: int   = 10,
     n_migrate:        int   = 10,
+    gamma_converge:   float = 0.99,
+    delta_similar:    float = 0.1,
+    t_stagnation:     int   = 5,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -536,6 +543,9 @@ def run_qinsga3(
     arch_F:    list[np.ndarray] = []
     arch_theta: list[np.ndarray] = []
     _MAX_ARCHIVE = 500
+
+    niche_guide_history: dict = {}
+    niche_stagnation:    dict = {}
 
     n_workers = min(os.cpu_count() or 1, pop_size)
     chunksize = max(1, pop_size // (2 * n_workers))
@@ -593,6 +603,16 @@ def run_qinsga3(
                 qpop.crossover(p_cross, eta_cross)
 
             qpop.mutate(p_mut, p_mut_strong, mut_sigma)
+
+            niche_guide_history, niche_stagnation, stagnant = _update_niche_stagnation(
+                assoc, guides_theta, niche_guide_history, niche_stagnation, t_stagnation,
+            )
+            if t_stagnation > 0 and stagnant:
+                reset_mask = _diversity_preserve_mask(
+                    assoc, qpop.theta, F_norm, ref_dirs, stagnant,
+                    gamma_converge, delta_similar,
+                )
+                qpop.theta[reset_mask] = np.pi / 4.0
 
             if (arch_F_norm is not None
                     and migration_period > 0
