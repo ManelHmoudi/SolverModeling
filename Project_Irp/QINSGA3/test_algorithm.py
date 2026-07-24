@@ -129,3 +129,53 @@ def test_select_guides_niche_with_neither_front_nor_archive_uses_global_fallback
     )
 
     assert guides[1, 0] == 0.1   # niche 1: neither front nor archive -> global fallback
+
+
+from QINSGA3.algorithm import _update_niche_stagnation
+
+
+def test_update_niche_stagnation_triggers_after_t_generations():
+    """A niche's guide unchanged for exactly t_stagnation consecutive calls
+    ends up in the returned stagnant set; one call short does not."""
+    assoc = np.array([0, 0])
+    guide_theta = np.array([[0.5], [0.5]])
+    history, counters = {}, {}
+    t_stagnation = 3
+
+    history, counters, stagnant = _update_niche_stagnation(
+        assoc, guide_theta, history, counters, t_stagnation)
+    assert counters[0] == 0
+    assert 0 not in stagnant
+
+    for _ in range(2):
+        history, counters, stagnant = _update_niche_stagnation(
+            assoc, guide_theta, history, counters, t_stagnation)
+    assert counters[0] == 2
+    assert 0 not in stagnant   # t_stagnation=3 not yet reached
+
+    history, counters, stagnant = _update_niche_stagnation(
+        assoc, guide_theta, history, counters, t_stagnation)
+    assert counters[0] == 3
+    assert 0 in stagnant
+
+
+def test_update_niche_stagnation_resets_when_guide_changes():
+    """The counter resets to 0 the moment a niche's guide theta changes."""
+    assoc = np.array([0, 0])
+    history, counters = {}, {}
+    t_stagnation = 2
+
+    guide_a = np.array([[0.5], [0.5]])
+    guide_b = np.array([[0.7], [0.7]])
+
+    history, counters, _ = _update_niche_stagnation(
+        assoc, guide_a, history, counters, t_stagnation)
+    history, counters, stagnant = _update_niche_stagnation(
+        assoc, guide_a, history, counters, t_stagnation)
+    assert counters[0] == 1
+    assert 0 not in stagnant
+
+    history, counters, stagnant = _update_niche_stagnation(
+        assoc, guide_b, history, counters, t_stagnation)
+    assert counters[0] == 0
+    assert 0 not in stagnant

@@ -256,6 +256,48 @@ def _migrate(
 
 
 # ---------------------------------------------------------------------------
+# Diversity preserving operator [Tayarani-N & Akbarzadeh-T 2014, Evol.
+# Intel. 7:219-239, Section 5]
+# ---------------------------------------------------------------------------
+
+def _update_niche_stagnation(
+    assoc:        np.ndarray,
+    guides_theta: np.ndarray,
+    history:      dict,
+    counters:     dict,
+    t_stagnation: int,
+) -> tuple[dict, dict, set]:
+    """Track how many consecutive generations each niche's guide has been
+    unchanged [Tayarani-N & Akbarzadeh-T 2014, eq. 13: b_i^{t-T} = b_i^t].
+
+    guides_theta is the (pop_size, n_genes) array _select_guides just
+    returned this generation -- every member of a niche shares the same
+    guide theta by construction (_select_guides broadcasts it), so
+    comparing one representative row per niche to the stored history is
+    enough. Returns (new_history, new_counters, stagnant_niches), where
+    stagnant_niches is the set of niche ids whose guide has been unchanged
+    for >= t_stagnation consecutive calls.
+    """
+    new_history  = dict(history)
+    new_counters = dict(counters)
+    stagnant: set = set()
+
+    for rd in np.unique(assoc):
+        rd = int(rd)
+        rep_theta = guides_theta[np.where(assoc == rd)[0][0]]
+        prev = new_history.get(rd)
+        if prev is not None and np.array_equal(prev, rep_theta):
+            new_counters[rd] = new_counters.get(rd, 0) + 1
+        else:
+            new_counters[rd] = 0
+        new_history[rd] = rep_theta
+        if new_counters[rd] >= t_stagnation:
+            stagnant.add(rd)
+
+    return new_history, new_counters, stagnant
+
+
+# ---------------------------------------------------------------------------
 # Crowding distance and archive trimming (vectorised)
 # ---------------------------------------------------------------------------
 
