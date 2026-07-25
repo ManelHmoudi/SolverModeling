@@ -72,7 +72,6 @@ def render_from_instance(data_path):
     sets_, params_ = load_instance(data_path)
     n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
 
-    # Support both old single-run and new multi-run cache formats
     if "runs" in cache:
         runs_cache = cache["runs"]
     else:
