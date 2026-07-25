@@ -37,32 +37,6 @@ DTLZ7 mean IGD 2.98 -> 1.85, MaF7 2.98 -> 1.85, DTLZ3 31.7 -> 12.0, DTLZ2
 ~unchanged — unlike rotation_type or p_mut_strong variants, which each
 traded off one problem class against another. This is a genuine
 improvement, not a compromise.
-
-GAMMA_CONVERGE/DELTA_SIMILAR/T_STAGNATION are new parameters for the
-per-niche diversity-preserving operator [Tayarani-N & Akbarzadeh-T 2014,
-Evol. Intel. 7:219-239, §5], added to address a premature-convergence trap
-found in a 5-run ablation of the elitist per-niche guide (see
-docs/superpowers/specs/2026-07-24-qinsga3-elitist-guide-design.md and the
-"Piste explorée et écartée" note in DTLZ_results_summary_qinsga3.md):
-DTLZ3's mean/worst/std regressed 3-5x when the elitist guide alone was
-tested. Starting values are the paper's own empirically-found good ranges
-(Table 4), not yet validated for QINSGA3 — see
-docs/superpowers/specs/2026-07-24-qinsga3-diversity-preserving-design.md
-for the full formula derivation and the ablation methodology used to
-validate (or reject) them before any adoption.
-
-GAMMA_CONVERGE was recalibrated from the paper's own 0.99 to 0.5 after a
-5-run DTLZ1/DTLZ3 ablation showed the operator never triggered a single
-reset at 0.99 — diagnostic instrumentation found the population-wide
-convergence score (mean |cos(2*theta)| across genes) never exceeds ~0.6-0.77
-(DTLZ1) or ~0.57-0.61 (DTLZ3) even at the final generation of a 326-generation
-run, since QINSGA3's continuous SBX crossover and two-tier mutation
-continuously reintroduce exploration that the paper's crossover-free QEA
-does not have, preventing theta from ever collapsing as tightly toward
-0/pi/2. 0.5 is comfortably below the observed late-run upper tail (so the
-operator can engage) while staying above typical early/mid-run scores
-(~0.15-0.4) -- itself a starting point pending re-validation via the same
-ablation methodology, not a proven-final value.
 """
 import numpy as np
 
@@ -81,9 +55,6 @@ MIGRATION_PERIOD = 5   # was 10 (QINSGA3/main.py default) — see module docstri
 N_MIGRATE = 20          # was 10 (QINSGA3/main.py default) — see module docstring
 ROTATION_TYPE = "tanh"
 NOISE_SCALE = 0.0  # was 0.02 (QINSGA3/main.py's IRP default) — see module docstring
-GAMMA_CONVERGE = 0.5    # recalibrated from the paper's 0.99 — see module docstring
-DELTA_SIMILAR = 0.1     # most problem-sensitive parameter per the paper's own Table 4 — primary ablation target
-T_STAGNATION = 5        # generations a niche's guide must be unchanged before the operator applies
 
 
 def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
@@ -106,8 +77,6 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
         p_mut=p_mut, p_mut_strong=P_MUT_STRONG, mut_sigma=MUT_SIGMA,
         p_cross=P_CROSS, eta_cross=ETA_CROSS,
         migration_period=MIGRATION_PERIOD, n_migrate=N_MIGRATE,
-        gamma_converge=GAMMA_CONVERGE, delta_similar=DELTA_SIMILAR,
-        t_stagnation=T_STAGNATION,
         seed=seed, rotation_type=ROTATION_TYPE, noise_scale=NOISE_SCALE,
     )
 
