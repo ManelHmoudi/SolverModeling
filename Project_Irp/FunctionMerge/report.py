@@ -3,9 +3,6 @@
 import json
 import math
 import os
-import subprocess
-import sys
-import webbrowser
 
 _TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en">
@@ -524,37 +521,6 @@ def compute_node_positions(N, svg_w=480, svg_h=290):
     return {str(k): v for k, v in pos.items()}
 
 
-def _open_chrome(url):
-    if sys.platform == "win32":
-        candidates = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
-        ]
-        try:
-            import winreg
-            key = winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
-            )
-            rp = winreg.QueryValue(key, None)
-            if rp:
-                candidates.insert(0, rp)
-        except Exception:
-            pass
-        for path in candidates:
-            if os.path.exists(path):
-                subprocess.Popen([path, url])
-                return
-    elif sys.platform == "darwin":
-        try:
-            subprocess.Popen(["open", "-a", "Google Chrome", url])
-            return
-        except Exception:
-            pass
-    webbrowser.open(url)
-
-
 def render_report_html(data):
     return _TEMPLATE.replace(
         "/*DATA_PLACEHOLDER*/null",
@@ -567,10 +533,3 @@ def write_report(data, output_path):
     with open(output_path, "w", encoding="utf-8") as fh:
         fh.write(html)
     return os.path.abspath(output_path)
-
-
-def generate_and_open(data, output_path):
-    report_path = write_report(data, output_path)
-    abs_path = os.path.abspath(output_path).replace("\\", "/")
-    _open_chrome(f"file:///{abs_path}")
-    return report_path
