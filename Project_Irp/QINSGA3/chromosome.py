@@ -233,7 +233,7 @@ class QuantumPopulation:
         average); p_strong = 0.15 keeps most mutations local while still
         allowing occasional full resets to escape stagnation. Empirically,
         p_strong=0.3 caused GD instability across seeds on the 100-client IRP
-        instance (see validation/compare_pstrong.py) — 0.15 improved mean GD,
+        instance (see sensitivity/compare_pstrong.py) — 0.15 improved mean GD,
         IGD, HV and Spacing over 10 seeds.
         """
         mask = self.rng.random(self.theta.shape) < prob

@@ -19,8 +19,8 @@ across all 30 runs, so values are directly comparable — same methodology
 report_builder.py uses for the dashboard's "Runs comparison" table.
 
 Usage:
-    python -m validation.compare_pstrong
-    python -m validation.compare_pstrong --seeds 42 137 271 --gen 100
+    python -m sensitivity.compare_pstrong
+    python -m sensitivity.compare_pstrong --seeds 42 137 271 --gen 100
 """
 
 from __future__ import annotations

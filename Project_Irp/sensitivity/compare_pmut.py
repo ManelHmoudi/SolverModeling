@@ -15,8 +15,8 @@ Metrics:
   - Runtime (seconds)
 
 Usage:
-    python -m validation.compare_pmut --instance 15 --runs 10 --gen 200
-    python -m validation.compare_pmut --instance 5  --runs 5  --gen 150
+    python -m sensitivity.compare_pmut --instance 15 --runs 10 --gen 200
+    python -m sensitivity.compare_pmut --instance 5  --runs 5  --gen 150
 """
 
 from __future__ import annotations

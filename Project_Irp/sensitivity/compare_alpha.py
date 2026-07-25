@@ -18,8 +18,8 @@ Metrics (fixed global HV reference point):
   - Pareto front size    — higher is better
 
 Usage:
-    python -m validation.compare_alpha --instance 15 --runs 10 --gen 200
-    python -m validation.compare_alpha --instance 15 --runs 10 --gen 200 --phase 2
+    python -m sensitivity.compare_alpha --instance 15 --runs 10 --gen 200
+    python -m sensitivity.compare_alpha --instance 15 --runs 10 --gen 200 --phase 2
 """
 
 from __future__ import annotations

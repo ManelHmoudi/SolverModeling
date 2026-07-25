@@ -353,7 +353,7 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
     </div>
     <div class="lit-table-note">
       <b>p</b> = divisions Das-Dennis &middot; <b>H</b> = points de r&eacute;f&eacute;rence &middot; <b>N</b> = taille de population (plus petit multiple de 4 &ge; H) &middot; <b>G</b> = g&eacute;n&eacute;rations (T<sub>max</sub>&nbsp;&divide;&nbsp;N) &middot; SBX &eta;=20, PM &eta;=20, p<sub>c</sub>=1.0, p<sub>m</sub>=1/D &middot; 30 runs ind&eacute;pendants, IGD sur P*&asymp;10&thinsp;000 points de r&eacute;f&eacute;rence.<br>
-      <b>D</b> (variables de d&eacute;cision) suit ici la convention standard de la litt&eacute;rature, D = M + k &minus; 1 (k=5/10/20 selon le probl&egrave;me DTLZ, k=10 pour MaF1&ndash;6, k=20 pour MaF7), et non la valeur fixe D=54 du Tableau 2 original &mdash; propre au cas d&rsquo;&eacute;tude r&eacute;el des auteurs, sans rapport avec les suites de test synth&eacute;tiques.
+      <b>D</b> (variables de d&eacute;cision) suit ici la convention standard de la litt&eacute;rature, D = M + k &minus; 1 (k=5/10/20 selon le probl&egrave;me DTLZ, k=10 pour MaF1&ndash;6, k=20 pour MaF7), et non la valeur fixe D=54 de l'article
     </div>
   </div>
 
@@ -1492,7 +1492,7 @@ def run_objective_calibration_route():
 
 @app.route("/objective-calibration/report")
 def objective_calibration_report():
-    data_path, inst_key = _resolve_instance()
+    data_path, _ = _resolve_instance()
     try:
         if not os.path.exists(DEFAULT_REPORT_PATH):
             run_objective_calibration(data_path=data_path)
@@ -1526,7 +1526,7 @@ def run_function_merge_route():
 
 @app.route("/function-merge/report")
 def function_merge_report():
-    data_path, inst_key = _resolve_instance()
+    data_path, _ = _resolve_instance()
     try:
         if not os.path.exists(FM_REPORT_PATH):
             run_function_merge(data_path=data_path)
@@ -1556,7 +1556,7 @@ def run_nsga3_route():
 
 @app.route("/nsga3/report")
 def nsga3_report():
-    data_path, inst_key = _resolve_instance()
+    data_path, _ = _resolve_instance()
     try:
         try:
             data = nsga3_render_from_instance(data_path)
@@ -1589,7 +1589,7 @@ def run_qinsga3_route():
 
 @app.route("/qinsga3/report")
 def qinsga3_report():
-    data_path, inst_key = _resolve_instance()
+    data_path, _ = _resolve_instance()
     try:
         try:
             data = qinsga3_render_from_instance(data_path)
