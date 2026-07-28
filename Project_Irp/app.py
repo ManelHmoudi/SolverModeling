@@ -14,11 +14,11 @@ from html import escape
 
 from flask import Flask, jsonify, render_template_string, request, send_file, url_for
 
-from ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
-from FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
-from NSGA3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
-from NSGA3.report  import render_html as nsga3_render_html
-from QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
+from Solvers.ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
+from Solvers.FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
+from Solvers.NSGA3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
+from Solvers.NSGA3.report  import render_html as nsga3_render_html
+from Solvers.QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
 
 
 # ── Async job tracker ────────────────────────────────────────────────────────
@@ -102,17 +102,18 @@ p{{font-size:13.5px;color:var(--text-2);line-height:1.6;}}
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# One suite = one validation/<suite>/results/ folder. Both follow the same
-# Cui et al. (2025) protocol (same p/H/N/Tmax, Table 2 gives an identical row
-# for "DTLZ 1-7" and "MaF 1-7"), so they share the M values and the whole
-# card/chart/table rendering — only the problem list and results dir differ.
+# One suite = one Validation/Benchmarking/<suite>/results/ folder. Both follow
+# the same Cui et al. (2025) protocol (same p/H/N/Tmax, Table 2 gives an
+# identical row for "DTLZ 1-7" and "MaF 1-7"), so they share the M values and
+# the whole card/chart/table rendering — only the problem list and results
+# dir differ.
 _BENCHMARK_SUITES = {
     "dtlz": {
-        "results_dir": os.path.join(BASE_DIR, "validation", "dtlz", "results"),
+        "results_dir": os.path.join(BASE_DIR, "Validation", "Benchmarking", "dtlz", "results"),
         "problems": ["DTLZ1", "DTLZ2", "DTLZ3", "DTLZ4", "DTLZ5", "DTLZ6", "DTLZ7"],
     },
     "maf": {
-        "results_dir": os.path.join(BASE_DIR, "validation", "maf", "results"),
+        "results_dir": os.path.join(BASE_DIR, "Validation", "Benchmarking", "maf", "results"),
         "problems": ["MaF1", "MaF2", "MaF3", "MaF4", "MaF5", "MaF6", "MaF7"],
     },
 }
@@ -571,7 +572,7 @@ function renderResultsForM() {
   } else if (isDegenerateM4) {
     html = `<div class="rcard"><div class="nodata">M=4 is not shown for ${currentProb}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
   } else {
-    html = `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m validation.${currentSuite}.main_validation</code> to generate them.</div></div>`;
+    html = `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m Validation.Benchmarking.${currentSuite}.main_validation</code> to generate them.</div></div>`;
   }
   results.innerHTML = html;
   document.querySelectorAll('[data-key]').forEach(svg => {
@@ -1512,7 +1513,7 @@ def run_function_merge_route():
             if result is None:
                 _job_error(job_id,
                     f"No feasible solution found for instance {inst_key} within the time limit.\n"
-                    "Try increasing timelimit or mipgap in FunctionMerge/main.py.")
+                    "Try increasing timelimit or mipgap in Solvers/FunctionMerge/main.py.")
             else:
                 _job_done(job_id, f"/function-merge/report?instance={inst_key}")
         except Exception:

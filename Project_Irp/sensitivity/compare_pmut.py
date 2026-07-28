@@ -36,7 +36,7 @@ from pymoo.indicators.hv import HV
 from pymoo.util.ref_dirs import get_reference_directions
 
 from models.parametres import load_instance
-from QINSGA3.algorithm import run_qinsga3
+from Solvers.QINSGA3.algorithm import run_qinsga3
 
 # ---------------------------------------------------------------------------
 # Configuration

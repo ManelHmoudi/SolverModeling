@@ -35,14 +35,14 @@ if PROJECT_DIR not in sys.path:
 import numpy as np
 from scipy.stats import mannwhitneyu
 
-from models.parametres import load_instance
-from NSGA3.decoder      import decode_chromosome, build_routes
-from NSGA3.evaluator    import compute_f1, compute_f2, compute_f3, compute_f4
-from NSGA3.metrics      import compute_pareto_metrics
+from models.parametres         import load_instance
+from Solvers.NSGA3.decoder      import decode_chromosome, build_routes
+from Solvers.NSGA3.evaluator    import compute_f1, compute_f2, compute_f3, compute_f4
+from Solvers.NSGA3.metrics      import compute_pareto_metrics
 
 _CACHE_PATHS = {
-    "NSGA-III":    os.path.join(PROJECT_DIR, "NSGA3", "nsga3_chromosomes.json"),
-    "QI-NSGA-III": os.path.join(PROJECT_DIR, "QINSGA3", "qinsga3_chromosomes.json"),
+    "NSGA-III":    os.path.join(PROJECT_DIR, "Solvers", "NSGA3", "nsga3_chromosomes.json"),
+    "QI-NSGA-III": os.path.join(PROJECT_DIR, "Solvers", "QINSGA3", "qinsga3_chromosomes.json"),
 }
 
 _INDICATORS = ["HV", "GD", "IGD", "Spacing"]
