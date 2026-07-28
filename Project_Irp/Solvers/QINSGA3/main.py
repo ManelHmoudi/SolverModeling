@@ -1,9 +1,9 @@
 """QINSGA3 — Many-objective IRP solved with Quantum-Inspired NSGA-III.
 
 Usage (standalone):
-    python -m QINSGA3.main                          # instance_25_clients.json
-    python -m QINSGA3.main --instance 30
-    python -m QINSGA3.main --instance 25 --pop 200 --gen 200 --runs 3
+    python -m Solvers.QINSGA3.main                          # instance_25_clients.json
+    python -m Solvers.QINSGA3.main --instance 30
+    python -m Solvers.QINSGA3.main --instance 25 --pop 200 --gen 200 --runs 3
 
 Called from app.py via run_qinsga3_report().
 Report format is identical to NSGA3 — NSGA3/report.py is reused unchanged.

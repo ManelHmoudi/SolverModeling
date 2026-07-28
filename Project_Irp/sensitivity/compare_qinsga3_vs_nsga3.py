@@ -8,13 +8,13 @@ observed difference in each indicator is statistically significant
 Both algorithms' metrics are recomputed here from their cached chromosomes
 using ONE shared global ideal/nadir across all runs of BOTH algorithms
 combined -- NOT the per-run ideal/nadir already stored in the cache JSONs
-(NSGA3/nsga3_chromosomes.json, QINSGA3/qinsga3_chromosomes.json), which are
-each normalised to their own run's scale and are NOT directly comparable
-across algorithms or even across runs of the same algorithm. This mirrors
-NSGA3/report_builder.py::_build_report_data's within-algorithm global-
-ideal/nadir approach (and sensitivity/compare_pstrong.py's "Phase 2" global
-ideal/nadir), extended across both algorithms so HV in particular (which
-depends on the reference point) is measured on the same scale for both.
+(Solvers/NSGA3/nsga3_chromosomes.json, Solvers/QINSGA3/qinsga3_chromosomes.json),
+which are each normalised to their own run's scale and are NOT directly
+comparable across algorithms or even across runs of the same algorithm. This
+mirrors Solvers/NSGA3/report_builder.py::_build_report_data's within-algorithm
+global-ideal/nadir approach, extended across both algorithms so HV in
+particular (which depends on the reference point) is measured on the same
+scale for both.
 
 Usage:
     python -m sensitivity.compare_qinsga3_vs_nsga3

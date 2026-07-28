@@ -1,11 +1,10 @@
 """Adaptive rotation-angle test for QINSGA-III.
 
 Context: after adding elitist survivor selection + X-space SBX/PM (both now
-in production QINSGA3/algorithm.py — see compare_elitist_selection.py and
-compare_xspace_variation.py for the earlier A/B evidence), QI-NSGA-III closed
-much of the gap with NSGA-III on the 100-client instance but a real gap
-remains. The current rotation-step schedule is a single scalar, identical
-for every individual, that depends ONLY on the generation index:
+in production Solvers/QINSGA3/algorithm.py), QI-NSGA-III closed much of the
+gap with NSGA-III on the 100-client instance but a real gap remains. The
+current rotation-step schedule is a single scalar, identical for every
+individual, that depends ONLY on the generation index:
 
     alpha(g) = alpha_min + (alpha_max - alpha_min) * (1 - g / max_gen)
 

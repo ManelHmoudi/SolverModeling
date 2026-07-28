@@ -15,16 +15,11 @@ Rotation gate variants (see rotate()):
     "tanh_soft" [empirical soft variant]
     "linear"    [Han & Kim 2002, literature baseline]
 
-Crossover [Deb 2001, §2.3]:
-    Bounded SBX in θ-space.
-
-Mutation (two-tier, see mutate()):
-    "strong" [Han & Kim 2002]: continuous generalisation of the quantum NOT
-        gate — reset selected genes to Uniform(0, π/2). Maximum diversification,
-        but can destroy structure the rotation gate has already converged on.
-    "weak": local perturbation θ += N(0, sigma), clipped to [0, π/2] —
-        explores around the current angle instead of discarding it, so the
-        gate's progress is not wiped out. Balances exploration/exploitation.
+Crossover and mutation are NOT methods of this class — Solvers/QINSGA3/algorithm.py
+applies pymoo's own SBX/PM directly in decision-variable (X) space instead
+(see that module's docstring for why: the cos² measurement map above is
+highly non-uniform, which was found to hurt variation operators applied in
+θ-space directly).
 """
 
 import numpy as np
@@ -143,111 +138,3 @@ class QuantumPopulation:
         else:  # "linear"
             self.theta += alpha * diff / (np.pi / 2.0)
         self.theta = np.clip(self.theta, 0.0, np.pi / 2.0)
-
-    # ------------------------------------------------------------------
-    # Crossover
-    # ------------------------------------------------------------------
-
-    def crossover(self, p_cross: float, eta: float) -> None:
-        """Quantum SBX crossover in θ-space — bounded variant [Deb 2001, §2.3].
-
-        Randomly pairs individuals; each pair crosses with probability p_cross.
-        The bounded SBX spread factor β_q accounts for the distance from each
-        parent to the domain boundary [0, π/2], ensuring offspring never leave
-        the feasible angle range and that the distribution is correctly shaped
-        near the bounds [Deb 2001, eq. 2.13].
-
-        Generation order (rotate → crossover → mutate) follows NSGA-III
-        [Deb & Jain 2014] adapted to the quantum domain.
-
-        Recommended: p_cross = 0.9, eta = 5.
-        """
-        lo, hi = 0.0, np.pi / 2.0
-        idx    = self.rng.permutation(self.pop_size)
-
-        for k in range(0, self.pop_size - 1, 2):
-            i, j = idx[k], idx[k + 1]
-            if self.rng.random() > p_cross:
-                continue
-
-            # p1 ≤ p2 per gene (vectorised)
-            p1   = np.minimum(self.theta[i], self.theta[j])
-            p2   = np.maximum(self.theta[i], self.theta[j])
-            diff = p2 - p1
-
-            active = diff > 1e-14   # skip genes where parents are identical
-
-            # Boundary-aware spread factor α [Deb 2001, eq. 2.13]:
-            # min(p1 − lo, hi − p2) ≥ 0 because θ ∈ [lo, hi]
-            beta_a = np.where(
-                active,
-                np.maximum(
-                    1.0 + 2.0 * np.minimum(p1 - lo, hi - p2) / np.where(active, diff, 1.0),
-                    1e-6,
-                ),
-                2.0,
-            )
-            alpha = 2.0 - np.power(beta_a, -(eta + 1.0))
-
-            u = self.rng.random(self.n_genes)
-            beta_q = np.where(
-                u <= 1.0 / alpha,
-                np.power(alpha * u, 1.0 / (eta + 1.0)),
-                np.power(
-                    1.0 / np.maximum(2.0 - alpha * u, 1e-12),
-                    1.0 / (eta + 1.0),
-                ),
-            )
-
-            mid       = 0.5 * (p1 + p2)
-            half_diff = 0.5 * diff
-
-            c1 = np.clip(mid - beta_q * half_diff, lo, hi)
-            c2 = np.clip(mid + beta_q * half_diff, lo, hi)
-
-            c1 = np.where(active, c1, p1)
-            c2 = np.where(active, c2, p2)
-
-            # Random offspring assignment avoids directional bias
-            swap          = self.rng.random(self.n_genes) < 0.5
-            self.theta[i] = np.where(swap, c1, c2)
-            self.theta[j] = np.where(swap, c2, c1)
-
-    # ------------------------------------------------------------------
-    # Mutation
-    # ------------------------------------------------------------------
-
-    def mutate(self, prob: float, p_strong: float = 0.15, sigma: float = 0.05 * np.pi) -> None:
-        """Two-tier quantum mutation on genes selected with probability `prob`.
-
-        Each selected gene is mutated:
-          - "strong" (probability p_strong) [Han & Kim 2002, §II-C]: reset to
-            Uniform(0, π/2) — continuous generalisation of the quantum NOT
-            gate. Maximum diversification, but can undo structure the
-            rotation gate already converged on.
-          - "weak" (probability 1 − p_strong): θ += N(0, sigma), clipped to
-            [0, π/2] — local perturbation that explores around the current
-            angle instead of discarding it.
-
-        Recommended: prob = 2 / n_genes (two genes mutated per individual on
-        average); p_strong = 0.15 keeps most mutations local while still
-        allowing occasional full resets to escape stagnation. Empirically,
-        p_strong=0.3 caused GD instability across seeds on the 100-client IRP
-        instance (see sensitivity/compare_pstrong.py) — 0.15 improved mean GD,
-        IGD, HV and Spacing over 10 seeds.
-        """
-        mask = self.rng.random(self.theta.shape) < prob
-        if not mask.any():
-            return
-
-        strong_mask = mask & (self.rng.random(self.theta.shape) < p_strong)
-        weak_mask   = mask & ~strong_mask
-
-        n_strong = int(strong_mask.sum())
-        if n_strong > 0:
-            self.theta[strong_mask] = self.rng.uniform(0.0, np.pi / 2.0, n_strong)
-
-        n_weak = int(weak_mask.sum())
-        if n_weak > 0:
-            perturbed = self.theta[weak_mask] + self.rng.standard_normal(n_weak) * sigma
-            self.theta[weak_mask] = np.clip(perturbed, 0.0, np.pi / 2.0)

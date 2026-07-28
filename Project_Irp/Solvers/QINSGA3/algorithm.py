@@ -21,24 +21,21 @@ Algorithm per generation  [Li et al. ICNC 2008; Deb & Jain 2014]:
      only the best pop_size via pymoo's actual ReferenceDirectionSurvival
      (rank + niching) — the same elitist replacement NSGA-III itself uses.
 
-Why steps 6-7 exist (see sensitivity/compare_elitist_selection.py and
-sensitivity/compare_xspace_variation.py for the A/B evidence on the
-100-client instance):
-  - Without step 7, nothing ever compared "population before variation" vs
-    "population after variation" to discard individuals that got worse — the
-    whole population was unconditionally rotated + crossed + mutated every
-    generation, with only the external archive providing any elitism.  Adding
-    the parent/offspring merge-and-select step roughly doubled HV.
-  - The decode x = xl + cos²(θ)(xu−xl) has dx/dθ = −(xu−xl)sin(2θ), which
-    vanishes at θ=0/π/2 and peaks at θ=π/4 — a highly non-uniform mapping.
-    Doing SBX/PM directly in θ-space (as before) meant a fixed-width move in
-    θ produced wildly different moves in the real decision variables
-    depending on where θ currently sat. Moving variation into X-space (while
-    keeping the rotation gate — the distinctive quantum mechanism — in
-    θ-space) roughly tripled HV on top of the elitist-selection fix.
-  - Both changes still leave a real (smaller) quality gap vs NSGA-III on the
-    100-client instance; the archive was confirmed to help (not hurt) in both
-    A/B tests, so it is kept unconditionally.
+Rationale for steps 6-7 (A/B-validated on the IRP's 100-client instance,
+NSGA-III reference, shared ideal/nadir; ~2x then ~3x HV improvement
+respectively — see git history for the full evidence):
+  - Step 7 (elitist survival): previously nothing compared "population
+    before variation" vs "after" to discard individuals that got worse —
+    the whole population was unconditionally rotated + crossed + mutated
+    every generation, with only the external archive providing elitism.
+  - Step 6 (X-space variation): the decode x = xl + cos²(θ)(xu−xl) has
+    dx/dθ = −(xu−xl)sin(2θ), vanishing at θ=0/π/2 and peaking at θ=π/4 — a
+    highly non-uniform mapping. SBX/PM applied directly in θ-space meant a
+    fixed-width move in θ produced wildly different moves in the real
+    decision variables depending on where θ currently sat.
+  - A real (smaller) quality gap vs NSGA-III remains on the 100-client
+    instance. The external archive was confirmed to help, not hurt, and is
+    kept unconditionally.
 
 Performance:
   - Population evaluation is parallelised via ProcessPoolExecutor.  Each worker

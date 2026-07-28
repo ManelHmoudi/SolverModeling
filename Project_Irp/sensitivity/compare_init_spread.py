@@ -1,33 +1,25 @@
 """Initial-population spread test for QINSGA-III.
 
-Context: on the 100-client instance, QI-NSGA-III's front stays dominated by
-NSGA-III's even after ruling out eta_cross (compare_eta_cross.py) and adding
-proper elitist survivor selection (compare_elitist_selection.py, which helped
-but did not close the gap).
-
-New hypothesis, found while checking whether the two algorithms are
-"normalised the same way": QuantumPopulation.__init__ (QINSGA3/chromosome.py)
-starts EVERY individual at theta = pi/4 +- 0.05. Since the decode is
+Hypothesis: QuantumPopulation.__init__ (Solvers/QINSGA3/chromosome.py) starts
+EVERY individual at theta = pi/4 +- 0.05. Since the decode is
 x = xl + cos^2(theta) * (xu - xl) and cos^2(pi/4) = 0.5 EXACTLY, every gene of
 every individual starts at the MIDPOINT of its [xl, xu] range, with only
 ~noise_scale=0.02 (~2%) of extra spread. NSGA-III (pymoo) instead uses
-FloatRandomSampling(): every gene of every individual is drawn ~ Uniform(xl,
-xu) independently, i.e. the whole decision box is covered from generation 0.
+FloatRandomSampling(): every gene is drawn ~ Uniform(xl, xu) independently,
+covering the whole decision box from generation 0. On a 600-variable problem
+(100 clients) this looked like a plausible handicap for QI-NSGA-III.
 
-On a 600-variable problem (100 clients) this is a large, previously untested
-difference: QI-NSGA-III starts from a near-single point and has to "discover"
-the box via a rotation gate whose step size DECAYS over the run, while
-NSGA-III already explores the whole box from the start.
+Result: FALSIFIED, and reversed — the concentrated init outperforms a
+dispersed one on this instance (see git history for the full A/B numbers),
+likely because it lands closer to feasibility on a heavily constrained
+problem. Kept as documentation of a ruled-out avenue.
 
-This script does NOT touch QINSGA3/chromosome.py or algorithm.py. It defines
-a QuantumPopulation subclass whose initial theta is drawn so the DECODED x
-for generation 0 is distributed ~ Uniform(xl, xu) exactly like NSGA-III's
-sampling (p = cos^2(theta) ~ U(0,1)  <=>  theta = arccos(sqrt(p))), then runs
-the UNMODIFIED run_qinsga3 loop by temporarily monkeypatching the
-QuantumPopulation reference QINSGA3.algorithm uses internally. No change to
-the generational loop itself -- this isolates the initialisation variable
-only, so it doesn't get confounded with the elitist-selection change tested
-separately in compare_elitist_selection.py.
+This script does NOT touch chromosome.py or algorithm.py. It defines a
+QuantumPopulation subclass whose initial theta is drawn so the DECODED x for
+generation 0 is distributed ~ Uniform(xl, xu) exactly like NSGA-III's
+sampling (p = cos^2(theta) ~ U(0,1) <=> theta = arccos(sqrt(p))), then runs
+the unmodified run_qinsga3 loop by temporarily monkeypatching the
+QuantumPopulation reference Solvers.QINSGA3.algorithm uses internally.
 
 Usage:
     python -m sensitivity.compare_init_spread

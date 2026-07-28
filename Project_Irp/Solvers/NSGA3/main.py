@@ -2,9 +2,9 @@
 NSGA3 — Many-Objective IRP solved with NSGA-III (pymoo).
 
 Usage (standalone):
-    python -m NSGA3.main                          # instance_25_clients.json
-    python -m NSGA3.main --instance 30
-    python -m NSGA3.main --instance 25 --pop 200 --gen 200 --runs 5
+    python -m Solvers.NSGA3.main                          # instance_25_clients.json
+    python -m Solvers.NSGA3.main --instance 30
+    python -m Solvers.NSGA3.main --instance 25 --pop 200 --gen 200 --runs 5
 
 Called from app.py via run_nsga3_report().
 """
