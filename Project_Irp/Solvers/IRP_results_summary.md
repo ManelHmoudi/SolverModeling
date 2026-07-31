@@ -95,3 +95,114 @@ où QI-NSGA-III dépasse NSGA-III sur plusieurs problèmes — et où la
 normalisation partagée améliore aussi les résultats sur la plupart des
 problèmes DTLZ/MaF (DTLZ7 et MaF7 en M3 basculent même en faveur de
 QI-NSGA-III, qui perdait auparavant sur ces deux problèmes).
+
+## Diagnostic diversite / decodeur -- pourquoi QI-NSGA-III gagne sur DTLZ/MaF mais pas sur l'IRP
+
+Constat de depart (remarque de l'encadrante) : sur les benchmarks DTLZ/MaF,
+QI-NSGA-III bat NSGA-III dans 17 cas sur 25 (68 %, voir
+`Validation/Benchmarking/{dtlz,maf}/results/qinsga3/`) -- l'algorithme
+quantique fonctionne donc bien en soi. Sur l'IRP reel, c'est l'inverse.
+Trois hypotheses ont ete proposees pour expliquer cet ecart, avec une
+experience de diagnostic dediee.
+
+### Les 3 hypotheses et leur statut
+
+| Hypothese | Statut | Ce qui a ete trouve |
+|---|---|---|
+| **H1** -- le decodeur glouton (plus-proche-voisin) detruit la diversite generee par le codage quantique | Testee, refutee (mais pas comme prevu) | La diversite chromosome de QI-NSGA-III est deja ~13x plus basse que celle de NSGA-III **avant meme le decodage** (voir ci-dessous) -- ce n'est pas une perte au decodage, c'est un deficit en amont |
+| **H2** -- QI adapte aux problemes continus ; sur l'IRP combinatoire, une petite variation de theta peut ne provoquer aucun changement reel de tournee | Testee directement, confirmee partiellement | Voir "Test de sensibilite locale" ci-dessous : vrai seulement en toute fin de run (alpha faible), negligeable sur l'essentiel du run |
+| **H3** -- perte d'information dans la chaine theta -> x -> decodeur -> solution | Testee indirectement, pas de preuve solide | Ratio de structures de routes uniques = 100 % pour les deux algorithmes (pas de collision totale), mais test faible |
+
+### Experience de diagnostic (diversite chromosome vs tournees vs front)
+
+Protocole : chromosomes du front de Pareto poolees sur 6 seeds (100 clients),
+NSGA-III (cache) vs QI-NSGA-III (code de production, avec le fix de
+normalisation). Diversite = variance moyenne par gene, normalisee par les
+bornes de la variable.
+
+| Metrique | NSGA-III | QI-NSGA-III | Ratio QI/NSGA |
+|---|---|---|---|
+| N chromosomes poolees | 103 | 297 | -- |
+| Diversite chromosome Var(X norm.) | 0.060264 | 0.004700 | **0.078** (13x moins) |
+| HV | 0.842510 | 0.243675 | -- |
+| Spacing | 0.070750 | 0.036513 | -- |
+
+La metrique "diversite tournees" (variance de la quantite livree par
+client, sommee sur les periodes) prevue dans le protocole initial s'est
+revelee degeneree : cette somme est fixee par la contrainte de satisfaction
+de la demande totale, donc identique pour toute solution faisable quel que
+soit l'algorithme -- elle ne mesure rien d'utile et a ete abandonnee au
+profit du ratio de structures de routes uniques (100 % pour les deux
+algorithmes, voir tableau H1-H3 ci-dessus).
+
+**Conclusion** : le deficit de diversite de QI-NSGA-III est deja present au
+niveau chromosome, avant tout decodage -- la rotation guidee (Delta theta =
+alpha(g) x tanh((theta_guide - theta)/(pi/8))) tire 100 % de la population
+vers un guide unique par niche a chaque generation, un mecanisme que
+NSGA-III n'a pas (sa diversite vient uniquement de SBX/PM). Sur 600
+variables et 300 generations, cette pression convergente systematique
+explique l'ecart.
+
+### Test de sensibilite locale theta vers route (H2)
+
+Script : `sensitivity/test_theta_route_sensitivity.py`. Perturbation
+theta vers theta perturbe avec la formule de rotation reelle (tanh, guide =
+une autre solution reelle du pool), a differentes magnitudes alpha (plage
+de production, 0.001pi a 0.10pi), puis comparaison de la tournee decodee
+avant/apres.
+
+| alpha (rad) | Routes identiques apres perturbation | Delta F median quand ca change |
+|---|---|---|
+| 0.00314 (proche alpha_min, fin de run) | 19.2 % (15/78) | 54 |
+| 0.03142 | 1.3 % | 465 |
+| 0.15708 | 0.0 % | 1639 |
+| 0.31416 (proche alpha_max, debut de run) | 0.0 % | 2633 |
+
+H2 confirmee seulement dans une fenetre etroite (alpha tres faible, fin de
+run) -- pas le facteur dominant sur l'ensemble du run. Decouverte annexe,
+plus significative : le decodeur est chaotique, pas juste insensible --
+quand une perturbation change la tournee, l'ecart d'objectif (Delta F)
+est souvent enorme et disproportionne (jusqu'a mediane 2633, pour un f1
+typique de 15000-18000) par rapport a la magnitude de la perturbation en
+theta. Cause : `_nearest_neighbour()` (`Solvers/NSGA3/decoder.py`) fait des
+choix gloutons et irrevocables -- un petit changement de score peut
+faire basculer un choix tot dans la construction, ce qui cascade sur toute
+la suite de la tournee (effet papillon classique des heuristiques
+constructives sans retour arriere).
+
+### Quatre remedes testes et rejetes (fin juillet - debut aout 2026)
+
+Chaque remede isole une seule variable, valide avec le meme protocole que
+le reste du projet (shared ideal/nadir, Mann-Whitney U, 3 seeds puis
+scaling si signal positif).
+
+| Remede | Cible | Resultat (3 seeds) | Diversite chromosome | Decision |
+|---|---|---|---|---|
+| Magnitude de rotation adaptative par fitness (Kumar et al. 2026) | Enveloppe alpha | 3 seeds prometteur (U=0) puis 20 seeds : aucun effet significatif | -- | Rejete (voir tableau precedent) |
+| rotation_prob -- rotation appliquee a une fraction aleatoire de la population par generation au lieu de 100 % | Frequence du tirage vers le guide | HV/GD/IGD legerement mieux, p non significatif | 0.003984 vers 0.003727 (inchangee) | Rejete -- reduire la frequence ne change pas la convergence cumulee sur 300 generations |
+| Guide echantillonne par individu (au lieu du meme guide unique par niche) | Cible du tirage | HV/GD/IGD legerement mieux, p non significatif | 0.003984 vers 0.003728 (inchangee) | Rejete -- meme verdict que rotation_prob, confirme que le guidage n'est pas le facteur dominant |
+| Decodeur adouci (selection softmax au lieu d'argmin strict dans _nearest_neighbour) | Chaos du decodeur | HV/GD pires (p non significatif mais tendance negative) | 0.003984 vers 0.004136 (quasi inchangee) | Rejete -- reduit le chaos mesure de 24 % (test de sensibilite) mais ne se traduit par aucun gain, voire une legere degradation |
+| Reparation locale 2-opt post-decodage | Chaos du decodeur (construction) | Abandonne avant test complet | -- | Rejete -- le 2-opt minimise la distance seule ; sur 10 solutions verifiees, f3 (temps de trajet) s'ameliore toujours mais f1 (cout, incluant les penalites de fenetres de temps) se degrade systematiquement (+90 a +735) -- optimise le mauvais critere pour ce probleme |
+
+Scripts conserves dans `sensitivity/` : `compare_fitness_adaptive_rotation.py`,
+`compare_rotation_prob.py`, `compare_sampled_guide.py`,
+`compare_soft_decoder.py`, `test_theta_route_sensitivity.py`.
+`compare_2opt_repair.py` n'a jamais atteint un etat valide (bug de fond
+identifie avant le test complet) -- supprime.
+
+### Conclusion de ce chapitre
+
+Apres un diagnostic structurel clair (deficit de diversite chromosome x13,
+decodeur chaotique) et quatre tentatives de remede independantes, aucune
+n'a produit de gain solide. Le pattern est coherent : le guidage
+(frequence, cible) n'est pas le levier determinant, et lisser le decodeur
+aide un peu sur le papier (-24 % de chaos mesure) sans se traduire en gain
+reel. Hypothese retenue pour le memoire : le mecanisme de rotation guidee
+de QI-NSGA-III repose sur une hypothese de regularite (« un petit pas vers
+le guide rapproche un peu de la solution ») qui ne tient pas face a un
+decodeur combinatoire glouton et irrevocable -- contrairement aux
+benchmarks DTLZ/MaF ou x=f(theta) directement. C'est une limite
+structurelle du mecanisme quantique face a ce type de decodeur, pas un
+probleme de reglage de parametres (largement ecarte egalement, voir
+tableau "Pistes testees et rejetees" plus haut) ni un bug corrigible
+simplement.
