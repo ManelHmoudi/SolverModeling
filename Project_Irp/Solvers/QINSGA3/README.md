@@ -57,7 +57,7 @@ Per generation, `run_qinsga3()`:
 
 1. **Measure** the parent population (θ → X), **evaluate** f1–f4 and constraints, **penalise** infeasible solutions (feasibility-first).
 2. **Archive-update** from the parent's own Pareto front (external elitist archive, never regresses).
-3. **Normalise** F via an ideal + nadir hyperplane [Deb & Jain 2014, §IV-A], **assign** each solution to its nearest reference direction, and **select guides** — the best Pareto member per niche, with the archive filling niches the current front doesn't cover.
+3. **Normalise** F via an ideal + nadir hyperplane [Deb & Jain 2014, §IV-A] — sharing the same running ideal/nadir as step 6's elitist survival (pymoo's own `ReferenceDirectionSurvival.norm`, monotonic across generations) rather than recomputing it from scratch each generation — **assign** each solution to its nearest reference direction, and **select guides** — the best Pareto member per niche, with the archive filling niches the current front doesn't cover.
 4. **Rotate** — the one step that stays in θ-space, since it is the genuinely quantum-inspired mechanism: `Δθ = α(g) × tanh((θ_guide − θ)/(π/8))`.
 5. **Vary in X-space** — measure the rotated population, then apply pymoo's own SBX(η) + PM(η), identical operators to `Solvers/NSGA3/`'s. Re-encode the result back to θ (`θ = arccos(√p)`, `p = (x−xl)/(xu−xl)`) so the next generation's rotation step has an angle to work from. Evaluate the offspring; archive-update from its own front.
 6. **Elitist survival** — merge parent and offspring populations and keep only the best `pop_size` via pymoo's own `ReferenceDirectionSurvival` (rank + niching): the same environmental-selection step that defines NSGA-III.
@@ -113,8 +113,27 @@ test (see git history for the full before/after numbers):
   the distinctive quantum mechanism — in θ-space) roughly tripled
   Hypervolume on top of the elitist-selection change.
 
+- **Stateful ideal/nadir normalisation** (step 3 above). Guide selection used
+  to call `_normalise_F(F)` fresh every generation, computing ideal/nadir
+  from only that generation's population — while the elitist survival step
+  (step 6) already used pymoo's own `ReferenceDirectionSurvival.norm`, whose
+  ideal/nadir is a running estimate that only ever improves across the whole
+  run. Two different, inconsistent normalisations of the same concept were
+  in play within the same generation: one driving which guide an individual
+  rotates toward, the other driving who survives. Sharing `survival.norm`'s
+  values for guide selection too (falling back to the from-scratch estimate
+  only on generation 0, before `survival.do()` has run once) fixed this.
+  Validated on the IRP's 100-client instance (20 seeds, shared ideal/nadir,
+  Mann-Whitney U vs. the pre-fix behaviour): GD and IGD improved
+  significantly (p=0.022 and p=0.029), HV improved but just missed
+  significance (p=0.060) — see `Solvers/IRP_results_summary.md` for the full
+  numbers. Also confirmed on the DTLZ1-7/MaF1-7 synthetic benchmark suite
+  (30 runs, M=3/M=4) — see
+  `Validation/Benchmarking/dtlz/results/qinsga3/DTLZ_results_summary_qinsga3.md`
+  and the MaF equivalent.
+
 A real, smaller quality gap versus `Solvers/NSGA3/` remains on the
-100-client instance after both changes. Two further re-tuning attempts were
+100-client instance after all three changes. Two further re-tuning attempts were
 tested and **not adopted** because they failed to improve on that gap once
 validated against the same NSGA-III reference (rather than only against
 other QI-NSGA-III configurations):

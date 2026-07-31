@@ -2,11 +2,12 @@
 
 Mirrors Solvers/QINSGA3/algorithm.py::run_qinsga3()'s algorithm exactly (same
 generation order: measure parent -> evaluate -> penalise -> non-dominated
-sort -> archive update -> normalise -> assign ref dirs -> select guides
-(+ supplement from archive) -> rotate (theta-space) -> measure -> SBX+PM
-variation (X-space) -> re-encode -> evaluate offspring -> archive update ->
-elitist survival (merge parent+offspring, keep best pop_size via pymoo's own
-ReferenceDirectionSurvival) -> migrate), but:
+sort -> archive update -> normalise (sharing survival.norm's running
+ideal/nadir, same as the production loop) -> assign ref dirs -> select
+guides (+ supplement from archive) -> rotate (theta-space) -> measure ->
+SBX+PM variation (X-space) -> re-encode -> evaluate offspring -> archive
+update -> elitist survival (merge parent+offspring, keep best pop_size via
+pymoo's own ReferenceDirectionSurvival.do()) -> migrate), but:
 
   - evaluates the whole population in one vectorised pymoo
     Problem.evaluate() call per generation instead of a multiprocessing
@@ -144,7 +145,17 @@ def run_qinsga3_generic(
             theta_parent[pareto_idx], arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
         )
 
-        F_norm = _normalise_F(F_pen_parent)
+        # Share the SAME ideal/nadir as the elitist survival step below
+        # (pymoo's own ReferenceDirectionSurvival.norm, monotonic across
+        # generations) for guide selection and niching -- see
+        # Solvers/QINSGA3/algorithm.py::_normalise_F's docstring. Not yet
+        # populated on generation 0 (before survival.do() has run once), so
+        # that first generation falls back to a from-scratch estimate
+        # exactly as before.
+        if survival.norm.nadir_point is None:
+            F_norm = _normalise_F(F_pen_parent)
+        else:
+            F_norm = _normalise_F(F_pen_parent, survival.norm.ideal_point, survival.norm.nadir_point)
         assoc  = _assign_ref_dirs(F_norm, ref_dirs)
         guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
 
@@ -152,7 +163,10 @@ def run_qinsga3_generic(
         arch_F_norm    = None
         if len(arch_X) >= 4:
             arch_theta_arr = np.array(arch_theta)
-            arch_F_norm    = _normalise_F(np.array(arch_F))
+            if survival.norm.nadir_point is None:
+                arch_F_norm = _normalise_F(np.array(arch_F))
+            else:
+                arch_F_norm = _normalise_F(np.array(arch_F), survival.norm.ideal_point, survival.norm.nadir_point)
             pareto_assoc   = assoc[pareto_idx]
             guides_theta   = _supplement_from_archive(
                 guides_theta, assoc, pareto_assoc,
@@ -199,10 +213,19 @@ def run_qinsga3_generic(
         # --- Elitist survival: merge parent + offspring, keep best pop_size
         # via pymoo's own NSGA-III niching survival — the same elitist
         # replacement NSGA-III (pymoo) itself uses every generation.
+        #
+        # survival.do() (pymoo's public entry point), not survival._do()
+        # directly — matches Solvers/QINSGA3/algorithm.py's production loop.
+        # For these unconstrained DTLZ/MaF problems this is a no-op
+        # (pymoo's Survival.do() only splits feasible/infeasible when
+        # problem.has_constraints() is True), but calling the same public
+        # method the production loop uses keeps this benchmark copy an
+        # honest mirror rather than a second implementation that happens to
+        # agree only on unconstrained problems.
         theta_pool = np.vstack([theta_parent, theta_offspring])
         F_pool     = np.vstack([F_pen_parent, F_pen_offspring])
         merged_pop = Population.new(X=theta_pool, F=F_pool)
-        survived   = survival._do(problem, merged_pop, pop_size, random_state=rng)
+        survived   = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
         qpop.theta = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
 
         if (arch_F_norm is not None

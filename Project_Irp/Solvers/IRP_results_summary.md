@@ -26,15 +26,18 @@ espace de décision réaliste (600 variables).
 
 | Indicateur | NSGA-III | QI-NSGA-III | Mann-Whitney | Verdict |
 |---|---|---|---|---|
-| HV ↑ | **0.442797** (σ=0.177) | 0.144091 (σ=0.019) | p<0.001 | NSGA-III significativement meilleur |
-| GD ↓ | **0.217636** (σ=0.127) | 0.587931 (σ=0.057) | p<0.001 | NSGA-III significativement meilleur |
-| IGD ↓ | **0.392792** (σ=0.056) | 0.625496 (σ=0.037) | p<0.001 | NSGA-III significativement meilleur |
-| Spacing ↓ | 0.043043 | 0.039179 | p=0.839 | Pas de différence significative |
+| HV ↑ | **0.526600** (σ=0.172) | 0.205470 (σ=0.028) | p<0.001 | NSGA-III significativement meilleur |
+| GD ↓ | **0.169105** (σ=0.085) | 0.457975 (σ=0.059) | p<0.001 | NSGA-III significativement meilleur |
+| IGD ↓ | **0.361349** (σ=0.035) | 0.535515 (σ=0.035) | p<0.001 | NSGA-III significativement meilleur |
+| Spacing ↓ | 0.047252 | 0.036220 | p=0.126 | Pas de différence significative |
 
 **Sur cette instance, NSGA-III reste significativement meilleur que
 QI-NSGA-III sur les 3 indicateurs de qualité**, malgré les corrections
 apportées (voir ci-dessous) — Spacing (répartition des solutions) est la
-seule métrique où les deux sont équivalents.
+seule métrique où les deux sont équivalents. Tableau mis à jour après
+l'étape 3 (normalisation partagée, voir ci-dessous) ; les chiffres évoluent
+légèrement d'une campagne à l'autre à cause du ideal/nadir partagé recalculé
+à chaque comparaison (voir note plus bas), sans changer le verdict.
 
 ## Évolution des corrections (avec preuves chiffrées)
 
@@ -49,7 +52,8 @@ configuration ci-dessus :
 | 0. Algorithme d'origine | Croisement/mutation en espace θ, pas de sélection de survie explicite sur la population de travail (seule l'archive externe est élitiste) | 0.113 (20v20, avant toute correction) | — référence de départ |
 | 1. + Sélection élitiste | Fusion parent+enfant, ne garde que les meilleurs `pop_size` via `ReferenceDirectionSurvival` (pymoo) — même sélection environnementale que NSGA-III | 0.068 → 0.120 (3 seeds) | ✅ Adopté — U=0 (séparation totale sur 3v3) |
 | 2. + Espace X | Croisement (SBX) et mutation (PM) en espace X (valeurs réelles, eta=20 comme NSGA-III) au lieu de l'espace θ, dont le décodage `cos²(θ)` est très non-uniforme | 0.067 → 0.224 (3 seeds, sur la config déjà élitiste) | ✅ Adopté |
-| → Validation finale (20v20) | Config confirmée (élitiste + espace X + α_max=0.10π + rotation="tanh") | **0.182** puis **0.144** (voir note ci-dessous) | Résultat actuel |
+| → Validation finale (20v20) | Config confirmée (élitiste + espace X + α_max=0.10π + rotation="tanh") | **0.182** puis **0.144** (voir note ci-dessous) | Résultat étape 2 |
+| 3. + Normalisation partagée avec `survival.norm` | La sélection des guides recalculait l'ideal/nadir à zéro chaque génération au lieu de partager celui, stable et monotone, que pymoo maintient déjà pour la survie élitiste — deux normalisations incohérentes du même concept dans la même génération | 0.189 → **0.205** (20v20, ancien comportement vs corrigé) | ✅ Adopté — GD (p=0.022) et IGD (p=0.029) significatifs, HV à la limite (p=0.060), Spacing inchangé (p=0.365, cohérent : correctif de convergence, pas de diversité) |
 
 **Note sur la variation 0.182 → 0.144** : ce nombre dépend du ideal/nadir
 partagé, recalculé à chaque comparaison à partir des chromosomes alors en
@@ -74,15 +78,20 @@ entre variantes QI-NSGA-III (précisé à chaque fois) :
 | `alpha_max=0.01π` (au lieu de 0.10π) | +3.8 à +9.3% de HV **en comparaison interne uniquement** (QI-NSGA-III vs lui-même, sans NSGA-III) | ⚠️ Piste trompeuse, voir ligne suivante |
 | `rotation_type="tanh_soft"` (au lieu de "tanh") | +2.9% de HV **en comparaison interne uniquement** | ⚠️ Piste trompeuse, voir ligne suivante |
 | Combinaison des deux ci-dessus, **validée contre NSGA-III** (20v20) | HV=0.169 vs NSGA-III=0.474 sur ce run — pas d'amélioration réelle par rapport à la config de production (aurait même légèrement dégradé GD/IGD) | ❌ Non adopté — piège classique de comparaison interne (chaque variante mesurée seulement contre elle-même) qui ne se confirme pas une fois normalisée sur l'échelle partagée avec NSGA-III |
+| Magnitude de rotation adaptative par fitness (`Δθ = η·tanh((f_best−f)/(\|f\|+ε))`, Kumar, Solanki, Jhariya, Shrivastava & Gupta 2026, *Scientific Reports*, EAH-QNSGA-II — adapté ici via la distance perpendiculaire au rayon de référence comme proxy de fitness) | 3 seeds : séparation totale sur HV (U=0, p=0.10 — plancher statistique à cet échantillon) laissait espérer un effet réel. 20 seeds : **aucune différence significative** sur les 4 métriques (HV p=0.925, GD p=0.172, IGD p=0.409, Spacing p=0.091) — le signal à 3 seeds était du bruit | ❌ Non adopté — script gardé (`sensitivity/compare_fitness_adaptive_rotation.py`) comme trace, aucune modification de production |
 
 ## Conclusion
 
-Les deux corrections adoptées (sélection élitiste, variation en espace X)
-constituent une amélioration réelle et validée statistiquement de
-QI-NSGA-III — HV multiplié par ~1,3 à ~2× selon le point de mesure, gap
-avec NSGA-III réduit de moitié à deux tiers selon l'indicateur. Mais sur
+Les trois corrections adoptées (sélection élitiste, variation en espace X,
+normalisation partagée) constituent une amélioration réelle et validée
+statistiquement de QI-NSGA-III — HV multiplié par ~1,3 à ~2× selon le point
+de mesure entre les deux premières corrections, puis un gain supplémentaire
+significatif sur GD/IGD (et HV à la limite) avec la troisième. Mais sur
 cette instance à 100 clients, **NSGA-III reste l'algorithme le plus
 performant** pour résoudre l'IRP lui-même — un résultat à assumer tel quel
 plutôt qu'à forcer, cohérent avec le tableau plus nuancé obtenu sur les
 benchmarks DTLZ/MaF (voir `Validation/Benchmarking/{dtlz,maf}/results/`),
-où QI-NSGA-III dépasse NSGA-III sur plusieurs problèmes.
+où QI-NSGA-III dépasse NSGA-III sur plusieurs problèmes — et où la
+normalisation partagée améliore aussi les résultats sur la plupart des
+problèmes DTLZ/MaF (DTLZ7 et MaF7 en M3 basculent même en faveur de
+QI-NSGA-III, qui perdait auparavant sur ces deux problèmes).

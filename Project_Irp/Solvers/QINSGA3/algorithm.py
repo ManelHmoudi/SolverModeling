@@ -131,10 +131,32 @@ def _compute_nadir(F: np.ndarray, ideal: np.ndarray) -> np.ndarray:
     return F.max(axis=0)
 
 
-def _normalise_F(F: np.ndarray) -> np.ndarray:
-    """Normalise F: ideal point + nadir from hyperplane (Deb & Jain 2014, §IV-A)."""
-    ideal = F.min(axis=0)
-    nadir = _compute_nadir(F, ideal)
+def _normalise_F(
+    F:     np.ndarray,
+    ideal: np.ndarray | None = None,
+    nadir: np.ndarray | None = None,
+) -> np.ndarray:
+    """Normalise F: ideal point + nadir from hyperplane (Deb & Jain 2014, §IV-A).
+
+    If ideal/nadir are not given, both are computed fresh from F alone (used
+    by _crowding_trim's one-off archive trim, where there is no notion of
+    "run so far" to track). If given, F is normalised directly against them
+    instead -- run_qinsga3's main loop passes pymoo's own running
+    ideal_point/nadir_point (ReferenceDirectionSurvival.norm, updated every
+    generation from the merged parent+offspring pool, monotonic across the
+    whole run) here, instead of recomputing an unstable from-scratch
+    ideal/nadir from only the current generation's population every call --
+    see "Design history" in Solvers/QINSGA3/README.md for why this matters:
+    guide selection and rotation used to run on a per-generation-only
+    estimate that could drift generation to generation even when nothing
+    about the actual search changed, while the elitist survival step
+    (pymoo's own ReferenceDirectionSurvival.do()) already used a stable,
+    monotonic one for the same ideal/nadir concept.
+    """
+    if ideal is None:
+        ideal = F.min(axis=0)
+    if nadir is None:
+        nadir = _compute_nadir(F, ideal)
     denom = np.where(nadir - ideal > 1e-9, nadir - ideal, 1.0)
     return (F - ideal) / denom
 
@@ -495,7 +517,16 @@ def run_qinsga3(
                 theta_parent[pareto_idx], arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
             )
 
-            F_norm = _normalise_F(F_pen_parent)
+            # Share the SAME ideal/nadir as the elitist survival step below
+            # (pymoo's own ReferenceDirectionSurvival.norm, monotonic across
+            # generations) for guide selection and niching -- see _normalise_F's
+            # docstring. Not yet populated on generation 0 (before survival.do()
+            # has run once), so that first generation falls back to a
+            # from-scratch estimate exactly as before.
+            if survival.norm.nadir_point is None:
+                F_norm = _normalise_F(F_pen_parent)
+            else:
+                F_norm = _normalise_F(F_pen_parent, survival.norm.ideal_point, survival.norm.nadir_point)
             assoc  = _assign_ref_dirs(F_norm, ref_dirs)
 
             guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
@@ -506,7 +537,10 @@ def run_qinsga3(
             arch_F_norm    = None
             if len(arch_X) >= 4:
                 arch_theta_arr = np.array(arch_theta)
-                arch_F_norm    = _normalise_F(np.array(arch_F))
+                if survival.norm.nadir_point is None:
+                    arch_F_norm = _normalise_F(np.array(arch_F))
+                else:
+                    arch_F_norm = _normalise_F(np.array(arch_F), survival.norm.ideal_point, survival.norm.nadir_point)
                 pareto_assoc   = assoc[pareto_idx]
                 guides_theta   = _supplement_from_archive(
                     guides_theta, assoc, pareto_assoc,
@@ -545,11 +579,28 @@ def run_qinsga3(
             # --- Elitist survival: merge parent + offspring, keep best pop_size
             # via pymoo's own NSGA-III niching survival — the same elitist
             # replacement NSGA-III (pymoo) itself uses every generation.
-            theta_pool = np.vstack([theta_parent, theta_offspring])
-            F_pool     = np.vstack([F_pen_parent, F_pen_offspring])
-            merged_pop = Population.new(X=theta_pool, F=F_pool)
-            survived   = survival._do(None, merged_pop, pop_size, random_state=rng)
-            qpop.theta = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
+            #
+            # IMPORTANT: use the REAL objectives (F_parent/F_offspring) and G
+            # here, and call survival.do() (pymoo's public entry point) —
+            # NOT the pre-penalised F_pen_* with survival._do() directly.
+            # do() first splits feasible/infeasible via CV (derived from G)
+            # and only fills remaining slots with infeasible individuals
+            # (sorted by constraint violation) — this is the exact
+            # "feasibility first" mechanism NSGA-III (pymoo) itself gets for
+            # free every generation via its own Survival.do() wrapper.
+            # Calling _do() directly on the manually penalised F_pen (as
+            # before) bypassed that wrapper entirely, mixing the penalty into
+            # the non-dominated sort instead — a real asymmetry that
+            # disadvantaged QI-NSGA-III relative to NSGA-III in head-to-head
+            # comparisons (confirmed by reading pymoo's Survival.do() /
+            # ReferenceDirectionSurvival source: filter_infeasible=True is
+            # only applied by the do() wrapper, never by _do()).
+            theta_pool  = np.vstack([theta_parent, theta_offspring])
+            F_true_pool = np.vstack([F_parent, F_offspring])
+            G_pool      = np.vstack([G_parent, G_offspring])
+            merged_pop  = Population.new(X=theta_pool, F=F_true_pool, G=G_pool)
+            survived    = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
+            qpop.theta  = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
 
             if (arch_F_norm is not None
                     and migration_period > 0
