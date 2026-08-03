@@ -367,6 +367,48 @@ def _supplement_from_archive(
     return guides_theta
 
 
+def _supplement_from_archive_crowding(
+    guides_theta: np.ndarray,
+    assoc:        np.ndarray,
+    pareto_assoc: np.ndarray,
+    arch_theta:   np.ndarray,
+    arch_F_norm:  np.ndarray,
+    ref_dirs:     np.ndarray,
+) -> np.ndarray:
+    """Remedy F counterpart to _supplement_from_archive: fills the same
+    uncovered-niche guides from the external archive, but the archive
+    candidate is chosen by highest crowding distance within the niche
+    instead of lowest perpendicular distance to the reference ray -- kept
+    consistent with _select_guides_crowding so no single generation mixes
+    the two criteria across niches. See docs/superpowers/specs/
+    2026-08-03-qinsga3-crowding-distance-guide-design.md.
+
+    ref_dirs is still needed here (only) to compute arch_assoc via
+    _assign_ref_dirs -- niche MEMBERSHIP is still by reference-ray
+    association; only the in-niche tie-break criterion changes.
+    """
+    arch_assoc = _assign_ref_dirs(arch_F_norm, ref_dirs)
+    covered    = set(pareto_assoc.tolist())
+
+    pop_rds           = np.unique(assoc)
+    uncovered_pop_rds = pop_rds[~np.isin(pop_rds, list(covered))]
+
+    for rd in uncovered_pop_rds:
+        in_niche = np.where(arch_assoc == rd)[0]
+        if len(in_niche) == 0:
+            continue
+        if len(in_niche) == 1:
+            best_theta = arch_theta[in_niche[0]]
+        else:
+            F_cand     = arch_F_norm[in_niche]
+            cd         = _crowding_distance(F_cand)
+            best_theta = arch_theta[in_niche[cd.argmax()]]
+
+        guides_theta[assoc == rd] = best_theta
+
+    return guides_theta
+
+
 # ---------------------------------------------------------------------------
 # Migration
 # ---------------------------------------------------------------------------

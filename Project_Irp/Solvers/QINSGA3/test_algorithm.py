@@ -471,3 +471,52 @@ def test_select_guides_crowding_differs_from_ray_closest_champion():
 
     assert np.allclose(guides[0], theta[1])   # P1's theta, not P0's
     assert not np.allclose(guides[0], theta[0])
+
+
+# ── _supplement_from_archive_crowding ───────────────────────────────────
+
+def test_supplement_from_archive_crowding_fills_uncovered_niche_by_crowding():
+    """Niche 1 has no Pareto representative (pareto_assoc only covers niche
+    0); 4 archive candidates are all associated to niche 1. Reuses the exact
+    dataset from test_select_guides_crowding_differs_from_ray_closest_champion
+    (verified: crowding winner = index 1, ray-closest winner = index 0) to
+    show the archive-fallback path picks the same, different champion the
+    base _supplement_from_archive would not."""
+    guides_theta = np.array([[9.0, 9.0]])   # placeholder, must be overwritten
+    assoc        = np.array([1])
+    pareto_assoc = np.array([0])            # niche 0 covered, niche 1 is not
+    ref_dirs     = np.array([[1.0, 0.0], [1.0, 1.0]])
+    arch_F_norm  = np.array([
+        [0.5, 0.5],
+        [0.1, 0.6],
+        [0.9, 0.4],
+        [0.3, 0.55],
+    ])
+    arch_theta = np.array([
+        [0.0, 0.0],
+        [1.0, 1.0],
+        [2.0, 2.0],
+        [3.0, 3.0],
+    ])
+
+    result = _supplement_from_archive_crowding(
+        guides_theta, assoc, pareto_assoc, arch_theta, arch_F_norm, ref_dirs,
+    )
+
+    assert np.allclose(result[0], arch_theta[1])   # crowding winner
+    assert not np.allclose(result[0], arch_theta[0])  # not the ray-closest winner
+
+
+def test_supplement_from_archive_crowding_leaves_covered_niches_untouched():
+    guides_theta = np.array([[7.0, 7.0]])
+    assoc        = np.array([0])
+    pareto_assoc = np.array([0])   # niche 0 IS covered -> no supplementation
+    ref_dirs     = np.array([[1.0, 0.0]])
+    arch_F_norm  = np.array([[0.2, 0.3]])
+    arch_theta   = np.array([[9.0, 9.0]])
+
+    result = _supplement_from_archive_crowding(
+        guides_theta, assoc, pareto_assoc, arch_theta, arch_F_norm, ref_dirs,
+    )
+
+    assert np.allclose(result[0], guides_theta[0])
