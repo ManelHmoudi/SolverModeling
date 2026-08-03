@@ -428,6 +428,41 @@ que restreindre la comparaison à un voisinage local change quoi que ce
 soit -- le guide local et le champion global finissent souvent par être les
 mêmes individus.
 
+### Remède F -- guide de niche par crowding distance
+
+Proposition d'un relecteur externe de la thèse : les remèdes A-E changent
+tous la fréquence, la cible ou la règle de la rotation, mais aucun ne touche
+le critère utilisé pour choisir LEQUEL des membres d'une niche devient le
+champion (`_select_guides` a toujours pris le membre le plus proche du rayon
+de référence -- un critère de **convergence**, `d_perp2.argmin()`). Ce
+remède le remplace par le membre à plus forte **crowding distance** dans la
+niche [Deb et al. 2002, §III-B] -- un critère de diversité déjà implémenté
+dans ce module (`_crowding_distance`, utilisé jusque-là pour l'élagage de
+l'archive externe). Design complet :
+`docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md`.
+
+**Résultat (3 seeds, 300 générations, instance 100 clients,
+`sensitivity/compare_crowding_guides.py`)** :
+
+| Indicateur | Baseline (ray-closest) | Test (crowding) | Mann-Whitney |
+|---|---|---|---|
+| HV ↑ | 0.140398 | 0.152976 | U=3.0, p=0.700000 |
+| GD ↓ | 0.634873 | 0.615103 | U=4.0, p=1.000000 |
+| IGD ↓ | 0.636284 | 0.631984 | U=4.0, p=1.000000 |
+| Diversité chromosome | 0.003984 | 0.003642 | -- |
+
+Script conservé : `sensitivity/compare_crowding_guides.py`. Log complet :
+`sensitivity/crowding_guides_campaign_log.txt`.
+
+**Sixième remède indépendant, même verdict que A-E** : changer uniquement le
+critère de sélection du champion de niche (sans toucher sa fréquence, sa
+magnitude, ni la formule de rotation) ne suffit pas non plus à combler
+l'écart avec NSGA-III sur l'IRP. Ceci renforce l'hypothèse retenue pour le
+mémoire : la limite n'est pas dans le CHOIX du point cible (que ce soit par
+convergence ou par diversité), mais dans le principe même de tirer chaque
+génération vers UN point unique dans un espace θ dont la géométrie n'est pas
+régulière une fois passée par le décodeur.
+
 ## Conclusion
 
 Après un diagnostic structurel clair (déficit de diversité chromosome ×13,
@@ -454,6 +489,16 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   prédit pas la qualité : cinq mécanismes indépendants, trois effets
   différents sur la diversité (forte hausse, baisse, légère hausse), un
   seul et même résultat sur la qualité.
+- Le remède F, qui change pour la première fois le CRITÈRE de choix du
+  champion (crowding distance plutôt que distance au rayon de référence)
+  plutôt que sa fréquence, sa cible ou la règle de rotation, a vu la
+  diversité chromosome légèrement diminuer (0.003642 contre 0.003984,
+  soit -8.6 %) sans qu'aucune métrique de qualité du front ne s'améliore
+  significativement face au baseline (HV/GD/IGD/Spacing tous non
+  significatifs, p entre 0.40 et 1.00), l'écart avec NSGA-III restant lui
+  hautement significatif (p=0.0011 sur HV/GD/IGD) -- sixième mécanisme
+  indépendant, même conclusion : ce n'est pas le choix du point cible qui
+  limite QI-NSGA-III sur l'IRP.
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le
