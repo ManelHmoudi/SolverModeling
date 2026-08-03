@@ -960,6 +960,7 @@ def run_qinsga3(
     noise_scale:      float = 0.02,
     use_rqpso_rotation: bool = False,
     use_ring_guides:  bool   = False,
+    use_crowding_guides: bool = False,
     use_pso_rotation: bool   = False,
     use_chaotic_rotation: bool = False,
     seed:             int   = 42,
@@ -1006,6 +1007,17 @@ def run_qinsga3(
     Tayarani-N & Akbarzadeh-T (2014) §3 -- see _select_guides_ring's
     docstring. Combinable with use_rqpso_rotation (gbest becomes the ring
     guide instead of the niche champion) but validated independently first.
+
+    use_crowding_guides (disabled by default) replaces _select_guides's
+    reference-ray-closest niche champion (and _supplement_from_archive's
+    archive fallback) with the HIGHEST-crowding-distance member instead --
+    see _select_guides_crowding's docstring for the full rationale and
+    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md
+    for the design. Mutually exclusive with use_ring_guides (both replace
+    the same guide-selection step) -- combinable in principle with the
+    rotation-rule variants (use_rqpso_rotation/use_pso_rotation/
+    use_chaotic_rotation) but validated alone first, same as every other
+    remedy in this module.
 
     use_pso_rotation (disabled by default) replaces the tanh rotation gate
     with the momentum-based update from Li, Xu, Liu & Li (2008) -- see the
@@ -1100,6 +1112,8 @@ def run_qinsga3(
 
             if use_ring_guides:
                 guides_theta = _select_guides_ring(assoc, F_norm, ref_dirs, qpop.theta)
+            elif use_crowding_guides:
+                guides_theta = _select_guides_crowding(assoc, pareto_idx, F_norm, qpop.theta)
             else:
                 guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
 
@@ -1114,7 +1128,9 @@ def run_qinsga3(
                 else:
                     arch_F_norm = _normalise_F(np.array(arch_F), survival.norm.ideal_point, survival.norm.nadir_point)
                 pareto_assoc   = assoc[pareto_idx]
-                guides_theta   = _supplement_from_archive(
+                supplement_fn  = (_supplement_from_archive_crowding if use_crowding_guides
+                                   else _supplement_from_archive)
+                guides_theta   = supplement_fn(
                     guides_theta, assoc, pareto_assoc,
                     arch_theta_arr, arch_F_norm, ref_dirs,
                 )
