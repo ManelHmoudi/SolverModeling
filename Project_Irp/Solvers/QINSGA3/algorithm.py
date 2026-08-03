@@ -222,6 +222,66 @@ def _select_guides(
     return guides_theta
 
 
+def _select_guides_ring(
+    assoc:      np.ndarray,
+    F_norm:     np.ndarray,
+    ref_dirs:   np.ndarray,
+    qpop_theta: np.ndarray,
+) -> np.ndarray:
+    """8th remedy: Ring-structured guide selection [Tayarani-N &
+    Akbarzadeh-T 2014, Evol. Intel. 7:219-239, §3] -- Ring is the structure
+    the paper itself found best for combinatorial problems (Table 2:
+    "the best structure for the algorithm when solving the Knapsack problem
+    is the Ring structure").
+
+    Unlike _select_guides (every population member in a niche is broadcast
+    the SAME single niche champion -- the mechanism the diagnostic chapter
+    identified as the root cause of QI-NSGA-III's chromosome-diversity
+    collapse on the IRP, see Solvers/IRP_results_summary.md), each niche's
+    population members are arranged in a ring (fixed order = current array
+    order, no cross-generation persistence needed -- unlike pbest/eq. 13,
+    this is a purely per-generation grouping, so the individual-identity
+    mismatch that broke those two ports does not apply here) and each member
+    rotates toward the BEST of itself and its two ring neighbours only, not
+    the whole niche's single best. A niche can therefore end up pulling
+    toward several different local points instead of collapsing onto one.
+
+    Niches with 1 member trivially guide toward themselves (no rotation).
+    Niches with 2 members are each other's only neighbour on both sides
+    (harmless duplication, not a special case).
+
+    No archive-fallback for uncovered niches here -- the caller applies
+    _supplement_from_archive afterward exactly as with _select_guides, since
+    that mechanism is unrelated to the ring topology.
+    """
+    N   = len(assoc)
+    ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
+    ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)
+
+    guides_theta = qpop_theta.copy()   # default: self (updated per niche below)
+
+    for rd in np.unique(assoc):
+        pop_idx = np.where(assoc == rd)[0]
+        n = len(pop_idx)
+
+        F_niche = F_norm[pop_idx]
+        proj    = F_niche @ ref_unit[rd]
+        d_self  = np.maximum((F_niche ** 2).sum(axis=1) - proj ** 2, 0.0)
+
+        idx_prev = np.roll(pop_idx, 1)
+        idx_next = np.roll(pop_idx, -1)
+        d_prev   = np.roll(d_self, 1)
+        d_next   = np.roll(d_self, -1)
+
+        stacked_d   = np.stack([d_self, d_prev, d_next], axis=1)          # (n, 3)
+        stacked_idx = np.stack([pop_idx, idx_prev, idx_next], axis=1)     # (n, 3)
+        best_local  = stacked_idx[np.arange(n), stacked_d.argmin(axis=1)]
+
+        guides_theta[pop_idx] = qpop_theta[best_local]
+
+    return guides_theta
+
+
 def _supplement_from_archive(
     guides_theta: np.ndarray,
     assoc:        np.ndarray,
@@ -302,6 +362,371 @@ def _migrate(
 
 
 # ---------------------------------------------------------------------------
+# Niche-recentring reset operator
+# [Tayarani-N & Akbarzadeh-T 2014, Evol. Intel. 7:219-239, §5], adapted --
+# see docs/superpowers/specs/2026-08-01-qinsga3-niche-recentring-reset-design.md
+# for why. Two of the paper's mechanisms don't transfer to QINSGA3 and were
+# dropped rather than reused verbatim:
+#   - eq. 11 (convergence = theta near 0/pi/2): QINSGA3 initialises and
+#     converges around theta=pi/4 ("maximum superposition"), not toward the
+#     classical-bit boundaries the paper's formula was written for -- measured
+#     0% trigger on the real IRP at every gamma from 0.99 to 0.50.
+#   - eq. 13 (stagnation gate = guide unchanged for T generations): QINSGA3's
+#     elitist survival re-selects the whole population from a freshly merged
+#     parent+offspring pool every generation, so the per-niche "champion" has
+#     no structural reason to stay identical across generations even when the
+#     niche is otherwise tightly converged -- measured 0/60 generations where
+#     any niche satisfied this on the real IRP (median guide shift 0.033 rad
+#     generation to generation, comparable to the clustering threshold itself).
+# What's kept: eq. 12 (mutual theta-distance clustering) as the sole trigger,
+# checked on every occupied niche every generation; keep-best-by-reference-ray
+# selection; the reset value is a fresh U(0, pi/2) draw rather than the
+# paper's theta<-pi/4 (pi/4 is where the population already sits, so
+# resetting there would be close to a no-op -- see design doc).
+# ---------------------------------------------------------------------------
+
+def _recentring_reset_mask(
+    assoc:      np.ndarray,
+    qpop_theta: np.ndarray,
+    F_norm:     np.ndarray,
+    ref_dirs:   np.ndarray,
+    delta:      float,
+) -> np.ndarray:
+    """Detect converged clusters in every occupied niche, by direct theta
+    distance (eq. 12, unmodified):
+
+        (1/n_genes) * sum_k |theta_ik - theta_jk| / (pi/2) < delta
+
+    Within each niche with >=2 members, "best" (kept) is the member closest to
+    the niche's reference ray -- the same criterion _select_guides already
+    uses. Every other member within delta of the best is marked for reset (the
+    caller decides the reset value).
+
+    Returns a boolean mask of shape (pop_size,): True for individuals to reset.
+    """
+    pop_size = len(assoc)
+    reset    = np.zeros(pop_size, dtype=bool)
+
+    ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
+    ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)
+
+    for rd in np.unique(assoc):
+        niche_idx = np.where(assoc == rd)[0]
+        if len(niche_idx) < 2:
+            continue
+
+        proj    = F_norm[niche_idx] @ ref_unit[rd]
+        d_perp2 = np.maximum((F_norm[niche_idx] ** 2).sum(axis=1) - proj ** 2, 0.0)
+        best_local = niche_idx[d_perp2.argmin()]
+
+        best_theta   = qpop_theta[best_local]
+        dist         = np.abs(qpop_theta[niche_idx] - best_theta).mean(axis=1) / (np.pi / 2.0)
+        similar_mask = dist < delta
+
+        losers = niche_idx[similar_mask & (niche_idx != best_local)]
+        reset[losers] = True
+
+    return reset
+
+
+# ---------------------------------------------------------------------------
+# RQPSO-style dual-attractor rotation (7th remedy)
+# [Bodha, Arun, Awasthi, Mahato & Fotis 2025, "Rotational gate based quantum
+# particle swarm optimization for benchmark suites and combined economic
+# emission dispatch", Engineering Research Express 7(4):045345], adapted --
+# see the docstring of sensitivity/compare_rqpso_rotation.py for the full
+# derivation. Two adaptations, both necessary (domain change), not invented:
+#   - The paper's theta lives on a full circle [0, 2*pi) and uses a
+#     shortest-arc WRAP(.) distance; QINSGA3's theta is a bounded, non-cyclic
+#     parameter in [0, pi/2] (Li & Wang 2007's cos^2 mixing angle, not a
+#     phase) -- there is no wraparound to exploit, so the plain difference
+#     (guide - theta) is used instead, normalised by the domain width pi/2
+#     (matches the eq. 12 port's own convention elsewhere in this file).
+#   - The paper's Theta_t = pi*(1 - t/T) rotation budget is specific to its
+#     [0, 2*pi) domain's scale; reusing it verbatim would apply a step an
+#     order of magnitude too large for QINSGA3's pi/2-wide domain. Replaced
+#     with QINSGA3's own already-calibrated alpha_max as the magnitude scale,
+#     keeping the paper's linear decay-to-zero SHAPE unchanged:
+#     theta_step = alpha_max * (1 - gen/max_gen).
+# c1 = c2 = 2.05 is the paper's own value, kept as-is (not re-tuned).
+#
+# pbest ("personal best") has no clean equivalent in QINSGA3: unlike RQPSO's
+# non-recombining particles (persistent identity across iterations), QINSGA3
+# has SBX crossover, and elitist survival re-selects the whole population
+# from a freshly merged parent+offspring pool every generation -- there is no
+# stable per-individual identity to track a personal history against (the
+# same architectural mismatch already found for the niche-recentring
+# operator's stagnation gate, see docs/superpowers/specs/
+# 2026-08-01-qinsga3-niche-recentring-reset-design.md). Approximated here by
+# tracking a best-ever theta/quality PER POPULATION SLOT INDEX rather than
+# per individual identity -- an explicit, documented approximation, not a
+# faithful port, using the same positional convention _migrate already uses
+# elsewhere in this file.
+# ---------------------------------------------------------------------------
+
+_RQPSO_C1 = 2.05
+_RQPSO_C2 = 2.05
+
+
+def _update_pbest(
+    pbest_theta: np.ndarray,
+    pbest_scalar: np.ndarray,
+    theta: np.ndarray,
+    F_norm: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Per-slot running best (see module note above): scalar quality is the
+    mean of the normalised objectives (equal-weight scalarisation, matching
+    the E(v, w, B) = sum_l w_l*f_l(v) construction with w_l=1/h used in
+    Demidova & Maslennikov 2025 [same issue as ref. [65], "QI-NSGA-III"] --
+    lower is better since F_norm is oriented for minimisation). Updates
+    pbest_theta/pbest_scalar in place where this generation's slot quality
+    improves on its own recorded best.
+    """
+    quality = F_norm.mean(axis=1)
+    improved = quality < pbest_scalar
+    new_pbest_theta = np.where(improved[:, None], theta, pbest_theta)
+    new_pbest_scalar = np.where(improved, quality, pbest_scalar)
+    return new_pbest_theta, new_pbest_scalar
+
+
+def _rqpso_rotate(
+    theta:       np.ndarray,
+    pbest_theta: np.ndarray,
+    guide_theta: np.ndarray,
+    theta_step:  float,
+    rng:         np.random.Generator,
+) -> np.ndarray:
+    """Dual-attractor rotation update (eq. Δθ in the paper, domain-adapted):
+
+        Δθ = c1*u1*((pbest - theta)/(pi/2))*theta_step
+           + c2*u2*((guide - theta)/(pi/2))*theta_step
+
+    u1, u2 ~ U(0,1), sampled independently per gene per individual (matches
+    the paper's per-qubit sampling). Returns the new, clipped theta.
+    """
+    u1 = rng.uniform(0.0, 1.0, size=theta.shape)
+    u2 = rng.uniform(0.0, 1.0, size=theta.shape)
+    diff_p = (pbest_theta - theta) / (np.pi / 2.0)
+    diff_g = (guide_theta - theta) / (np.pi / 2.0)
+    delta = _RQPSO_C1 * u1 * diff_p * theta_step + _RQPSO_C2 * u2 * diff_g * theta_step
+    return np.clip(theta + delta, 0.0, np.pi / 2.0)
+
+
+# ---------------------------------------------------------------------------
+# PSO-style momentum rotation (9th remedy)
+# [Li, Xu, Liu & Li 2008, "Quantum Multi-objective Evolutionary Algorithm
+# with Particle Swarm Optimization Method", ICNC 2008]. Same dual-attractor
+# targets as _rqpso_rotate (pbest, niche guide as gbest) but with a genuinely
+# new ingredient never tested before: a VELOCITY that PERSISTS across
+# generations (inertia), instead of every remedy so far recomputing the step
+# from scratch each generation. c1=c2=2 and the alpha_max/alpha_min bounds
+# already in this file (Vmax=0.10*pi, Vmin=0.001*pi in the paper's own
+# notation) are this same paper's own values -- already the cited source of
+# QINSGA3's alpha_max/alpha_min (see README), just never used with momentum
+# before.
+#
+# Two adaptations, both necessary and documented:
+#   - The paper reports Vmax/Vmin as fixed bounds without a decay schedule;
+#     reusing QINSGA3's own already-adopted linear decay (alpha_max ->
+#     alpha_min over the run, same convention as the existing tanh rotation
+#     and _rqpso_rotate's theta_step) rather than inventing a new schedule.
+#   - The adaptive inertia weight w_i = D(i)/N + m(i)/N (paper's eq. 3.1) is
+#     ported verbatim (D(i) = per-individual "max-min distance" density in
+#     theta-space, eq. in §3.1; m(i) = number of individuals i dominates,
+#     via the same Pareto dominance check _archive_update already uses) but
+#     clipped to [0, 2]: the paper's own formula has no clip and was only
+#     validated on their own single-archive knapsack setup, not established
+#     to stay non-negative in general -- w_i<0 would invert the velocity
+#     term and cause divergence, an instability outside the paper's own
+#     tested regime rather than part of its actual mechanism.
+# ---------------------------------------------------------------------------
+
+_PSO_C1 = 2.0
+_PSO_C2 = 2.0
+
+
+def _max_min_density(theta: np.ndarray) -> np.ndarray:
+    """Per-individual "max-min distance" density D(i) [Li, Xu, Liu & Li 2008,
+    §3.1]: d_ji = Euclidean distance between i and j in theta-space;
+    d_min(i) = min over j!=i of d_ji; d_max_min = max over i of d_min(i) (the
+    single most-isolated individual's nearest-neighbour distance, used as a
+    population-wide density threshold); D(i) = sum over j!=i of
+    sign(d_max_min - d_ji) -- positive when many other individuals are
+    closer to i than that threshold (i is in a crowded region), negative
+    when i is relatively isolated.
+    """
+    sq = (theta ** 2).sum(axis=1)
+    d2 = np.maximum(sq[:, None] + sq[None, :] - 2.0 * theta @ theta.T, 0.0)
+    d = np.sqrt(d2)
+
+    d_for_min = d.copy()
+    np.fill_diagonal(d_for_min, np.inf)
+    d_min = d_for_min.min(axis=1)
+    d_max_min = d_min.max()
+
+    sign_matrix = np.sign(d_max_min - d)
+    np.fill_diagonal(sign_matrix, 0.0)  # exclude j == i from the sum
+    return sign_matrix.sum(axis=1)
+
+
+def _domination_counts(F: np.ndarray) -> np.ndarray:
+    """m(i) = number of other individuals that i Pareto-dominates (F assumed
+    oriented for minimisation, same convention as the rest of this file's
+    dominance checks, e.g. _archive_update)."""
+    dominates = (F[:, None, :] <= F[None, :, :]).all(axis=2) & \
+                (F[:, None, :] < F[None, :, :]).any(axis=2)
+    np.fill_diagonal(dominates, False)
+    return dominates.sum(axis=1)
+
+
+def _adaptive_inertia(D: np.ndarray, m: np.ndarray, pop_size: int) -> np.ndarray:
+    """w_i = D(i)/N + m(i)/N [eq. 3.1], clipped to [0, 2] for stability (see
+    module note above -- not part of the paper's own formula, a necessary
+    safeguard against the untested w_i < 0 regime)."""
+    w = D / pop_size + m / pop_size
+    return np.clip(w, 0.0, 2.0)
+
+
+def _pso_rotate(
+    theta:       np.ndarray,
+    velocity:    np.ndarray,
+    pbest_theta: np.ndarray,
+    guide_theta: np.ndarray,
+    w:           np.ndarray,
+    v_clip:      float,
+    rng:         np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """v(t+1) = w*v(t) + c1*u1*(pbest-theta) + c2*u2*(guide-theta)
+       theta(t+1) = theta(t) + v(t+1)
+    [Li, Xu, Liu & Li 2008, §2.3/3.4]. w is per-individual (shape (pop_size,)).
+    v is clipped to [-v_clip, v_clip] (see module note re: Vmax/Vmin decay).
+    Returns (new_theta, new_velocity) -- velocity must be threaded back into
+    the caller's state for the next generation (this is the actual novelty:
+    a persistent momentum term no prior remedy in this project has used).
+    """
+    u1 = rng.uniform(0.0, 1.0, size=theta.shape)
+    u2 = rng.uniform(0.0, 1.0, size=theta.shape)
+    new_v = (w[:, None] * velocity
+             + _PSO_C1 * u1 * (pbest_theta - theta)
+             + _PSO_C2 * u2 * (guide_theta - theta))
+    new_v = np.clip(new_v, -v_clip, v_clip)
+    new_theta = np.clip(theta + new_v, 0.0, np.pi / 2.0)
+    return new_theta, new_v
+
+
+# ---------------------------------------------------------------------------
+# Chaos-modulated rotation (10th remedy)
+# [Hu Feng-jun & Wu Bin 2009, "Quantum Evolutionary Algorithm for Vehicle
+# Routing Problem with Simultaneous Delivery and Pickup", Joint 48th IEEE
+# CDC / 28th Chinese Control Conference, eq. 15-19]. Unlike every prior
+# remedy (tanh, RQPSO, PSO-momentum), the rotation MAGNITUDE here is not a
+# smooth function of generation index or fitness rank -- it is modulated by
+# a per-individual CHAOTIC sequence (logistic map, mu>=4), whose stationary
+# distribution is U-shaped (more time spent near 0 and near 1 than near
+# 0.5), producing bursty step sizes instead of a monotonically decaying
+# schedule. The paper's own magnitude (eq. 16) is an RMS distance to
+# "several best individuals" rather than a single guide.
+#
+# Three adaptations, all necessary (binary/VRP -> continuous IRP domain
+# mismatch, or numerical-stability guards), not invented:
+#   - eq. 17's direction chi = sgn(alpha_i*beta_i*(b_i-0.5)) depends on a
+#     BINARY bit b_i of the best solution (grey-binary VRP encoding in the
+#     source paper) -- meaningless for QINSGA3's continuous theta. Replaced
+#     with chi = sign(guide_theta - theta), the same "which side is the
+#     target on" direction logic already used by every other rotation
+#     variant in this file (tanh, RQPSO, PSO).
+#   - eq. 16's "K best individuals" (the paper's own external best-solution
+#     archive B(t), Fig. 1) maps directly onto QINSGA3's own external
+#     archive (_archive_update) -- no new elitism machinery invented, reused
+#     as-is, restricted per niche via the archive's reference-direction
+#     association. Niches not yet covered by the archive fall back to a
+#     single-point RMS (K=1: the niche's own guide, itself already resolved
+#     through _select_guides/_select_guides_ring + _supplement_from_archive)
+#     rather than being left undefined.
+#   - lambda must persist as a genuine chaotic TIME SERIES across
+#     generations (eq. 19 evolves lambda_t -> lambda_{t+1}, only seeded once
+#     from the individual's own fitness at generation 0) -- the same
+#     individual-identity mismatch already documented for pbest/velocity
+#     (QINSGA3's elitist survival re-selects the whole population from a
+#     freshly merged pool every generation). Approximated the same way:
+#     lambda tracked PER POPULATION SLOT, not per individual identity.
+#     Additionally clipped away from the exact fixed points 0.0/1.0 (not in
+#     the paper) -- floating-point rounding collapses the logistic map to
+#     the absorbing fixed point 0 after enough iterations otherwise, which
+#     would silently turn the chaotic term into a constant and defeat the
+#     entire mechanism being tested.
+# ---------------------------------------------------------------------------
+
+_CHAOS_MU = 4.0
+
+
+def _elite_rms_distance(
+    theta:        np.ndarray,
+    assoc:        np.ndarray,
+    guides_theta: np.ndarray,
+    arch_theta:   np.ndarray | None,
+    arch_assoc:   np.ndarray | None,
+) -> np.ndarray:
+    """Per-gene RMS distance from each individual to its niche's archive
+    elites [eq. 16, adapted -- see module note above]:
+
+        Delta_theta_i = sqrt( mean_k( (elite_k - theta_i)^2 ) )
+
+    Niches with no archive elites yet fall back to a K=1 "RMS" against the
+    niche's own already-resolved guide (reduces to |guide - theta|).
+    """
+    result = np.empty_like(theta)
+
+    for rd in np.unique(assoc):
+        pop_idx = np.where(assoc == rd)[0]
+        theta_n = theta[pop_idx]
+
+        elite_idx = (np.where(arch_assoc == rd)[0]
+                     if arch_assoc is not None else np.array([], dtype=int))
+
+        if len(elite_idx) > 0:
+            elites = arch_theta[elite_idx]                          # (K, D)
+            diff   = theta_n[:, None, :] - elites[None, :, :]        # (n, K, D)
+            rms    = np.sqrt((diff ** 2).mean(axis=1))               # (n, D)
+        else:
+            rms = np.abs(theta_n - guides_theta[pop_idx])
+
+        result[pop_idx] = rms
+
+    return result
+
+
+def _chaotic_lambda_seed(F_norm: np.ndarray) -> np.ndarray:
+    """lambda_0 = f(X_i) [eq. 18], using the same equal-weight normalised
+    quality scalar as _update_pbest, clipped away from the logistic map's
+    absorbing fixed points 0.0/1.0 (see module note)."""
+    quality = F_norm.mean(axis=1)
+    return np.clip(quality, 1e-4, 1.0 - 1e-4)
+
+
+def _chaotic_lambda_step(lam: np.ndarray, mu: float = _CHAOS_MU) -> np.ndarray:
+    """Logistic map [eq. 19]: lambda_{t+1} = mu*lambda_t*(1-lambda_t), mu>=4
+    for full chaos. Clipped away from 0.0/1.0 for the same reason as the seed."""
+    return np.clip(mu * lam * (1.0 - lam), 1e-6, 1.0 - 1e-6)
+
+
+def _chaotic_rotate(
+    theta:       np.ndarray,
+    guide_theta: np.ndarray,
+    elite_rms:   np.ndarray,
+    lam:         np.ndarray,
+) -> np.ndarray:
+    """theta_i = chi * Delta_theta_i * (1 + chi*lambda_i)  [eq. 15, adapted
+    direction -- see module note]. Deterministic given (elite_rms, lam): no
+    stochastic sampling, unlike RQPSO/PSO -- chaos comes from the logistic
+    map's own trajectory, not injected randomness.
+    """
+    chi  = np.sign(guide_theta - theta)
+    step = chi * elite_rms * (1.0 + chi * lam[:, None])
+    return np.clip(theta + step, 0.0, np.pi / 2.0)
+
+
+# ---------------------------------------------------------------------------
 # Crowding distance and archive trimming (vectorised)
 # ---------------------------------------------------------------------------
 
@@ -353,7 +778,7 @@ def _archive_update(
 ) -> None:
     """Update the external archive with non-dominated feasible solutions.
 
-    Dominance check vectorised [Zitzler 1999, Def. 2]:
+    Standard Pareto dominance check, vectorised:
         arr dominates f  ⟺  (arr ≤ f).all(axis=1) & (arr < f).any(axis=1)
 
     Performance fix: arr = np.array(arch_F) is built ONCE per call (not once per
@@ -447,6 +872,12 @@ def run_qinsga3(
     eta_mut:          float = 20.0,
     migration_period: int   = 10,
     n_migrate:        int   = 10,
+    delta_similar:    float = 0.0,
+    noise_scale:      float = 0.02,
+    use_rqpso_rotation: bool = False,
+    use_ring_guides:  bool   = False,
+    use_pso_rotation: bool   = False,
+    use_chaotic_rotation: bool = False,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -462,6 +893,48 @@ def run_qinsga3(
     eta_cross/eta_mut default to 20 to match NSGA-III's own SBX/PM operators
     (NSGA3/main.py) — crossover and mutation now happen in X-space (see module
     docstring), so these parameters mean the same thing as NSGA-III's.
+
+    delta_similar controls the niche-recentring reset operator (disabled by
+    default, delta_similar=0.0) -- see
+    docs/superpowers/specs/2026-08-01-qinsga3-niche-recentring-reset-design.md.
+    Ablation-only until validated against Solvers/NSGA3 with the project's
+    shared ideal/nadir + Mann-Whitney protocol.
+
+    noise_scale is exposed here (default 0.02, unchanged) so ablations can
+    test strengthening QuantumPopulation.measure()'s diversity noise -- see
+    Guzel et al. (2022), "QNSGA-II: A Quantum Computing-Inspired Approach to
+    Multi-Objective Optimization" (IEEE ISNCC): QNSGA-II's whole population
+    starts from IDENTICAL quantum chromosomes and relies entirely on
+    probabilistic measurement (not chromosome-level separation) for
+    diversity. QINSGA3 already has a measurement-noise term
+    (chromosome.py::measure, Platel et al. 2009) but it defaults to a small
+    value tuned only to break integer-rounding ties, not to carry the
+    diversity load the way QNSGA-II's measurement does.
+
+    use_rqpso_rotation (disabled by default) replaces the tanh rotation gate
+    with the dual-attractor update from Bodha, Arun, Awasthi, Mahato & Fotis
+    (2025) -- see the module note above _rqpso_rotate for the full formula
+    and the two documented domain adaptations. alpha_min/rotation_type are
+    unused when this is enabled (alpha_max still sets the step magnitude).
+
+    use_ring_guides (disabled by default) replaces _select_guides's single
+    niche-wide champion with the Ring-structured local guide from
+    Tayarani-N & Akbarzadeh-T (2014) §3 -- see _select_guides_ring's
+    docstring. Combinable with use_rqpso_rotation (gbest becomes the ring
+    guide instead of the niche champion) but validated independently first.
+
+    use_pso_rotation (disabled by default) replaces the tanh rotation gate
+    with the momentum-based update from Li, Xu, Liu & Li (2008) -- see the
+    module note above _pso_rotate for the full formula and the two
+    documented adaptations (velocity-bound decay schedule, inertia clip).
+    Mutually exclusive with use_rqpso_rotation in practice (both claim the
+    rotation step; only one should be True at a time).
+
+    use_chaotic_rotation (disabled by default) replaces the tanh rotation
+    gate with the chaos-modulated update from Hu Feng-jun & Wu Bin (2009) --
+    see the module note above _chaotic_rotate for the full formula and the
+    three documented adaptations (direction, archive-as-B(t), positional
+    lambda state). Mutually exclusive with the other rotation variants.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -477,7 +950,8 @@ def run_qinsga3(
     if p_mut is None:
         p_mut = 1.0 / n_genes   # matches NSGA-III's pm = 1/D convention
 
-    qpop     = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type)
+    qpop     = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type,
+                                  noise_scale=noise_scale)
     sorter   = NonDominatedSorting()
     survival = ReferenceDirectionSurvival(ref_dirs)
     sbx_op   = SBX(prob=p_cross, eta=eta_cross)
@@ -487,6 +961,14 @@ def run_qinsga3(
     arch_F:    list[np.ndarray] = []
     arch_theta: list[np.ndarray] = []
     _MAX_ARCHIVE = 500
+
+    if use_rqpso_rotation or use_pso_rotation:
+        pbest_theta  = qpop.theta.copy()
+        pbest_scalar = np.full(pop_size, np.inf)
+    if use_pso_rotation:
+        velocity = np.zeros_like(qpop.theta)
+    if use_chaotic_rotation:
+        lam = None   # seeded from generation 0's own F_norm (eq. 18), then evolves per-slot
 
     n_workers = min(os.cpu_count() or 1, pop_size)
     chunksize = max(1, pop_size // (2 * n_workers))
@@ -529,7 +1011,13 @@ def run_qinsga3(
                 F_norm = _normalise_F(F_pen_parent, survival.norm.ideal_point, survival.norm.nadir_point)
             assoc  = _assign_ref_dirs(F_norm, ref_dirs)
 
-            guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
+            if use_chaotic_rotation and lam is None:
+                lam = _chaotic_lambda_seed(F_norm)
+
+            if use_ring_guides:
+                guides_theta = _select_guides_ring(assoc, F_norm, ref_dirs, qpop.theta)
+            else:
+                guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
 
             # arch_F_norm computed once and shared by both _supplement_from_archive
             # and _migrate — avoids a redundant _normalise_F call per generation
@@ -550,7 +1038,27 @@ def run_qinsga3(
             alpha = alpha_min + (alpha_max - alpha_min) * (1.0 - gen / max_gen)
 
             # --- Quantum step: rotation stays in theta-space -----------------
-            qpop.rotate(guides_theta, alpha)
+            if use_rqpso_rotation:
+                theta_step = alpha_max * (1.0 - gen / max_gen)
+                qpop.theta = _rqpso_rotate(qpop.theta, pbest_theta, guides_theta, theta_step, rng)
+            elif use_pso_rotation:
+                v_clip = alpha_min + (alpha_max - alpha_min) * (1.0 - gen / max_gen)
+                D_density = _max_min_density(qpop.theta)
+                m_dom     = _domination_counts(F_pen_parent)
+                w_inertia = _adaptive_inertia(D_density, m_dom, pop_size)
+                qpop.theta, velocity = _pso_rotate(
+                    qpop.theta, velocity, pbest_theta, guides_theta, w_inertia, v_clip, rng,
+                )
+            elif use_chaotic_rotation:
+                arch_assoc_arr = (_assign_ref_dirs(arch_F_norm, ref_dirs)
+                                   if arch_F_norm is not None else None)
+                elite_rms = _elite_rms_distance(
+                    qpop.theta, assoc, guides_theta, arch_theta_arr, arch_assoc_arr,
+                )
+                qpop.theta = _chaotic_rotate(qpop.theta, guides_theta, elite_rms, lam)
+                lam = _chaotic_lambda_step(lam)
+            else:
+                qpop.rotate(guides_theta, alpha)
             X_rotated = qpop.measure()
 
             # --- Variation step: SBX + PM in X-SPACE (matches NSGA-III) -----
@@ -601,6 +1109,31 @@ def run_qinsga3(
             merged_pop  = Population.new(X=theta_pool, F=F_true_pool, G=G_pool)
             survived    = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
             qpop.theta  = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
+
+            if use_rqpso_rotation or use_pso_rotation:
+                survived_F_norm = _normalise_F(
+                    np.asarray(survived.get("F"), dtype=float),
+                    survival.norm.ideal_point, survival.norm.nadir_point,
+                )
+                pbest_theta, pbest_scalar = _update_pbest(
+                    pbest_theta, pbest_scalar, qpop.theta, survived_F_norm,
+                )
+
+            # --- Niche-recentring reset (ablation-only, delta_similar=0.0
+            # disables it) -- same positional approximation _migrate below
+            # already makes: assoc/F_norm were computed from the PARENT
+            # population earlier this generation, applied here against the
+            # post-survival qpop.theta. See docs/superpowers/specs/
+            # 2026-08-01-qinsga3-niche-recentring-reset-design.md.
+            if delta_similar > 0.0:
+                reset_mask = _recentring_reset_mask(
+                    assoc, qpop.theta, F_norm, ref_dirs, delta_similar,
+                )
+                n_reset = int(reset_mask.sum())
+                if n_reset:
+                    qpop.theta[reset_mask] = rng.uniform(
+                        0.0, np.pi / 2.0, size=(n_reset, n_genes)
+                    )
 
             if (arch_F_norm is not None
                     and migration_period > 0
