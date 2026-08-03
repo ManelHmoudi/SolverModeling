@@ -451,9 +451,6 @@ l'archive externe). Design complet :
 | IGD ↓ | 0.636284 | 0.631984 | U=4.0, p=1.000000 |
 | Diversité chromosome | 0.003984 | 0.003642 | -- |
 
-Script conservé : `sensitivity/compare_crowding_guides.py`. Log complet :
-`sensitivity/crowding_guides_campaign_log.txt`.
-
 **Sixième remède indépendant, même verdict que A-E** : changer uniquement le
 critère de sélection du champion de niche (sans toucher sa fréquence, sa
 magnitude, ni la formule de rotation) ne suffit pas non plus à combler
@@ -462,6 +459,9 @@ mémoire : la limite n'est pas dans le CHOIX du point cible (que ce soit par
 convergence ou par diversité), mais dans le principe même de tirer chaque
 génération vers UN point unique dans un espace θ dont la géométrie n'est pas
 régulière une fois passée par le décodeur.
+
+Script conservé : `sensitivity/compare_crowding_guides.py`. Log complet :
+`sensitivity/crowding_guides_campaign_log.txt`.
 
 ## Conclusion
 
