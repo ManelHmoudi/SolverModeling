@@ -292,8 +292,8 @@ def _select_guides_crowding(
     champion is chosen by HIGHEST crowding distance within the niche
     [Deb et al. 2002, §III-B -- _crowding_distance, already used elsewhere
     in this module for archive trimming] instead of LOWEST perpendicular
-    distance to the reference ray. See docs/superpowers/specs/
-    2026-08-03-qinsga3-crowding-distance-guide-design.md.
+    distance to the reference ray. See
+    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md.
 
     ref_dirs is not needed here -- crowding distance doesn't reference the
     niche's ray, and assoc/pareto_idx already encode niche membership. The
@@ -380,8 +380,8 @@ def _supplement_from_archive_crowding(
     candidate is chosen by highest crowding distance within the niche
     instead of lowest perpendicular distance to the reference ray -- kept
     consistent with _select_guides_crowding so no single generation mixes
-    the two criteria across niches. See docs/superpowers/specs/
-    2026-08-03-qinsga3-crowding-distance-guide-design.md.
+    the two criteria across niches. See
+    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md.
 
     ref_dirs is still needed here (only) to compute arch_assoc via
     _assign_ref_dirs -- niche MEMBERSHIP is still by reference-ray
@@ -1045,6 +1045,11 @@ def run_qinsga3(
 
     if p_mut is None:
         p_mut = 1.0 / n_genes   # matches NSGA-III's pm = 1/D convention
+
+    assert not (use_ring_guides and use_crowding_guides), (
+        "use_ring_guides and use_crowding_guides both replace the same "
+        "guide-selection step and are mutually exclusive"
+    )
 
     qpop     = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type,
                                   noise_scale=noise_scale)

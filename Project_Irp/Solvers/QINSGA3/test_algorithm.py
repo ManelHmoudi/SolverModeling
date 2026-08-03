@@ -10,7 +10,7 @@ from Solvers.QINSGA3.algorithm import (
     _update_pbest, _rqpso_rotate, _select_guides_ring,
     _max_min_density, _domination_counts, _adaptive_inertia, _pso_rotate,
     _elite_rms_distance, _chaotic_lambda_seed, _chaotic_lambda_step, _chaotic_rotate,
-    _select_guides_crowding, _supplement_from_archive_crowding,
+    _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -469,8 +469,11 @@ def test_select_guides_crowding_differs_from_ray_closest_champion():
 
     guides = _select_guides_crowding(assoc, pareto_idx, F_norm, theta)
 
+    ray_dir = np.array([[1.0, 1.0]])
+    baseline_guides = _select_guides(assoc, pareto_idx, F_norm, ray_dir, theta)
+
     assert np.allclose(guides[0], theta[1])   # P1's theta, not P0's
-    assert not np.allclose(guides[0], theta[0])
+    assert not np.allclose(guides[0], baseline_guides[0])   # differs from what _select_guides actually picks
 
 
 # ── _supplement_from_archive_crowding ───────────────────────────────────
@@ -509,6 +512,7 @@ def test_supplement_from_archive_crowding_fills_uncovered_niche_by_crowding():
 
 def test_supplement_from_archive_crowding_leaves_covered_niches_untouched():
     guides_theta = np.array([[7.0, 7.0]])
+    expected     = guides_theta.copy()
     assoc        = np.array([0])
     pareto_assoc = np.array([0])   # niche 0 IS covered -> no supplementation
     ref_dirs     = np.array([[1.0, 0.0]])
@@ -519,4 +523,5 @@ def test_supplement_from_archive_crowding_leaves_covered_niches_untouched():
         guides_theta, assoc, pareto_assoc, arch_theta, arch_F_norm, ref_dirs,
     )
 
-    assert np.allclose(result[0], guides_theta[0])
+    assert np.allclose(result[0], expected[0])
+    assert not np.allclose(result[0], arch_theta[0])   # archive value was NOT pulled in

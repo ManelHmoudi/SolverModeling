@@ -458,7 +458,22 @@ l'écart avec NSGA-III sur l'IRP. Ceci renforce l'hypothèse retenue pour le
 mémoire : la limite n'est pas dans le CHOIX du point cible (que ce soit par
 convergence ou par diversité), mais dans le principe même de tirer chaque
 génération vers UN point unique dans un espace θ dont la géométrie n'est pas
-régulière une fois passée par le décodeur.
+régulière une fois passée par le décodeur. Contrairement aux remèdes A-E
+(tous en séparation totale, U=0 ou U=9 sur 3v3 -- le test clairement pire),
+le remède F ne dégrade rien : distributions chevauchantes (U=3.0-7.0), les
+quatre métriques penchant nominalement en faveur du test sans signification
+statistique -- un résultat neutre, pas nuisible.
+
+**Réserve méthodologique** : `_crowding_distance` assigne une valeur
+infinie aux membres extrêmes de chaque objectif -- avec M=4 objectifs et des
+niches de 1 à 5 membres (taille typique sur l'IRP, voir le remède "anneau"
+ci-dessus), une simulation confirme que 75 à 100% des niches de taille 2-4
+ont TOUS leurs membres à `inf`, auquel cas le critère dégénère en un simple
+tie-break positionnel (premier indice) plutôt qu'un vrai signal de
+diversité. Les niches à 1 membre ne sont pas concernées. Ce remède a donc
+surtout comparé "convergence vs choix positionnel arbitraire" plutôt que
+"convergence vs diversité" pour la majorité des niches -- le résultat null
+reste valide et informatif, mais avec cette réserve.
 
 Script conservé : `sensitivity/compare_crowding_guides.py`. Log complet :
 `sensitivity/crowding_guides_campaign_log.txt`.
@@ -498,7 +513,9 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   significatifs, p entre 0.40 et 1.00), l'écart avec NSGA-III restant lui
   hautement significatif (p=0.0011 sur HV/GD/IGD) -- sixième mécanisme
   indépendant, même conclusion : ce n'est pas le choix du point cible qui
-  limite QI-NSGA-III sur l'IRP.
+  limite QI-NSGA-III sur l'IRP, avec la réserve que la crowding distance
+  sature en pratique pour la majorité des niches sur l'IRP (voir section
+  Remède F).
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le
