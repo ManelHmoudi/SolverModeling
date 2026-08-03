@@ -10,6 +10,7 @@ from Solvers.QINSGA3.algorithm import (
     _update_pbest, _rqpso_rotate, _select_guides_ring,
     _max_min_density, _domination_counts, _adaptive_inertia, _pso_rotate,
     _elite_rms_distance, _chaotic_lambda_seed, _chaotic_lambda_step, _chaotic_rotate,
+    _select_guides_crowding, _supplement_from_archive_crowding,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -405,3 +406,68 @@ def test_chaotic_rotate_clips_to_domain_bounds():
                               lam=np.array([0.9]))
     assert np.all(result <= np.pi / 2.0)
     assert np.all(result >= 0.0)
+
+
+# ── _select_guides_crowding ─────────────────────────────────────────────
+# Remedy F: niche champion chosen by HIGHEST crowding distance instead of
+# LOWEST perpendicular distance to the reference ray. See
+# docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md.
+
+def test_select_guides_crowding_single_pareto_member_guides_toward_itself():
+    assoc      = np.array([0])
+    pareto_idx = np.array([0])
+    F_norm     = np.array([[1.0, 0.0]])
+    theta      = np.array([[0.3, 0.3]])
+
+    guides = _select_guides_crowding(assoc, pareto_idx, F_norm, theta)
+
+    assert np.allclose(guides[0], theta[0])
+
+
+def test_select_guides_crowding_two_member_niche_picks_deterministically_without_crash():
+    """With exactly 2 Pareto members and 2 objectives, _crowding_distance
+    assigns inf to both (both are boundary points on every objective) --
+    argmax's first-index tie-break must still return a valid, non-crashing
+    result (the degenerate case flagged in the design doc's Risk section)."""
+    assoc      = np.array([0, 0])
+    pareto_idx = np.array([0, 1])
+    F_norm     = np.array([[0.0, 1.0], [1.0, 0.0]])
+    theta      = np.array([[0.2, 0.2], [0.8, 0.8]])
+
+    guides = _select_guides_crowding(assoc, pareto_idx, F_norm, theta)
+
+    assert np.allclose(guides[0], theta[0])
+    assert np.allclose(guides[1], theta[0])
+
+
+def test_select_guides_crowding_differs_from_ray_closest_champion():
+    """4-member niche where the crowding-distance winner and the
+    reference-ray-closest member (what _select_guides would pick) are
+    different, known individuals -- proves the criterion swap actually
+    changes which chromosome becomes the guide.
+
+    Dataset (verified by hand against both formulas):
+      P0=[.5,.5]  P1=[.1,.6]  P2=[.9,.4]  P3=[.3,.55]
+      d_perp2 to ref_dir [1,1]: P0=0.0 (ray-closest) < P3=.0313 < P1=.125 ~= P2=.1251
+      crowding distance (2 objectives): P0=1.5 (finite), P1=inf, P2=inf, P3=1.0
+      -> argmax picks P1 (first index at the max/inf value) -- NOT P0.
+    """
+    assoc      = np.array([0, 0, 0, 0])
+    pareto_idx = np.array([0, 1, 2, 3])
+    F_norm     = np.array([
+        [0.5, 0.5],
+        [0.1, 0.6],
+        [0.9, 0.4],
+        [0.3, 0.55],
+    ])
+    theta = np.array([
+        [0.0, 0.0],
+        [1.0, 1.0],
+        [2.0, 2.0],
+        [3.0, 3.0],
+    ])
+
+    guides = _select_guides_crowding(assoc, pareto_idx, F_norm, theta)
+
+    assert np.allclose(guides[0], theta[1])   # P1's theta, not P0's
+    assert not np.allclose(guides[0], theta[0])

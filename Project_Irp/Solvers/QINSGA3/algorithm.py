@@ -282,6 +282,48 @@ def _select_guides_ring(
     return guides_theta
 
 
+def _select_guides_crowding(
+    assoc:      np.ndarray,
+    pareto_idx: np.ndarray,
+    F_norm:     np.ndarray,
+    qpop_theta: np.ndarray,
+) -> np.ndarray:
+    """Remedy F: same niche-champion broadcast as _select_guides, but the
+    champion is chosen by HIGHEST crowding distance within the niche
+    [Deb et al. 2002, §III-B -- _crowding_distance, already used elsewhere
+    in this module for archive trimming] instead of LOWEST perpendicular
+    distance to the reference ray. See docs/superpowers/specs/
+    2026-08-03-qinsga3-crowding-distance-guide-design.md.
+
+    ref_dirs is not needed here -- crowding distance doesn't reference the
+    niche's ray, and assoc/pareto_idx already encode niche membership. The
+    global fallback (closest-to-origin Pareto member, for niches with no
+    Pareto representative) is unchanged from _select_guides -- it is not the
+    criterion under test.
+    """
+    N            = len(assoc)
+    F_par_n      = F_norm[pareto_idx]
+    global_fb    = qpop_theta[pareto_idx[np.linalg.norm(F_par_n, axis=1).argmin()]]
+    pareto_assoc = assoc[pareto_idx]
+
+    guides_theta = np.tile(global_fb, (N, 1))
+
+    for rd in np.unique(pareto_assoc):
+        same_mask = pareto_assoc == rd
+        same_idx  = pareto_idx[same_mask]
+
+        if len(same_idx) == 1:
+            best_theta = qpop_theta[same_idx[0]]
+        else:
+            F_same     = F_norm[same_idx]
+            cd         = _crowding_distance(F_same)
+            best_theta = qpop_theta[same_idx[cd.argmax()]]
+
+        guides_theta[assoc == rd] = best_theta
+
+    return guides_theta
+
+
 def _supplement_from_archive(
     guides_theta: np.ndarray,
     assoc:        np.ndarray,
