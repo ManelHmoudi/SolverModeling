@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from Solvers.QINSGA3.repair import (
     _two_opt_candidates, _route_traversal_time,
     _rebuild_route_arcs, _replace_route_arcs,
-    _repair_route_result,
+    _repair_route_result, _route_f1_contribution,
 )
 from Solvers.NSGA3.evaluator import compute_f1
 
@@ -229,3 +229,77 @@ def test_repair_route_result_leaves_already_optimal_route_unchanged():
     repaired = _repair_route_result(route_result, sets_, params_)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 0]
+
+
+# ── _route_f1_contribution ───────────────────────────────────────────────
+# Performance fix: _repair_route_result originally called compute_f1 on a
+# full scratch route_result per candidate (correct, but O(whole network)
+# per candidate -- measured ~29x slower than baseline on the real IRP,
+# sensitivity/compare_route_repair.py). _route_f1_contribution computes
+# only the ONE repaired route's y1+y3 contribution, O(route length). This
+# test proves the two are exactly equivalent as an acceptance criterion,
+# using the real compute_f1 formula on a route_result with a SECOND,
+# untouched route present -- proving the untouched route's contribution
+# (and y2, holding cost) cancels exactly in the delta, not just that the
+# two formulas agree when only one route exists in the whole network.
+
+def test_route_f1_contribution_delta_matches_compute_f1_delta():
+    """Same repairable route (path [0,1,2,3,0] -> [0,2,1,3,0]) as
+    test_repair_route_result_improves_f1_via_two_opt_swap, PLUS a second,
+    untouched route (truck 2, client 4, path [0,4,0] -- length 3, never
+    repaired) with its own nonzero transport cost and time-window penalty
+    (LT[4,1]=1.0, arrival=6.0 -> late by 5.0). If the isolation claim in
+    _route_f1_contribution's docstring is correct, this second route's
+    contribution -- and y2 -- must cancel exactly in the delta regardless
+    of their actual values.
+    """
+    sets_ = {"clients": [1, 2, 3, 4], "T": [1]}
+    d = defaultdict(lambda: 1000.0)
+    d.update({
+        (0, 1): 5.0, (1, 2): 5.0, (2, 3): 1.0, (3, 0): 1.0,
+        (0, 2): 1.0, (2, 1): 1.0, (1, 3): 1.0,
+        (0, 4): 2.0, (4, 0): 2.0,
+    })
+    params_ = {
+        "d": d,
+        "v": {1: 1.0, 2: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 1.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9, {(1, 1): 3.0, (2, 1): 8.0, (3, 1): 12.0, (4, 1): 1.0}),
+    }
+    route_result = {
+        "x": {
+            (0, 1, 1, 1): 1, (1, 2, 1, 1): 1, (2, 3, 1, 1): 1, (3, 0, 1, 1): 1,
+            (0, 4, 1, 2): 1, (4, 0, 1, 2): 1,
+        },
+        "f": {
+            (0, 1, 1, 1): 35, (1, 2, 1, 1): 25, (2, 3, 1, 1): 5, (3, 0, 1, 1): 0,
+            (0, 4, 1, 2): 8, (4, 0, 1, 2): 0,
+        },
+        "depot_stock": {1: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 5.0, (2, 1): 10.0, (3, 1): 11.0, (4, 1): 6.0},
+        "truck_assign": {(1, 1): 1, (2, 1): 1, (3, 1): 1, (4, 1): 2},
+        "actual_qty": {(1, 1): 10, (2, 1): 20, (3, 1): 5, (4, 1): 8},
+        "routes_data": {1: {
+            1: {"path": [0, 1, 2, 3, 0], "qty": {"1": 10, "2": 20, "3": 5}},
+            2: {"path": [0, 4, 0], "qty": {"4": 8}},
+        }},
+        "tau_return": {1: 12.0},
+    }
+
+    repaired = _repair_route_result(route_result, sets_, params_)
+    assert repaired["routes_data"][1][1]["path"] == [0, 2, 1, 3, 0]   # sanity: repair still fires
+    assert repaired["routes_data"][1][2]["path"] == [0, 4, 0]          # sanity: route 2 untouched
+
+    full_delta = compute_f1(repaired, sets_, params_) - compute_f1(route_result, sets_, params_)
+
+    original_path = route_result["routes_data"][1][1]["path"]
+    repaired_path = repaired["routes_data"][1][1]["path"]
+    contribution_delta = (
+        _route_f1_contribution(repaired_path, repaired["f"], repaired["arrival_times"], 1, 1, params_)
+        - _route_f1_contribution(original_path, route_result["f"], route_result["arrival_times"], 1, 1, params_)
+    )
+
+    assert full_delta == contribution_delta

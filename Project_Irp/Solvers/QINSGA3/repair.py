@@ -99,13 +99,50 @@ def _replace_route_arcs(arc_dict: dict, old_path: list, t, k, new_entries: dict)
     return result
 
 
-_MAX_REPAIR_ITER = 5   # internal constant, not exposed -- see design doc's "New parameters".
-# Lowered from 20 after the timing check (sensitivity/compare_route_repair.py,
-# instance 100, gen=10, pop=50) measured a ~29x slowdown vs baseline, growing
-# with generation count (15.4x at gen=3 -> 28.9x at gen=10) -- well past the
-# design doc's Risk-section 10x threshold. Each whole-individual compute_f1
-# recomputation per candidate swap is the dominant cost; capping the search
-# depth trades repair thoroughness for tractability.
+def _route_f1_contribution(path: list, f_vars: dict, arrival_times: dict, t, k, params_: dict) -> float:
+    """The portion of compute_f1's y1 (transport cost) + y3 (time-window
+    penalty) attributable to ONE route (t, k) only -- O(route length), not
+    O(whole network). A 2-opt swap only ever changes ONE route's arcs and
+    arrival times; every other term in f1 (y2 holding cost, every other
+    route's y1/y3 contribution) is identical before and after the swap and
+    cancels exactly in the difference. So
+        compute_f1(new_route_result) - compute_f1(old_route_result)
+        == _route_f1_contribution(new_path, ...) - _route_f1_contribution(old_path, ...)
+    exactly -- see test_route_f1_contribution_delta_matches_compute_f1_delta,
+    which verifies this equivalence against the real compute_f1 formula.
+    Replaces an earlier version of this search that called compute_f1 on a
+    full scratch route_result per candidate -- correct, but O(whole network)
+    per candidate; measured ~29x slower than baseline on the real IRP
+    (sensitivity/compare_route_repair.py, instance 100), which this fixes.
+    """
+    c_ijk = params_["c_ijk"]
+    d     = params_["d"]
+    c1    = params_["c1"]
+    c2    = params_["c2"]
+    ET    = params_["ET"]
+    LT    = params_["LT"]
+
+    y1 = 0.0
+    for idx in range(len(path) - 1):
+        i, j = path[idx], path[idx + 1]
+        y1 += c_ijk[i, j, k] * d[i, j] * f_vars[i, j, t, k]
+
+    y3 = 0.0
+    for l in path[1:-1]:
+        arr = arrival_times.get((l, t), 0.0)
+        if arr > 0.0:
+            y3 += c1 * max(0.0, ET[l, t] - arr)
+            y3 += c2 * max(0.0, arr - LT[l, t])
+
+    return y1 + y3
+
+
+_MAX_REPAIR_ITER = 20   # internal constant, not exposed -- see design doc's "New parameters".
+# _route_f1_contribution (above) replaced the earlier full-compute_f1-per-
+# candidate acceptance check, so the dominant per-candidate cost is now
+# O(route length) instead of O(whole network) -- restored to the design
+# doc's original value now that the real bottleneck is fixed, rather than
+# trading search thoroughness for speed.
 
 
 def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict:
@@ -118,8 +155,6 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict
     with updated x/f/arrival_times/routes_data/tau_return; the chromosome
     that produced the original route_result is never touched by the caller.
     """
-    from Solvers.NSGA3.evaluator import compute_f1
-
     working = dict(route_result)
     working["x"] = dict(route_result["x"])
     working["f"] = dict(route_result["f"])
@@ -138,7 +173,9 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict
                 continue
             qty_on_route = {int(l): q for l, q in info["qty"].items()}
 
-            current_f1 = compute_f1(working, sets_, params_)
+            current_contrib = _route_f1_contribution(
+                path, working["f"], working["arrival_times"], t, k, params_
+            )
 
             for _ in range(_MAX_REPAIR_ITER):
                 improved = False
@@ -150,23 +187,20 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict
                     trial_x, trial_f, trial_arrivals = _rebuild_route_arcs(
                         candidate, qty_on_route, t, k, params_
                     )
-                    scratch = dict(working)
-                    scratch["x"] = _replace_route_arcs(working["x"], path, t, k, trial_x)
-                    scratch["f"] = _replace_route_arcs(working["f"], path, t, k, trial_f)
-                    scratch["arrival_times"] = {**working["arrival_times"], **trial_arrivals}
-
-                    trial_f1 = compute_f1(scratch, sets_, params_)
-                    if trial_f1 < current_f1:
-                        working["x"] = scratch["x"]
-                        working["f"] = scratch["f"]
-                        working["arrival_times"] = scratch["arrival_times"]
+                    trial_contrib = _route_f1_contribution(
+                        candidate, trial_f, trial_arrivals, t, k, params_
+                    )
+                    if trial_contrib < current_contrib:
+                        working["x"] = _replace_route_arcs(working["x"], path, t, k, trial_x)
+                        working["f"] = _replace_route_arcs(working["f"], path, t, k, trial_f)
+                        working["arrival_times"] = {**working["arrival_times"], **trial_arrivals}
                         working["routes_data"][t][k] = {"path": candidate, "qty": info["qty"]}
                         working["tau_return"][t] = max(
                             _route_traversal_time(r["path"], k2, params_)
                             for k2, r in working["routes_data"][t].items()
                         )
                         path = candidate
-                        current_f1 = trial_f1
+                        current_contrib = trial_contrib
                         improved = True
                         break
                 if not improved:
