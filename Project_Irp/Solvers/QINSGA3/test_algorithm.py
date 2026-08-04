@@ -11,7 +11,7 @@ from Solvers.QINSGA3.algorithm import (
     _max_min_density, _domination_counts, _adaptive_inertia, _pso_rotate,
     _elite_rms_distance, _chaotic_lambda_seed, _chaotic_lambda_step, _chaotic_rotate,
     _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
-    _crowding_saturation_stats,
+    _crowding_saturation_stats, _build_g_constraints,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -602,3 +602,42 @@ def test_crowding_saturation_stats_aggregates_across_niches():
 
     assert n_multi == 2
     assert n_saturated == 1
+
+
+# ── _build_g_constraints ─────────────────────────────────────────────────
+# Remedy G: duplicates IRPProblem._evaluate's G-list construction
+# (Solvers/NSGA3/problem.py:67-85) so _evaluate_with_repair can compute G
+# for a REPAIRED route_result without calling IRPProblem._evaluate itself
+# (which decodes and builds routes internally, with no repair hook). This
+# test hand-verifies the duplicate against the same published formula, to
+# catch transcription drift.
+
+def test_build_g_constraints_matches_hand_verified_formula():
+    """2 periods, 1 client. Hand-computed (mirrors problem.py:67-85 exactly):
+      t=1: ret=20 -> [20-100=-80, 0-20=-20]
+      t=2: ret=30 -> [30-100=-70, 0-30=-30]
+      client 1: t=1: cum_del=8,  cum_dem=10 -> [10-8=2]
+                t=2: cum_del=15, cum_dem=15 -> [15-15=0]
+      t=1: [depot_stock[1].frigo-50=10-50=-40, depot_stock[1].nonfrigo-50=5-50=-45]
+      t=2: [depot_stock[2].frigo-50=60-50=10, depot_stock[2].nonfrigo-50=2-50=-48]
+    """
+    sets_ = {"clients": [1], "T": [1, 2]}
+    params_ = {
+        "q_lt": {(1, 1): 10, (1, 2): 5},
+        "tau_min": 0.0,
+        "tau_max": 100.0,
+        "I_O_max_frigo": 50.0,
+        "I_O_max_nonfrigo": 50.0,
+    }
+    route_result = {
+        "tau_return": {1: 20.0, 2: 30.0},
+        "actual_qty": {(1, 1): 8, (1, 2): 7},
+        "depot_stock": {
+            1: {"frigo": 10.0, "nonfrigo": 5.0},
+            2: {"frigo": 60.0, "nonfrigo": 2.0},
+        },
+    }
+
+    G = _build_g_constraints(route_result, sets_, params_)
+
+    assert G == [-80, -20, -70, -30, 2, 0, -40, -45, 10, -48]

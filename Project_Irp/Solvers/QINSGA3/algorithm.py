@@ -90,6 +90,73 @@ def _worker_eval(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return out["F"], out["G"]
 
 
+def _build_g_constraints(route_result: dict, sets_: dict, params_: dict) -> list:
+    """Mirrors IRPProblem._evaluate's G-list construction exactly
+    (Solvers/NSGA3/problem.py:67-85) -- duplicated here, not imported,
+    since calling IRPProblem._evaluate directly would decode and build
+    routes itself with no repair hook. Kept in sync manually; see
+    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+    """
+    clients  = sets_["clients"]
+    T        = sets_["T"]
+    q_lt     = params_["q_lt"]
+    tau_min  = params_["tau_min"]
+    tau_max  = params_["tau_max"]
+    I_max_f  = params_["I_O_max_frigo"]
+    I_max_nf = params_["I_O_max_nonfrigo"]
+    actual      = route_result["actual_qty"]
+    depot_stock = route_result["depot_stock"]
+
+    G = []
+    for t in T:
+        ret = route_result["tau_return"].get(t, 0.0)
+        G.append(ret - tau_max)
+        G.append(tau_min - ret)
+
+    for l in clients:
+        cum_del = cum_dem = 0
+        for t in T:
+            cum_del += actual.get((l, t), 0)
+            cum_dem += q_lt[l, t]
+            G.append(cum_dem - cum_del)
+
+    for t in T:
+        G.append(depot_stock[t]["frigo"]    - I_max_f)
+        G.append(depot_stock[t]["nonfrigo"] - I_max_nf)
+
+    return G
+
+
+def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict) -> tuple[np.ndarray, np.ndarray]:
+    """Remedy G: decode + repair (2-opt, Baldwinian -- see repair.py) +
+    evaluate, replacing IRPProblem._evaluate for QINSGA3 only, when
+    use_route_repair=True. See
+    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+    """
+    from Solvers.NSGA3.decoder import decode_chromosome, build_routes
+    from Solvers.NSGA3.evaluator import compute_f1, compute_f2, compute_f3, compute_f4
+    from Solvers.QINSGA3.repair import _repair_route_result
+
+    quantities, priorities = decode_chromosome(x, sets_)
+    route_result = build_routes(quantities, sets_, params_, priorities)
+    route_result = _repair_route_result(route_result, sets_, params_)
+
+    F = np.array([
+        compute_f1(route_result, sets_, params_),
+        compute_f2(route_result, sets_, params_),
+        compute_f3(route_result, sets_, params_),
+        compute_f4(route_result, sets_, params_),
+    ])
+    G = np.array(_build_g_constraints(route_result, sets_, params_))
+    return F, G
+
+
+def _worker_eval_repaired(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Same per-process pattern as _worker_eval, but routes through
+    _evaluate_with_repair (remedy G) instead of _g_problem._evaluate."""
+    return _evaluate_with_repair(x, _g_problem.sets_, _g_problem.params_)
+
+
 # ---------------------------------------------------------------------------
 # Objective-space helpers
 # ---------------------------------------------------------------------------
@@ -1000,6 +1067,7 @@ def run_qinsga3(
     use_crowding_guides: bool = False,
     use_pso_rotation: bool   = False,
     use_chaotic_rotation: bool = False,
+    use_route_repair: bool = False,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -1078,6 +1146,14 @@ def run_qinsga3(
     see the module note above _chaotic_rotate for the full formula and the
     three documented adaptations (direction, archive-as-B(t), positional
     lambda state). Mutually exclusive with the other rotation variants.
+
+    use_route_repair (disabled by default) replaces each worker's call to
+    _worker_eval with _worker_eval_repaired, applying a 2-opt local-search
+    repair (see Solvers/QINSGA3/repair.py) to every individual's decoded
+    route before scoring it, for both parent and offspring populations
+    every generation. Baldwinian: the repair never changes the chromosome,
+    only the fitness it is scored with. See
+    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1129,7 +1205,8 @@ def run_qinsga3(
 
         def _eval_batch(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             """Evaluate all individuals in X in parallel across worker processes."""
-            results = list(pool.map(_worker_eval, list(X), chunksize=chunksize))
+            worker_fn = _worker_eval_repaired if use_route_repair else _worker_eval
+            results = list(pool.map(worker_fn, list(X), chunksize=chunksize))
             return (
                 np.array([r[0] for r in results]),
                 np.array([r[1] for r in results]),
