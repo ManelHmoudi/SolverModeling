@@ -324,6 +324,43 @@ def _select_guides_crowding(
     return guides_theta
 
 
+def _crowding_saturation_stats(
+    assoc:      np.ndarray,
+    pareto_idx: np.ndarray,
+    F_norm:     np.ndarray,
+) -> tuple:
+    """Diagnostic only -- not called by _select_guides_crowding itself; wired
+    optionally via run_qinsga3's crowding_saturation_log parameter. Added
+    after the final review of docs/superpowers/plans/
+    2026-08-03-qinsga3-crowding-distance-guide.md flagged (and simulated,
+    but never measured) that with several objectives and small niches,
+    _crowding_distance can assign inf to every Pareto member of a niche,
+    degenerating _select_guides_crowding's argmax over crowding distance
+    into an arbitrary positional (first-index) tie-break rather than a
+    genuine diversity-driven pick. See the design doc's "Risk" section.
+
+    Returns (n_multi_member_niches, n_fully_saturated_niches): among
+    occupied niches with >=2 Pareto members (the only case where the
+    argmax can be ambiguous -- a 1-member niche always guides toward
+    itself, no crowding distance involved), how many have EVERY member at
+    crowding distance = inf.
+    """
+    pareto_assoc = assoc[pareto_idx]
+    n_multi     = 0
+    n_saturated = 0
+
+    for rd in np.unique(pareto_assoc):
+        same_idx = pareto_idx[pareto_assoc == rd]
+        if len(same_idx) < 2:
+            continue
+        n_multi += 1
+        cd = _crowding_distance(F_norm[same_idx])
+        if np.all(np.isinf(cd)):
+            n_saturated += 1
+
+    return n_multi, n_saturated
+
+
 def _supplement_from_archive(
     guides_theta: np.ndarray,
     assoc:        np.ndarray,
@@ -966,6 +1003,7 @@ def run_qinsga3(
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
+    crowding_saturation_log: list | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Run one QINSGA-III instance. Returns (pareto_X, pareto_F, pareto_G).
 
@@ -1018,6 +1056,15 @@ def run_qinsga3(
     rotation-rule variants (use_rqpso_rotation/use_pso_rotation/
     use_chaotic_rotation) but validated alone first, same as every other
     remedy in this module.
+
+    crowding_saturation_log (disabled by default, None) -- if a list is
+    passed and use_crowding_guides is True, one (n_multi_member_niches,
+    n_fully_saturated_niches) tuple from _crowding_saturation_stats is
+    appended to it every generation. Diagnostic only, added after the
+    final review of docs/superpowers/plans/
+    2026-08-03-qinsga3-crowding-distance-guide.md found the design doc's
+    own "Risk" section (crowding distance saturating to inf for small
+    niches) had been simulated but never actually measured on a real run.
 
     use_pso_rotation (disabled by default) replaces the tanh rotation gate
     with the momentum-based update from Li, Xu, Liu & Li (2008) -- see the
@@ -1119,6 +1166,10 @@ def run_qinsga3(
                 guides_theta = _select_guides_ring(assoc, F_norm, ref_dirs, qpop.theta)
             elif use_crowding_guides:
                 guides_theta = _select_guides_crowding(assoc, pareto_idx, F_norm, qpop.theta)
+                if crowding_saturation_log is not None:
+                    crowding_saturation_log.append(
+                        _crowding_saturation_stats(assoc, pareto_idx, F_norm)
+                    )
             else:
                 guides_theta = _select_guides(assoc, pareto_idx, F_norm, ref_dirs, qpop.theta)
 

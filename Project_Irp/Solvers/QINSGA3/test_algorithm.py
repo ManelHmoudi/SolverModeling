@@ -11,6 +11,7 @@ from Solvers.QINSGA3.algorithm import (
     _max_min_density, _domination_counts, _adaptive_inertia, _pso_rotate,
     _elite_rms_distance, _chaotic_lambda_seed, _chaotic_lambda_step, _chaotic_rotate,
     _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
+    _crowding_saturation_stats,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -525,3 +526,79 @@ def test_supplement_from_archive_crowding_leaves_covered_niches_untouched():
 
     assert np.allclose(result[0], expected[0])
     assert not np.allclose(result[0], arch_theta[0])   # archive value was NOT pulled in
+
+
+# ── _crowding_saturation_stats ──────────────────────────────────────────
+# Diagnostic-only helper (not used by _select_guides_crowding itself) added
+# after the final review of docs/superpowers/plans/
+# 2026-08-03-qinsga3-crowding-distance-guide.md flagged that with M=4
+# objectives and small niches, _crowding_distance can assign inf to every
+# member of a niche, degenerating _select_guides_crowding's argmax into an
+# arbitrary positional tie-break. This measures how often that happens.
+
+def test_crowding_saturation_stats_ignores_single_member_niches():
+    assoc      = np.array([0])
+    pareto_idx = np.array([0])
+    F_norm     = np.array([[1.0, 0.0]])
+
+    n_multi, n_saturated = _crowding_saturation_stats(assoc, pareto_idx, F_norm)
+
+    assert n_multi == 0
+    assert n_saturated == 0
+
+
+def test_crowding_saturation_stats_counts_fully_saturated_niche():
+    """2-member niche where _crowding_distance gives inf to both (each is
+    simultaneously the min and max on its own objective) -- the exact
+    dataset from test_select_guides_crowding_two_member_niche_..., known to
+    be fully saturated."""
+    assoc      = np.array([0, 0])
+    pareto_idx = np.array([0, 1])
+    F_norm     = np.array([[0.0, 1.0], [1.0, 0.0]])
+
+    n_multi, n_saturated = _crowding_saturation_stats(assoc, pareto_idx, F_norm)
+
+    assert n_multi == 1
+    assert n_saturated == 1
+
+
+def test_crowding_saturation_stats_does_not_count_partially_saturated_niche():
+    """4-member niche from test_select_guides_crowding_differs_from_ray_closest_champion:
+    cd = [1.5, inf, inf, 1.0] -- 2 of 4 members are inf, but NOT all of them,
+    so the argmax pick (P1) is still meaningfully driven by the criterion,
+    not an arbitrary tie-break across the whole niche."""
+    assoc      = np.array([0, 0, 0, 0])
+    pareto_idx = np.array([0, 1, 2, 3])
+    F_norm     = np.array([
+        [0.5, 0.5],
+        [0.1, 0.6],
+        [0.9, 0.4],
+        [0.3, 0.55],
+    ])
+
+    n_multi, n_saturated = _crowding_saturation_stats(assoc, pareto_idx, F_norm)
+
+    assert n_multi == 1
+    assert n_saturated == 0
+
+
+def test_crowding_saturation_stats_aggregates_across_niches():
+    """Two niches: niche 0 (2 members, fully saturated, same data as the
+    fully-saturated test above) and niche 1 (4 members, partially saturated,
+    same data as the partially-saturated test above) -- confirms per-niche
+    results are summed correctly, not just correct for a single niche."""
+    assoc      = np.array([0, 0, 1, 1, 1, 1])
+    pareto_idx = np.array([0, 1, 2, 3, 4, 5])
+    F_norm     = np.array([
+        [0.0, 1.0],   # niche 0
+        [1.0, 0.0],   # niche 0
+        [0.5, 0.5],   # niche 1
+        [0.1, 0.6],   # niche 1
+        [0.9, 0.4],   # niche 1
+        [0.3, 0.55],  # niche 1
+    ])
+
+    n_multi, n_saturated = _crowding_saturation_stats(assoc, pareto_idx, F_norm)
+
+    assert n_multi == 2
+    assert n_saturated == 1
