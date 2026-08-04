@@ -97,3 +97,73 @@ def _replace_route_arcs(arc_dict: dict, old_path: list, t, k, new_entries: dict)
         result.pop((i, j, t, k), None)
     result.update(new_entries)
     return result
+
+
+_MAX_REPAIR_ITER = 20   # internal constant, not exposed -- see design doc's "New parameters"
+
+
+def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict:
+    """First-improvement 2-opt local search per route: for every truck's
+    path longer than 3 nodes (more than 1 client), repeatedly applies the
+    first candidate swap that (a) does not push this period's worst-case
+    travel time above its pre-repair value, and (b) strictly reduces f1
+    for the whole individual -- until no such candidate exists or
+    _MAX_REPAIR_ITER is reached. Baldwinian: returns a NEW route_result
+    with updated x/f/arrival_times/routes_data/tau_return; the chromosome
+    that produced the original route_result is never touched by the caller.
+    """
+    from Solvers.NSGA3.evaluator import compute_f1
+
+    working = dict(route_result)
+    working["x"] = dict(route_result["x"])
+    working["f"] = dict(route_result["f"])
+    working["arrival_times"] = dict(route_result["arrival_times"])
+    working["tau_return"] = dict(route_result["tau_return"])
+    working["routes_data"] = {
+        t: dict(routes) for t, routes in route_result["routes_data"].items()
+    }
+
+    for t, routes in route_result["routes_data"].items():
+        tau_return_before = route_result["tau_return"].get(t, 0.0)
+
+        for k, info in routes.items():
+            path = list(info["path"])
+            if len(path) <= 3:
+                continue
+            qty_on_route = {int(l): q for l, q in info["qty"].items()}
+
+            current_f1 = compute_f1(working, sets_, params_)
+
+            for _ in range(_MAX_REPAIR_ITER):
+                improved = False
+                for i, j, candidate in _two_opt_candidates(path):
+                    candidate_time = _route_traversal_time(candidate, k, params_)
+                    if candidate_time > tau_return_before:
+                        continue
+
+                    trial_x, trial_f, trial_arrivals = _rebuild_route_arcs(
+                        candidate, qty_on_route, t, k, params_
+                    )
+                    scratch = dict(working)
+                    scratch["x"] = _replace_route_arcs(working["x"], path, t, k, trial_x)
+                    scratch["f"] = _replace_route_arcs(working["f"], path, t, k, trial_f)
+                    scratch["arrival_times"] = {**working["arrival_times"], **trial_arrivals}
+
+                    trial_f1 = compute_f1(scratch, sets_, params_)
+                    if trial_f1 < current_f1:
+                        working["x"] = scratch["x"]
+                        working["f"] = scratch["f"]
+                        working["arrival_times"] = scratch["arrival_times"]
+                        working["routes_data"][t][k] = {"path": candidate, "qty": info["qty"]}
+                        working["tau_return"][t] = max(
+                            _route_traversal_time(r["path"], k2, params_)
+                            for k2, r in working["routes_data"][t].items()
+                        )
+                        path = candidate
+                        current_f1 = trial_f1
+                        improved = True
+                        break
+                if not improved:
+                    break
+
+    return working

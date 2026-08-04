@@ -7,7 +7,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from Solvers.QINSGA3.repair import (
     _two_opt_candidates, _route_traversal_time,
     _rebuild_route_arcs, _replace_route_arcs,
+    _repair_route_result,
 )
+from Solvers.NSGA3.evaluator import compute_f1
 
 # ── _two_opt_candidates ──────────────────────────────────────────────────
 
@@ -105,3 +107,125 @@ def test_replace_route_arcs_removes_old_and_adds_new_for_same_route_only():
         (0, 2, 1, 1): 1, (2, 1, 1, 1): 1, (1, 0, 1, 1): 1,
         (0, 3, 1, 2): 1,
     }
+
+
+# ── _repair_route_result ─────────────────────────────────────────────────
+
+def test_repair_route_result_improves_f1_via_two_opt_swap():
+    """3-client route with a known-bad visiting order; the (i=1,j=2) 2-opt
+    swap strictly reduces f1 by cutting total flow-weighted distance, with
+    no time-window pressure (ET=0, LT huge) so the improvement is entirely
+    attributable to the 2-opt reordering. Unlisted arcs default to a large
+    distance (1000.0) so later, unplanned-for candidates the search may
+    explore on a second pass are automatically rejected by the tau_return
+    guard rather than raising KeyError.
+
+    Hand-verified:
+      original y1 = d[0,1]*35 + d[1,2]*25 + d[2,3]*5 + d[3,0]*0
+                   = 5*35 + 5*25 + 1*5 + 1*0 = 175+125+5+0 = 305
+      candidate y1 = d[0,2]*35 + d[2,1]*15 + d[1,3]*5 + d[3,0]*0
+                    = 1*35 + 1*15 + 1*5 + 1*0 = 35+15+5+0 = 55
+    """
+    sets_ = {"clients": [1, 2, 3], "T": [1]}
+    d = defaultdict(lambda: 1000.0)
+    d.update({
+        (0, 1): 5.0, (1, 2): 5.0, (2, 3): 1.0, (3, 0): 1.0,
+        (0, 2): 1.0, (2, 1): 1.0, (1, 3): 1.0,
+    })
+    params_ = {
+        "d": d,
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 2, 1, 1): 1, (2, 3, 1, 1): 1, (3, 0, 1, 1): 1},
+        "f": {(0, 1, 1, 1): 35, (1, 2, 1, 1): 25, (2, 3, 1, 1): 5, (3, 0, 1, 1): 0},
+        "depot_stock": {1: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 5.0, (2, 1): 10.0, (3, 1): 11.0},
+        "truck_assign": {(1, 1): 1, (2, 1): 1, (3, 1): 1},
+        "actual_qty": {(1, 1): 10, (2, 1): 20, (3, 1): 5},
+        "routes_data": {1: {1: {"path": [0, 1, 2, 3, 0], "qty": {"1": 10, "2": 20, "3": 5}}}},
+        "tau_return": {1: 12.0},
+    }
+
+    repaired = _repair_route_result(route_result, sets_, params_)
+
+    assert repaired["routes_data"][1][1]["path"] == [0, 2, 1, 3, 0]
+    assert compute_f1(repaired, sets_, params_) < compute_f1(route_result, sets_, params_)
+
+
+def test_repair_route_result_rejects_swap_that_would_increase_tau_return():
+    """2-client route where the only 2-opt swap strictly improves f1 (moves
+    the heavy-flow leg onto a much shorter arc) but would more than triple
+    the route's total traversal time -- the safety guard must reject it and
+    leave the path unchanged, even though f1 would otherwise improve.
+
+    Hand-verified:
+      original: tau_return_before = d[0,1]+d[1,2]+d[2,0] = 1+1+1 = 3.0
+                y1 = d[0,1]*101 + d[1,2]*1 + d[2,0]*0 = 101+1+0 = 102
+      candidate: time = d[0,2]+d[2,1]+d[1,0] = 0.001+0.001+10 = 10.002 > 3.0 -- rejected
+                (y1 would have been 0.001*101+0.001*100+10*0 = 0.201, an
+                 improvement, but the guard fires before f1 is even checked)
+    """
+    sets_ = {"clients": [1, 2], "T": [1]}
+    params_ = {
+        "d": {
+            (0, 1): 1.0, (1, 2): 1.0, (2, 0): 1.0,
+            (0, 2): 0.001, (2, 1): 0.001, (1, 0): 10.0,
+        },
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 2, 1, 1): 1, (2, 0, 1, 1): 1},
+        "f": {(0, 1, 1, 1): 101, (1, 2, 1, 1): 1, (2, 0, 1, 1): 0},
+        "depot_stock": {1: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 1.0, (2, 1): 2.0},
+        "truck_assign": {(1, 1): 1, (2, 1): 1},
+        "actual_qty": {(1, 1): 100, (2, 1): 1},
+        "routes_data": {1: {1: {"path": [0, 1, 2, 0], "qty": {"1": 100, "2": 1}}}},
+        "tau_return": {1: 3.0},
+    }
+
+    repaired = _repair_route_result(route_result, sets_, params_)
+
+    assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 0]
+
+
+def test_repair_route_result_leaves_already_optimal_route_unchanged():
+    """2-client route with fully symmetric distances and quantities -- both
+    visiting orders give identical f1 (30 == 30, hand-verified), so no
+    STRICT improvement exists and the path must be left untouched (no
+    spurious 'improvement' on a tie, no infinite loop)."""
+    sets_ = {"clients": [1, 2], "T": [1]}
+    params_ = {
+        "d": {(0, 1): 1.0, (1, 2): 1.0, (2, 0): 1.0, (0, 2): 1.0, (2, 1): 1.0, (1, 0): 1.0},
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 2, 1, 1): 1, (2, 0, 1, 1): 1},
+        "f": {(0, 1, 1, 1): 20, (1, 2, 1, 1): 10, (2, 0, 1, 1): 0},
+        "depot_stock": {1: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 1.0, (2, 1): 2.0},
+        "truck_assign": {(1, 1): 1, (2, 1): 1},
+        "actual_qty": {(1, 1): 10, (2, 1): 10},
+        "routes_data": {1: {1: {"path": [0, 1, 2, 0], "qty": {"1": 10, "2": 10}}}},
+        "tau_return": {1: 3.0},
+    }
+
+    repaired = _repair_route_result(route_result, sets_, params_)
+
+    assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 0]
