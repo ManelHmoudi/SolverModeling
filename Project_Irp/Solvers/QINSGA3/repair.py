@@ -40,3 +40,60 @@ def _route_traversal_time(path: list, k, params_: dict) -> float:
         s.get(path[idx], 0.0) + d[path[idx], path[idx + 1]] / speed
         for idx in range(len(path) - 1)
     )
+
+
+def _rebuild_route_arcs(path: list, qty_on_route: dict, t, k, params_: dict):
+    """Recompute one route's x/f arc entries and per-client arrival times
+    for a (possibly reordered) path, given the SAME qty_on_route mapping
+    the original decode produced -- a 2-opt swap never changes which
+    clients are visited or their delivered quantities, only the order.
+    Mirrors decoder.py's own arrival-time accumulation (line 342) and
+    suffix-sum arc-flow construction (lines 353-368) exactly, factored out
+    here since build_routes doesn't expose either as a standalone function.
+
+    Returns (x_vars, f_vars, arrivals) for THIS route only -- the caller
+    merges these into the full route_result's dicts via _replace_route_arcs.
+    """
+    d = params_["d"]
+    v = params_["v"]
+    s = params_["s"]
+    speed = v[k]
+    depot = path[0]
+
+    x_vars = {}
+    f_vars = {}
+    arrivals = {}
+
+    current_time = 0.0
+    current = depot
+    for node in path[1:]:
+        current_time += s.get(current, 0.0) + d[current, node] / speed
+        if node != depot:
+            arrivals[node, t] = current_time
+        current = node
+
+    n = len(path)
+    suf = [0] * (n + 1)
+    for idx in range(n - 2, -1, -1):
+        node = path[idx + 1]
+        suf[idx] = suf[idx + 1] + (qty_on_route.get(node, 0) if node != depot else 0)
+
+    for idx in range(n - 1):
+        i, j = path[idx], path[idx + 1]
+        x_vars[i, j, t, k] = 1
+        f_vars[i, j, t, k] = suf[idx]
+
+    return x_vars, f_vars, arrivals
+
+
+def _replace_route_arcs(arc_dict: dict, old_path: list, t, k, new_entries: dict) -> dict:
+    """Remove old_path's (i, j, t, k) arc keys from arc_dict, then merge in
+    new_entries -- used to update route_result["x"]/["f"] for one repaired
+    route without disturbing other routes' entries in the same shared dict.
+    """
+    result = dict(arc_dict)
+    for idx in range(len(old_path) - 1):
+        i, j = old_path[idx], old_path[idx + 1]
+        result.pop((i, j, t, k), None)
+    result.update(new_entries)
+    return result
