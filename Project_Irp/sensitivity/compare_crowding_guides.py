@@ -131,12 +131,14 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         print(f"front={len(pareto_F) if pareto_F is not None else 0}  time={elapsed}s", flush=True)
 
     print(f"\n>>> {test_lbl}")
+    saturation_log: list[tuple[int, int]] = []
     for seed in seeds:
         print(f"  seed={seed} ... ", end="", flush=True)
         t0 = time.time()
         X, pareto_F, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=max_gen, seed=seed, use_crowding_guides=True,
+            crowding_saturation_log=saturation_log,
         )
         elapsed = round(time.time() - t0, 1)
         raw[test_lbl].append((seed, pareto_F, elapsed))
@@ -190,6 +192,16 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
     for lbl in (baseline_lbl, test_lbl):
         d = _chrom_diversity(chrom_X[lbl], xl, xu)
         print(f"    {lbl:<32} {d:.6f}")
+
+    print(f"\n{'-'*92}")
+    print("  Saturation crowding distance (test uniquement, pooled sur toutes generations/seeds)")
+    print(f"{'-'*92}")
+    total_multi     = sum(n_multi for n_multi, _ in saturation_log)
+    total_saturated = sum(n_sat for _, n_sat in saturation_log)
+    pct = (100.0 * total_saturated / total_multi) if total_multi > 0 else float("nan")
+    print(f"    Generations observees          {len(saturation_log)}")
+    print(f"    Niches a >=2 membres (total)   {total_multi}")
+    print(f"    Niches entierement saturees    {total_saturated}  ({pct:.1f}%)")
 
     print(f"\n{'-'*92}")
     print(f"  Mann-Whitney U : baseline vs {test_lbl}")
