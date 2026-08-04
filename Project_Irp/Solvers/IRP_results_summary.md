@@ -467,16 +467,43 @@ statistique -- un résultat neutre, pas nuisible.
 **Réserve méthodologique** : `_crowding_distance` assigne une valeur
 infinie aux membres extrêmes de chaque objectif -- avec M=4 objectifs et des
 niches de 1 à 5 membres (taille typique sur l'IRP, voir le remède "anneau"
-ci-dessus), une simulation confirme que 75 à 100% des niches de taille 2-4
-ont TOUS leurs membres à `inf`, auquel cas le critère dégénère en un simple
-tie-break positionnel (premier indice) plutôt qu'un vrai signal de
-diversité. Les niches à 1 membre ne sont pas concernées. Ce remède a donc
-surtout comparé "convergence vs choix positionnel arbitraire" plutôt que
-"convergence vs diversité" pour la majorité des niches -- le résultat null
-reste valide et informatif, mais avec cette réserve.
+ci-dessus), le critère dégénère alors en un simple tie-break positionnel
+(premier indice) plutôt qu'un vrai signal de diversité. Les niches à 1
+membre ne sont pas concernées. Ce remède a donc surtout comparé "convergence
+vs choix positionnel arbitraire" plutôt que "convergence vs diversité" pour
+la majorité des niches -- le résultat null reste valide et informatif, mais
+avec cette réserve.
 
-Script conservé : `sensitivity/compare_crowding_guides.py`. Log complet :
-`sensitivity/crowding_guides_campaign_log.txt`.
+**Confirmation (5 seeds, avec instrumentation de la saturation)** : pour
+lever deux limites identifiées lors de la revue -- (1) avec seulement 3
+seeds, le plancher exact du test de Mann-Whitney bilatéral est p=0.10,
+rendant p<0.05 structurellement inatteignable sur la comparaison
+baseline-vs-test, quel que soit l'effet réel ; (2) la réserve ci-dessus
+n'était qu'une estimation par simulation, jamais mesurée sur un run réel --
+la campagne a été rejouée à 5 seeds (42, 137, 271, 314, 512, plancher
+Mann-Whitney à ~0.008, donc atteignable) avec un compteur de saturation par
+génération (`_crowding_saturation_stats`, voir
+`Solvers/QINSGA3/algorithm.py`) :
+
+| Indicateur | Baseline (ray-closest) | Test (crowding) | Mann-Whitney (5 seeds) |
+|---|---|---|---|
+| HV ↑ | 0.145438 | 0.162728 | U=9.0, p=0.547619 |
+| GD ↓ | 0.614167 | 0.589421 | U=14.0, p=0.841270 |
+| IGD ↓ | 0.625595 | 0.611548 | U=14.0, p=0.841270 |
+| Diversité chromosome | 0.004485 | 0.004261 | -- |
+
+Saturation mesurée (pooled sur 1500 générations, 5 seeds × 300 gen) :
+**3768 / 4313 niches à ≥2 membres entièrement saturées, soit 87.4%** --
+conforme à l'estimation par simulation (75-100%), maintenant une mesure
+directe plutôt qu'une réserve théorique. Le résultat reste non significatif
+à 5 seeds malgré un plancher de test atteignable (p=0.55 contre un plancher
+de 0.008) : ce n'est donc pas un manque de puissance statistique qui masque
+un effet réel, le résultat null est robuste.
+
+Scripts conservés : `sensitivity/compare_crowding_guides.py`. Logs complets :
+`sensitivity/crowding_guides_campaign_log.txt` (3 seeds),
+`sensitivity/crowding_guides_5seed_campaign_log.txt` (5 seeds, avec
+saturation instrumentée).
 
 ## Conclusion
 
@@ -513,9 +540,12 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   significatifs, p entre 0.40 et 1.00), l'écart avec NSGA-III restant lui
   hautement significatif (p=0.0011 sur HV/GD/IGD) -- sixième mécanisme
   indépendant, même conclusion : ce n'est pas le choix du point cible qui
-  limite QI-NSGA-III sur l'IRP, avec la réserve que la crowding distance
-  sature en pratique pour la majorité des niches sur l'IRP (voir section
-  Remède F).
+  limite QI-NSGA-III sur l'IRP -- confirmé à 5 seeds (p=0.55, toujours non
+  significatif malgré un plancher de test atteignable) et avec la réserve,
+  mesurée directement et non plus estimée (87.4% des niches à ≥2 membres
+  entièrement saturées sur 1500 générations), que la crowding distance
+  sature en pratique pour la grande majorité des niches sur l'IRP (voir
+  section Remède F).
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le
