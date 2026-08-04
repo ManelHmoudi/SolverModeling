@@ -99,7 +99,13 @@ def _replace_route_arcs(arc_dict: dict, old_path: list, t, k, new_entries: dict)
     return result
 
 
-_MAX_REPAIR_ITER = 20   # internal constant, not exposed -- see design doc's "New parameters"
+_MAX_REPAIR_ITER = 5   # internal constant, not exposed -- see design doc's "New parameters".
+# Lowered from 20 after the timing check (sensitivity/compare_route_repair.py,
+# instance 100, gen=10, pop=50) measured a ~29x slowdown vs baseline, growing
+# with generation count (15.4x at gen=3 -> 28.9x at gen=10) -- well past the
+# design doc's Risk-section 10x threshold. Each whole-individual compute_f1
+# recomputation per candidate swap is the dominant cost; capping the search
+# depth trades repair thoroughness for tractability.
 
 
 def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict:
