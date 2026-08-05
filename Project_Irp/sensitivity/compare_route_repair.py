@@ -127,6 +127,7 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         X, pareto_F, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=max_gen, seed=seed,
+            repair_final_front=False,   # explicit: repair_final_front now defaults to True in production
         )
         elapsed = round(time.time() - t0, 1)
         raw[baseline_lbl].append((seed, pareto_F, elapsed))
@@ -139,7 +140,8 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         t0 = time.time()
         X, pareto_F, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
-            pop_size=effective_pop, max_gen=max_gen, seed=seed, use_route_repair=True,
+            pop_size=effective_pop, max_gen=max_gen, seed=seed,
+            use_route_repair=True, repair_final_front=False,   # isolate the every-generation variant only
         )
         elapsed = round(time.time() - t0, 1)
         raw[test_lbl].append((seed, pareto_F, elapsed))

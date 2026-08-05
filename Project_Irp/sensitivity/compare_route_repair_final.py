@@ -130,6 +130,7 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         X, pareto_F, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=max_gen, seed=seed,
+            repair_final_front=False,   # explicit: repair_final_front now defaults to True in production
         )
         elapsed = round(time.time() - t0, 1)
         raw[baseline_lbl].append((seed, pareto_F, elapsed))

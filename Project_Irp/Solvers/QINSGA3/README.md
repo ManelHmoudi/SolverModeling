@@ -139,6 +139,38 @@ test (see git history for the full before/after numbers):
   `Validation/Benchmarking/dtlz/results/qinsga3/DTLZ_results_summary_qinsga3.md`
   and the MaF equivalent.
 
+- **Final-front route repair** (`repair_final_front`, enabled by default).
+  A diagnostic investigation found the real bottleneck on the IRP isn't the
+  rotation mechanism at all, but `Solvers/NSGA3/decoder.py`'s greedy,
+  irrevocable route construction -- a tiny theta perturbation can flip an
+  early construction choice and cascade into a wildly different route with
+  a disproportionate objective jump (`Solvers/IRP_results_summary.md`'s
+  "Diagnostic diversite / decodeur" chapter). Seven independent remedies
+  targeting the rotation/guide-selection mechanism (A-F) were all rejected.
+  Remedy G attacks the decoder directly instead: a 2-opt local search
+  (`Solvers/QINSGA3/repair.py`, evaluated against the real f1 cost, not raw
+  distance) repairs each returned Pareto-front chromosome's decoded route
+  ONCE, after the generational loop has already finished -- Baldwinian (the
+  chromosome itself is never modified, only the fitness it is reported
+  with), and IRP-only (`decoder.py`/`evaluator.py`/`problem.py`, shared
+  with NSGA-III, are never modified; DTLZ/MaF have no decoder, so the
+  mechanism doesn't apply there). An earlier, every-generation variant
+  (`use_route_repair`, still available, disabled by default) tests the
+  same repair as a research question ("does fixing the decode step's
+  fitness signal help guide selection/survival throughout the run?") but
+  is inherently expensive (~3.5x-15x baseline, even after optimising the
+  search itself) since it repairs every individual, every generation;
+  `repair_final_front` repairs only the small final front instead, leaving
+  the search loop's own runtime untouched. Validated at the project's own
+  20-seed protocol (shared ideal/nadir vs `Solvers/NSGA3`'s cache,
+  Mann-Whitney U): HV +29.2% (p=0.000059), GD -15.3% (p=0.001116), IGD
+  -10.4% (p=0.000179), all significant -- the first of eight remedies
+  tried (A-G) to reach real significance rather than a small-sample
+  Mann-Whitney floor -- with no measurable runtime cost. See
+  `Solvers/IRP_results_summary.md`'s "Remede G -- variante pratique"
+  section for the full numbers; still significantly worse than NSGA-III on
+  the same instance, the gap is narrowed, not closed.
+
 A real, smaller quality gap versus `Solvers/NSGA3/` remains on the
 100-client instance after all three changes. Two further re-tuning attempts were
 tested and **not adopted** because they failed to improve on that gap once

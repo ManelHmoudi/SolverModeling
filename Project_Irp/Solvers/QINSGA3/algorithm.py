@@ -1092,7 +1092,7 @@ def run_qinsga3(
     use_pso_rotation: bool   = False,
     use_chaotic_rotation: bool = False,
     use_route_repair: bool = False,
-    repair_final_front: bool = False,
+    repair_final_front: bool = True,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -1187,18 +1187,30 @@ def run_qinsga3(
     (fitness-only), never re-encoded into the chromosome, matching this
     module's other design notes on the same topic.
 
-    repair_final_front (disabled by default) is the practical counterpart
-    to use_route_repair: instead of repairing every individual every
-    generation (which is what makes use_route_repair slow -- ~3.5x to
-    ~15x baseline depending on scale, even after the delta-cost/merged-
-    pass/windowed-search optimisations in repair.py), this repairs ONLY
-    the returned Pareto front, ONCE, after the generational loop has
-    already finished. The search loop's own runtime is completely
-    unaffected -- this trades the "does repairing the search's fitness
-    signal help guide selection/survival throughout the run" research
-    question (what use_route_repair tests) for a purely practical one:
-    does polishing the final reported front improve it, at effectively
-    zero added cost to the algorithm's own runtime. Mutually exclusive in
+    repair_final_front (ENABLED by default -- the one adopted correction
+    remedy G produced; see Solvers/QINSGA3/README.md's "Design history")
+    is the practical counterpart to use_route_repair: instead of repairing
+    every individual every generation (which is what makes use_route_repair
+    slow -- ~3.5x to ~15x baseline depending on scale, even after the
+    delta-cost/merged-pass/windowed-search optimisations in repair.py),
+    this repairs ONLY the returned Pareto front, ONCE, after the
+    generational loop has already finished. The search loop's own runtime
+    is completely unaffected -- this trades the "does repairing the
+    search's fitness signal help guide selection/survival throughout the
+    run" research question (what use_route_repair tests, still disabled
+    by default -- an ablation-only research variant, not adopted) for a
+    purely practical one: does polishing the final reported front improve
+    it, at effectively zero added cost to the algorithm's own runtime.
+    Validated at the project's own 20-seed gold-standard protocol (shared
+    ideal/nadir vs Solvers/NSGA3's cache, Mann-Whitney U): HV +29.2%
+    (p=0.000059), GD -15.3% (p=0.001116), IGD -10.4% (p=0.000179), all
+    significant, runtime unchanged vs the pre-remedy-G baseline -- see
+    Solvers/IRP_results_summary.md's "Remède G — variante pratique"
+    section for the full numbers. Still significantly worse than NSGA-III
+    on the same instance (the gap is not closed, only narrowed). Set
+    repair_final_front=False to reproduce the pre-remedy-G behaviour (e.g.
+    for ablation comparisons against this new default -- see
+    sensitivity/compare_route_repair_final.py). Mutually exclusive in
     practice with use_route_repair (combining both would repair the front
     twice, redundantly) -- not asserted against, since nothing currently
     calls them together, but do not combine them. Same Baldwinian
