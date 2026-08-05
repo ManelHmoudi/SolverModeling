@@ -12,6 +12,7 @@ from Solvers.QINSGA3.algorithm import (
     _elite_rms_distance, _chaotic_lambda_seed, _chaotic_lambda_step, _chaotic_rotate,
     _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
     _crowding_saturation_stats, _build_g_constraints,
+    _evaluate_with_repair, _repair_pareto_front,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -672,3 +673,38 @@ def test_build_g_constraints_matches_real_irpproblem_evaluate():
     actual_G = _build_g_constraints(route_result, sets_, params_)
 
     assert actual_G == expected_G
+
+
+# ── _repair_pareto_front ─────────────────────────────────────────────────
+# Practical counterpart to use_route_repair (run_qinsga3's repair_final_front
+# parameter): repairs only the returned Pareto front, once, after the
+# generational loop -- never touches the loop's own runtime.
+
+def test_repair_pareto_front_matches_per_chromosome_evaluate_with_repair():
+    """3 distinct chromosomes (real instance_3_clients.json) -- the batch
+    helper's output must match calling _evaluate_with_repair on each
+    chromosome individually, in the same order, and pareto_X itself must
+    be returned unmodified by the caller's own reference (this function
+    never touches its pareto_X argument -- it only ever reads from it)."""
+    from models.parametres import load_instance
+    from Solvers.NSGA3.problem import IRPProblem
+
+    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sets_, params_ = load_instance(os.path.join(project_dir, "data", "instance_3_clients.json"))
+    problem = IRPProblem(sets_, params_)
+
+    pareto_X = np.array([
+        np.random.default_rng(seed).uniform(problem.xl, problem.xu)
+        for seed in (0, 1, 2)
+    ])
+    pareto_X_snapshot = pareto_X.copy()
+
+    F_arr, G_arr = _repair_pareto_front(pareto_X, sets_, params_)
+
+    assert F_arr.shape[0] == 3
+    assert G_arr.shape[0] == 3
+    for idx, x in enumerate(pareto_X):
+        expected_F, expected_G = _evaluate_with_repair(x, sets_, params_)
+        assert np.allclose(F_arr[idx], expected_F)
+        assert (G_arr[idx] == expected_G).all()
+    assert np.array_equal(pareto_X, pareto_X_snapshot)   # Baldwinian: pareto_X untouched

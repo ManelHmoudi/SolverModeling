@@ -157,6 +157,30 @@ def _worker_eval_repaired(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return _evaluate_with_repair(x, _g_problem.sets_, _g_problem.params_)
 
 
+def _repair_pareto_front(
+    pareto_X: np.ndarray, sets_: dict, params_: dict,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Post-processing variant of remedy G, for run_qinsga3's
+    repair_final_front parameter: repairs each front chromosome's decoded
+    route ONCE, sequentially, after the generational search loop has
+    already finished (the loop's own process pool is closed by this
+    point, and the front is small -- tens of individuals, not
+    pop_size x max_gen -- so a sequential pass here is not the cost driver
+    use_route_repair's every-generation repair was). Reuses
+    _evaluate_with_repair unchanged (same decode -> repair -> evaluate ->
+    G-list chain use_route_repair's worker path already uses) for each
+    chromosome. Baldwinian: pareto_X itself is never modified, only the
+    returned F/G arrays.
+    """
+    F_list = []
+    G_list = []
+    for x in pareto_X:
+        F, G = _evaluate_with_repair(x, sets_, params_)
+        F_list.append(F)
+        G_list.append(G)
+    return np.array(F_list), np.array(G_list)
+
+
 # ---------------------------------------------------------------------------
 # Objective-space helpers
 # ---------------------------------------------------------------------------
@@ -1068,6 +1092,7 @@ def run_qinsga3(
     use_pso_rotation: bool   = False,
     use_chaotic_rotation: bool = False,
     use_route_repair: bool = False,
+    repair_final_front: bool = False,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -1161,6 +1186,24 @@ def run_qinsga3(
     re-running _repair_route_result -- the repair is Baldwinian
     (fitness-only), never re-encoded into the chromosome, matching this
     module's other design notes on the same topic.
+
+    repair_final_front (disabled by default) is the practical counterpart
+    to use_route_repair: instead of repairing every individual every
+    generation (which is what makes use_route_repair slow -- ~3.5x to
+    ~15x baseline depending on scale, even after the delta-cost/merged-
+    pass/windowed-search optimisations in repair.py), this repairs ONLY
+    the returned Pareto front, ONCE, after the generational loop has
+    already finished. The search loop's own runtime is completely
+    unaffected -- this trades the "does repairing the search's fitness
+    signal help guide selection/survival throughout the run" research
+    question (what use_route_repair tests) for a purely practical one:
+    does polishing the final reported front improve it, at effectively
+    zero added cost to the algorithm's own runtime. Mutually exclusive in
+    practice with use_route_repair (combining both would repair the front
+    twice, redundantly) -- not asserted against, since nothing currently
+    calls them together, but do not combine them. Same Baldwinian
+    consequence as use_route_repair: pareto_X is unchanged, only pareto_F/
+    pareto_G are repaired.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1405,6 +1448,15 @@ def run_qinsga3(
         arch_X_arr, arch_F_arr, _ = _crowding_trim(
             np.array(arch_X), np.array(arch_F), np.array(arch_theta), pop_size
         )
-        return arch_X_arr, arch_F_arr, np.zeros((len(arch_X_arr), n_constr))
+        pareto_X, pareto_F, pareto_G = (
+            arch_X_arr, arch_F_arr, np.zeros((len(arch_X_arr), n_constr))
+        )
+    else:
+        pareto_X, pareto_F, pareto_G = (
+            X_final[final_pareto_idx], F_final[final_pareto_idx], G_final[final_pareto_idx]
+        )
 
-    return X_final[final_pareto_idx], F_final[final_pareto_idx], G_final[final_pareto_idx]
+    if repair_final_front:
+        pareto_F, pareto_G = _repair_pareto_front(pareto_X, sets_, params_)
+
+    return pareto_X, pareto_F, pareto_G
