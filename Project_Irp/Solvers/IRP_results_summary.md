@@ -528,17 +528,23 @@ les gènes de priorité). Design complet :
 
 **Correction de performance en cours de campagne** : la première
 implémentation recalculait f1 sur tout le réseau de tournées à chaque
-candidat 2-opt testé -- mesuré à ~29x plus lent que le baseline (test de
-timing préliminaire, instance 100, gen=10, pop=50), bien au-delà du seuil
-de 10x du design. Remplacé par un calcul de delta local à la seule tournée
-modifiée (`_route_f1_contribution`) -- mathématiquement équivalent (tous
-les autres termes de f1 sont inchangés par un échange sur une seule
-tournée et s'annulent exactement dans la différence, prouvé par un test
-comparant au vrai `compute_f1` sur un `route_result` avec une seconde
-tournée non touchée), mais O(longueur de tournée) au lieu de O(réseau
-entier) par candidat. Ramène le ratio à ~5.7x au même test de timing
-réduit -- mais **~15.2x à pleine échelle** (voir ci-dessous), le ratio
-croissant avec l'échelle plutôt que rester constant.
+candidat 2-opt testé, bien au-delà du seuil de 10x du design -- une
+première tentative pour compenser (`_MAX_REPAIR_ITER` abaissé de 20 à 5)
+n'a quasiment rien changé au ratio (`sensitivity/route_repair_timing_check_iter5.txt` :
+instance 100, gen=10 -- baseline=18.9s, réparation=814.3s, **~43x**),
+confirmant que le nombre d'itérations n'était pas le facteur dominant.
+Remplacé par un calcul de delta local à la seule tournée modifiée
+(`_route_f1_contribution`) -- mathématiquement équivalent (tous les
+autres termes de f1 sont inchangés par un échange sur une seule tournée
+et s'annulent exactement dans la différence, prouvé par un test comparant
+au vrai `compute_f1` sur un `route_result` avec une seconde tournée non
+touchée), mais O(longueur de tournée) au lieu de O(réseau entier) par
+candidat -- `_MAX_REPAIR_ITER` restauré à 20 une fois le vrai goulot
+d'étranglement corrigé. Ramène le ratio à **~5.7x** au même test de timing
+réduit (`sensitivity/route_repair_timing_check_delta.txt` : instance 100,
+gen=10 -- baseline=19.3s, réparation=109.4s) -- mais **~15.2x à pleine
+échelle** (voir ci-dessous), le ratio croissant avec l'échelle plutôt que
+rester constant.
 
 **Résultat (3 seeds, 300 générations, instance 100 clients,
 `sensitivity/compare_route_repair.py`)** :
@@ -574,8 +580,10 @@ pour absence d'effet comme A-F.
 
 Script conservé : `sensitivity/compare_route_repair.py`. Logs complets :
 `sensitivity/route_repair_campaign_log.txt` (campagne 3 seeds pleine
-échelle), `sensitivity/route_repair_timing_check_delta.txt` (test de
-timing post-optimisation).
+échelle), `sensitivity/route_repair_timing_check_iter5.txt` (test de
+timing avec `_MAX_REPAIR_ITER=5`, avant la correction de performance),
+`sensitivity/route_repair_timing_check_delta.txt` (test de timing après
+la correction de performance).
 
 ## Conclusion
 
