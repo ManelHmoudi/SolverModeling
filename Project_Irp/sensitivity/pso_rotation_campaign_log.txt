@@ -1,0 +1,77 @@
+============================================================================================
+  PSO MOMENTUM ROTATION — QINSGA-III (baseline tanh vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (tanh) (prod. actuelle)
+  seed=42 ... front=63  time=216.1s
+  seed=137 ... front=41  time=225.2s
+  seed=271 ... front=45  time=221.0s
+
+>>> PSO momentum (test)
+  seed=42 ... front=34  time=221.3s
+  seed=137 ... front=51  time=214.2s
+  seed=271 ... front=16  time=217.4s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18969.73584651  1046.34169711    85.7469261   4660.19178082]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.535182  std=0.170224
+    baseline (tanh)                  mean=0.219573  std=0.037834
+    PSO momentum (test)              mean=0.116715  std=0.022401
+
+  GD (v)
+    NSGA-III (reference)             mean=0.165508  std=0.080398
+    baseline (tanh)                  mean=0.434029  std=0.064232
+    PSO momentum (test)              mean=0.696588  std=0.087259
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.361390  std=0.033609
+    baseline (tanh)                  mean=0.512387  std=0.047121
+    PSO momentum (test)              mean=0.686031  std=0.052059
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.045685  std=0.021358
+    baseline (tanh)                  mean=0.039770  std=0.010346
+    PSO momentum (test)              mean=0.045761  std=0.015520
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (tanh)                  0.003984
+    PSO momentum (test)              0.002394
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs PSO momentum (test)
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.100000  -> non significatif
+  GD       U=0.0  p=0.100000  -> non significatif
+  IGD      U=0.0  p=0.100000  -> non significatif
+  Spacing  U=3.0  p=0.700000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : PSO momentum (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=34.0  p=0.763411  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (tanh)                  mean=220.8s
+    PSO momentum (test)              mean=217.6s
+
+============================================================================================
+

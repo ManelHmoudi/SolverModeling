@@ -1,0 +1,77 @@
+============================================================================================
+  BRUIT DE MESURE RENFORCE (noise_scale=0.08) — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (noise_scale=0.02) (prod. actuelle)
+  seed=42 ... front=63  time=224.0s
+  seed=137 ... front=41  time=224.8s
+  seed=271 ... front=45  time=223.5s
+
+>>> noise_scale=0.08 (test)
+  seed=42 ... front=19  time=271.5s
+  seed=137 ... front=35  time=219.5s
+  seed=271 ... front=38  time=219.2s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18826.52179199  1079.03940363    88.93294425  4656.08219178]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.559727  std=0.160902
+    baseline (noise_scale=0.02)      mean=0.238363  std=0.035815
+    noise_scale=0.08 (test)          mean=0.057595  std=0.004680
+
+  GD (v)
+    NSGA-III (reference)             mean=0.151305  std=0.068504
+    baseline (noise_scale=0.02)      mean=0.384751  std=0.056529
+    noise_scale=0.08 (test)          mean=0.896580  std=0.022509
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.353366  std=0.028820
+    baseline (noise_scale=0.02)      mean=0.494600  std=0.037033
+    noise_scale=0.08 (test)          mean=0.854963  std=0.036358
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.043445  std=0.020760
+    baseline (noise_scale=0.02)      mean=0.038439  std=0.010408
+    noise_scale=0.08 (test)          mean=0.045669  std=0.010274
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (noise_scale=0.02)      0.003984
+    noise_scale=0.08 (test)          0.065852
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs noise_scale=0.08 (test)
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.100000  -> non significatif
+  GD       U=0.0  p=0.100000  -> non significatif
+  IGD      U=0.0  p=0.100000  -> non significatif
+  Spacing  U=2.0  p=0.400000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : noise_scale=0.08 (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=34.0  p=0.763411  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (noise_scale=0.02)      mean=224.1s
+    noise_scale=0.08 (test)          mean=236.7s
+
+============================================================================================
+

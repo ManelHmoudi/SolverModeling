@@ -39,15 +39,21 @@ Standard NSGA-III (Deb & Jain, 2014), used unmodified from pymoo:
 
 ## Parameters and references
 
-| Parameter | Value | Rationale / reference |
+| Parameter | Value | Reference |
 |---|---|---|
 | `pop_size` | 200 | Fixed search budget, matched to `Solvers/QINSGA3` for a fair comparison |
-| `n_gen` | 300 | Same reasoning — equal generation budget across both solvers |
-| SBX `prob` | 0.9 | Standard crossover probability — Deb (2001), *Multi-Objective Optimization Using Evolutionary Algorithms* |
-| SBX `eta` | 20 | Distribution index; higher = offspring closer to parents (more exploitative) — value used in Deb & Jain's (2014) own NSGA-III experiments |
-| PM `eta` | 20 | Same rationale, polynomial mutation — Deb & Agrawal (1995) |
-| PM `prob` | `1 / D` (D = number of decision variables) | Deb & Jain's (2014) recommended per-gene mutation rate |
-| `N_PARTITIONS` (Das-Dennis) | 8 → 165 reference directions for 4 objectives | Das & Dennis's (1998) systematic simplex-lattice design, as prescribed by Deb & Jain (2014) |
+| `n_gen` | 300 | Equal generation budget across both solvers |
+| SBX crossover probability (`pc`) | 0.9 | Deb & Agrawal (1995) [1] |
+| SBX distribution index (`eta_c`) | 20 | Deb & Agrawal (1995) [1] |
+| PM distribution index (`eta_m`) | 20 | Deb & Agrawal (1995) [1] |
+| PM mutation probability (`pm`) | 1/D (D = number of decision variables) | Deb & Jain (2014) [2] |
+| Reference-point construction | Das-Dennis, `N_PARTITIONS = 8` → 165 directions (4 objectives) | Das & Dennis (1998) [3], as prescribed by Deb & Jain (2014) [2] |
+
+### References
+
+[1] Deb, K., & Agrawal, R. B. (1995). Simulated binary crossover for continuous search space. *Complex Systems*, 9(2), 115–148.
+[2] Deb, K., & Jain, H. (2014). An evolutionary many-objective optimization algorithm using reference-point-based nondominated sorting approach, part I: Solving problems with box constraints. *IEEE Transactions on Evolutionary Computation*, 18(4), 577–601.
+[3] Das, I., & Dennis, J. E. (1998). Normal-boundary intersection: A new method for generating the Pareto surface in nonlinear multicriteria optimization problems. *SIAM Journal on Optimization*, 8(3), 631–657.
 
 ## Objectives
 
