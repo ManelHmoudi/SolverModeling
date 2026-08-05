@@ -505,6 +505,78 @@ Scripts conservés : `sensitivity/compare_crowding_guides.py`. Logs complets :
 `sensitivity/crowding_guides_5seed_campaign_log.txt` (5 seeds, avec
 saturation instrumentée).
 
+### Remède G -- réparation locale post-décodage (2-opt)
+
+Les remèdes A-F touchent tous le mécanisme de guide/rotation ; ce remède
+s'attaque directement à la cause racine identifiée par le diagnostic
+initial : le décodeur glouton et irrévocable (`_nearest_neighbour`,
+`Solvers/NSGA3/decoder.py`), dont l'effet papillon (petite variation de θ →
+tournée complètement différente, écart d'objectif disproportionné) est
+mesuré dans `sensitivity/test_theta_route_sensitivity_weighted.py`. Une
+première tentative de réparation locale 2-opt existait tout au début de ce
+projet ("Premières tentatives" ci-dessus) mais avait été abandonnée --
+mauvaise métrique (distance brute au lieu du coût réel avec pénalités de
+fenêtres de temps). Ce remède reprend l'idée correctement : recherche
+locale 2-opt par tournée, appliquée à chaque génération sur parents ET
+enfants, n'acceptant un échange que s'il réduit strictement f1 (coût réel,
+pas la distance) et ne dégrade jamais le temps de trajet de la période
+au-delà de sa valeur d'avant réparation (garde-fou C13). Réparation
+"baldwinienne" : améliore uniquement la fitness évaluée, jamais ré-encodée
+dans le chromosome (l'ordre de visite réparé n'a pas d'inverse défini vers
+les gènes de priorité). Design complet :
+`docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md`.
+
+**Correction de performance en cours de campagne** : la première
+implémentation recalculait f1 sur tout le réseau de tournées à chaque
+candidat 2-opt testé -- mesuré à ~29x plus lent que le baseline (test de
+timing préliminaire, instance 100, gen=10, pop=50), bien au-delà du seuil
+de 10x du design. Remplacé par un calcul de delta local à la seule tournée
+modifiée (`_route_f1_contribution`) -- mathématiquement équivalent (tous
+les autres termes de f1 sont inchangés par un échange sur une seule
+tournée et s'annulent exactement dans la différence, prouvé par un test
+comparant au vrai `compute_f1` sur un `route_result` avec une seconde
+tournée non touchée), mais O(longueur de tournée) au lieu de O(réseau
+entier) par candidat. Ramène le ratio à ~5.7x au même test de timing
+réduit -- mais **~15.2x à pleine échelle** (voir ci-dessous), le ratio
+croissant avec l'échelle plutôt que rester constant.
+
+**Résultat (3 seeds, 300 générations, instance 100 clients,
+`sensitivity/compare_route_repair.py`)** :
+
+| Indicateur | Baseline (sans réparation) | Test (réparation) | Mann-Whitney |
+|---|---|---|---|
+| HV ↑ | 0.125800 | 0.191693 | U=0.0, p=0.100000 |
+| GD ↓ | 0.672893 | 0.487900 | U=9.0, p=0.100000 |
+| IGD ↓ | 0.671085 | 0.561825 | U=9.0, p=0.100000 |
+| Diversité chromosome | 0.003984 | 0.003797 | -- |
+
+**Le signal le plus net des sept remèdes** : sur HV, GD et IGD, les 3 seeds
+réparés battent systématiquement les 3 seeds baseline sans exception
+(séparation totale, U=0.0/9.0/9.0 sur les 3 métriques) -- HV progresse de
++52 % en relatif (0.1258 → 0.1917). C'est une séparation complète jamais
+observée sur les remèdes A-F. p=0.10 reste cependant non significatif :
+c'est exactement le plancher exact du test de Mann-Whitney bilatéral à 3
+seeds (2/C(6,3) = 0.10, même limite structurelle déjà rencontrée pour le
+remède F), pas une absence d'effet -- une séparation totale à 3 seeds est
+la configuration la plus favorable possible avant de scaler. Le fossé avec
+NSGA-III reste néanmoins significatif (HV p=0.0079, GD p=0.026, IGD
+p=0.0045) : la réparation aide mais ne comble pas l'écart.
+
+**Disqualifié en pratique malgré le signal, sur le coût de calcul** :
+même après la correction de performance, le rapport temps réparation/
+baseline mesuré à pleine échelle est de **3343.1s / 219.8s ≈ 15.2x** --
+plus lent que NSGA-III lui-même, l'algorithme que ce remède essaie de
+battre. Décision du porteur de projet : ne pas scaler à 5 seeds pour
+confirmer statistiquement le signal -- même confirmé, un remède 15x plus
+lent que la référence qu'il compare n'est pas utilisable en pratique.
+Documenté tel quel, signal positif mais non actionnable, plutôt que rejeté
+pour absence d'effet comme A-F.
+
+Script conservé : `sensitivity/compare_route_repair.py`. Logs complets :
+`sensitivity/route_repair_campaign_log.txt` (campagne 3 seeds pleine
+échelle), `sensitivity/route_repair_timing_check_delta.txt` (test de
+timing post-optimisation).
+
 ## Conclusion
 
 Après un diagnostic structurel clair (déficit de diversité chromosome ×13,
@@ -546,6 +618,16 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   entièrement saturées sur 1500 générations), que la crowding distance
   sature en pratique pour la grande majorité des niches sur l'IRP (voir
   section Remède F).
+- Le remède G, seul remède à s'attaquer au décodeur plutôt qu'au mécanisme
+  de guide/rotation (réparation locale 2-opt post-décodage, évaluée sur le
+  vrai coût f1), montre le signal de qualité le plus net des sept remèdes :
+  séparation totale sur HV/GD/IGD (les 3 seeds réparés battent
+  systématiquement les 3 seeds baseline, HV +52 % en relatif), p=0.10
+  restant le plancher structurel du test à 3 seeds, pas une absence
+  d'effet. Mais le coût de calcul (~15x plus lent que le baseline à pleine
+  échelle, plus lent que NSGA-III lui-même) le disqualifie en pratique
+  indépendamment du résultat statistique -- documenté comme signal positif
+  non actionnable plutôt que rejeté comme A-F.
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le
