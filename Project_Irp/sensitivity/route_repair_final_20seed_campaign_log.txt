@@ -1,0 +1,111 @@
+============================================================================================
+  FINAL-FRONT ROUTE REPAIR — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123, 1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (no repair) (prod. actuelle)
+  seed=42 ... front=63  time=205.6s
+  seed=137 ... front=41  time=208.3s
+  seed=271 ... front=45  time=210.0s
+  seed=491 ... front=44  time=216.3s
+  seed=613 ... front=47  time=215.3s
+  seed=733 ... front=57  time=224.2s
+  seed=857 ... front=65  time=225.9s
+  seed=977 ... front=106  time=226.6s
+  seed=1009 ... front=48  time=219.0s
+  seed=1123 ... front=86  time=237.9s
+  seed=1249 ... front=55  time=228.7s
+  seed=1373 ... front=35  time=452.0s
+  seed=1499 ... front=46  time=491.1s
+  seed=1609 ... front=60  time=426.0s
+  seed=1733 ... front=54  time=420.5s
+  seed=1871 ... front=40  time=351.0s
+  seed=1997 ... front=60  time=323.5s
+  seed=2113 ... front=62  time=494.5s
+  seed=2237 ... front=52  time=498.9s
+  seed=2351 ... front=39  time=907.0s
+
+>>> Final-front repair (test)
+  seed=42 ... front=63  time=212.1s
+  seed=137 ... front=41  time=212.5s
+  seed=271 ... front=45  time=210.6s
+  seed=491 ... front=44  time=211.8s
+  seed=613 ... front=47  time=210.7s
+  seed=733 ... front=57  time=210.9s
+  seed=857 ... front=65  time=211.4s
+  seed=977 ... front=106  time=213.7s
+  seed=1009 ... front=48  time=209.3s
+  seed=1123 ... front=86  time=212.8s
+  seed=1249 ... front=55  time=210.7s
+  seed=1373 ... front=35  time=209.2s
+  seed=1499 ... front=46  time=210.3s
+  seed=1609 ... front=60  time=211.5s
+  seed=1733 ... front=54  time=209.7s
+  seed=1871 ... front=40  time=208.5s
+  seed=1997 ... front=60  time=212.2s
+  seed=2113 ... front=62  time=210.1s
+  seed=2237 ... front=52  time=209.0s
+  seed=2351 ... front=39  time=209.3s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18570.15152189  1022.85135966    84.11174335  4653.20547945]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.493284  std=0.180905
+    baseline (no repair)             mean=0.172409  std=0.028105
+    Final-front repair (test)        mean=0.222827  std=0.035648
+
+  GD (v)
+    NSGA-III (reference)             mean=0.195117  std=0.107281
+    baseline (no repair)             mean=0.536421  std=0.065055
+    Final-front repair (test)        mean=0.454558  std=0.068662
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.373486  std=0.049834
+    baseline (no repair)             mean=0.584226  std=0.042155
+    Final-front repair (test)        mean=0.523336  std=0.038593
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.050805  std=0.024060
+    baseline (no repair)             mean=0.038679  std=0.012641
+    Final-front repair (test)        mean=0.036555  std=0.012885
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             0.004901
+    Final-front repair (test)        0.004901
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs Final-front repair (test)
+--------------------------------------------------------------------------------------------
+  HV       U=51.0  p=0.000059  -> significatif (p<0.05)
+  GD       U=321.0  p=0.001116  -> significatif (p<0.05)
+  IGD      U=339.0  p=0.000179  -> significatif (p<0.05)
+  Spacing  U=228.0  p=0.456951  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : Final-front repair (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=8.0  p=0.000000  -> significatif (p<0.05)
+  GD       U=387.0  p=0.000000  -> significatif (p<0.05)
+  IGD      U=394.0  p=0.000000  -> significatif (p<0.05)
+  Spacing  U=121.0  p=0.033718  -> significatif (p<0.05)
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             mean=339.1s
+    Final-front repair (test)        mean=210.8s
+
+============================================================================================
+

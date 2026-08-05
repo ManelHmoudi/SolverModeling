@@ -1,0 +1,77 @@
+============================================================================================
+  NICHE-RECENTRING RESET (delta_similar=0.02) — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (delta_similar=0.0) (prod. actuelle)
+  seed=42 ... front=63  time=212.3s
+  seed=137 ... front=41  time=211.5s
+  seed=271 ... front=45  time=214.9s
+
+>>> delta_similar=0.02 (test)
+  seed=42 ... front=45  time=225.3s
+  seed=137 ... front=35  time=225.3s
+  seed=271 ... front=57  time=228.6s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18366.68094619  1012.08982095    83.21654008  4650.73972603]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.470590  std=0.186295
+    baseline (delta_similar=0.0)     mean=0.154651  std=0.034975
+    delta_similar=0.02 (test)        mean=0.107986  std=0.014399
+
+  GD (v)
+    NSGA-III (reference)             mean=0.216700  std=0.123763
+    baseline (delta_similar=0.0)     mean=0.591028  std=0.076210
+    delta_similar=0.02 (test)        mean=0.723812  std=0.052009
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.383288  std=0.061081
+    baseline (delta_similar=0.0)     mean=0.612304  std=0.060310
+    delta_similar=0.02 (test)        mean=0.692076  std=0.028522
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.053764  std=0.025731
+    baseline (delta_similar=0.0)     mean=0.046002  std=0.010897
+    delta_similar=0.02 (test)        mean=0.044928  std=0.007544
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (delta_similar=0.0)     0.003984
+    delta_similar=0.02 (test)        0.003884
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs delta_similar=0.02 (test)
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.100000  -> non significatif
+  GD       U=0.0  p=0.100000  -> non significatif
+  IGD      U=0.0  p=0.100000  -> non significatif
+  Spacing  U=4.0  p=1.000000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : delta_similar=0.02 (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=26.0  p=0.763411  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (delta_similar=0.0)     mean=212.9s
+    delta_similar=0.02 (test)        mean=226.4s
+
+============================================================================================
+

@@ -1,0 +1,85 @@
+============================================================================================
+  FINAL-FRONT ROUTE REPAIR — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271, 314, 512, 653, 789]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (no repair) (prod. actuelle)
+  seed=42 ... front=63  time=210.7s
+  seed=137 ... front=41  time=221.7s
+  seed=271 ... front=45  time=226.7s
+  seed=314 ... front=43  time=232.9s
+  seed=512 ... front=45  time=223.9s
+  seed=653 ... front=50  time=213.2s
+  seed=789 ... front=30  time=209.8s
+
+>>> Final-front repair (test)
+  seed=42 ... front=63  time=212.2s
+  seed=137 ... front=41  time=210.7s
+  seed=271 ... front=45  time=210.8s
+  seed=314 ... front=43  time=211.2s
+  seed=512 ... front=45  time=210.9s
+  seed=653 ... front=50  time=213.1s
+  seed=789 ... front=30  time=210.6s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18311.29539078  1004.54339728    82.28000545  4647.8630137 ]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.452604  std=0.190646
+    baseline (no repair)             mean=0.143543  std=0.026374
+    Final-front repair (test)        mean=0.199913  std=0.044684
+
+  GD (v)
+    NSGA-III (reference)             mean=0.236728  std=0.137738
+    baseline (no repair)             mean=0.610255  std=0.070409
+    Final-front repair (test)        mean=0.496704  std=0.092721
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.393307  std=0.071187
+    baseline (no repair)             mean=0.635616  std=0.048153
+    Final-front repair (test)        mean=0.554527  std=0.050940
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.056011  std=0.026778
+    baseline (no repair)             mean=0.043897  std=0.010129
+    Final-front repair (test)        mean=0.043041  std=0.017350
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             0.004515
+    Final-front repair (test)        0.004515
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs Final-front repair (test)
+--------------------------------------------------------------------------------------------
+  HV       U=7.0  p=0.026224  -> significatif (p<0.05)
+  GD       U=38.0  p=0.097319  -> non significatif
+  IGD      U=42.0  p=0.026224  -> significatif (p<0.05)
+  Spacing  U=28.0  p=0.710373  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : Final-front repair (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=6.0  p=0.000068  -> significatif (p<0.05)
+  GD       U=128.0  p=0.000554  -> significatif (p<0.05)
+  IGD      U=133.0  p=0.000101  -> significatif (p<0.05)
+  Spacing  U=49.0  p=0.263455  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             mean=219.8s
+    Final-front repair (test)        mean=211.4s
+
+============================================================================================
+
