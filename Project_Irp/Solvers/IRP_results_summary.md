@@ -599,6 +599,52 @@ timing avec `_MAX_REPAIR_ITER=5`, avant la correction de performance),
 `sensitivity/route_repair_timing_check_delta.txt` (test de timing après
 la correction de performance).
 
+### Remède G — variante pratique : réparation du front final uniquement
+
+La variante ci-dessus (`use_route_repair`) répare chaque individu à chaque
+génération -- c'est ce qui la rend ~15x plus lente que le baseline, un coût
+structurel, pas un défaut d'implémentation (confirmé après deux
+optimisations supplémentaires : fusion des calculs par candidat en un seul
+passage sur la tournée, et une recherche 2-opt bornée à une fenêtre de
+positions proches -- `sensitivity/route_repair_timing_check_lever1.txt` et
+`_timing_check_window.txt`, ratio ramené de 15.2x à ~3.5x à petite échelle,
+toujours loin d'être compétitif face à NSGA-III).
+
+Nouveau paramètre `repair_final_front` (`Solvers/QINSGA3/algorithm.py`) :
+au lieu de réparer 400 individus × 300 générations, on répare **uniquement
+le front de Pareto final retourné, une seule fois**, après la fin de la
+recherche évolutive -- la boucle de génération elle-même n'est jamais
+ralentie. Même mécanisme de réparation (2-opt baldwinien, évalué sur le
+vrai coût f1), juste appliqué à un moment différent du pipeline. Ne teste
+plus l'hypothèse scientifique initiale (est-ce que réparer corrige le
+signal qui guide toute la recherche) -- répond à une question pratique
+différente : peut-on améliorer le résultat rapporté sans ralentir
+l'algorithme ?
+
+**Résultat (7 seeds, 300 générations, instance 100 clients,
+`sensitivity/compare_route_repair_final.py`)** :
+
+| Indicateur | Baseline (sans réparation) | Test (réparation front final) | Mann-Whitney |
+|---|---|---|---|
+| HV ↑ | 0.143543 | **0.199913** (+39.3%) | U=7.0, **p=0.026224** |
+| GD ↓ | 0.610255 | 0.496704 (-18.6%) | U=38.0, p=0.097319 |
+| IGD ↓ | 0.635616 | **0.554527** (-12.8%) | U=42.0, **p=0.026224** |
+| Diversité chromosome | 0.004515 | 0.004515 (identique -- le chromosome n'est jamais modifié) | -- |
+| Temps moyen | 219.8s | **211.4s** | -- |
+
+**Premier remède avec un gain statistiquement significatif sur cette
+instance** (HV et IGD, p<0.05 -- pas juste une séparation totale limitée
+par le plancher du test comme pour les remèdes F et G/variante A-F, mais
+une vraie significativité, rendue possible par les 7 seeds), **et sans
+coût de temps mesurable** (211.4s vs 219.8s, dans le bruit de mesure).
+Toujours significativement moins bon que NSGA-III (HV p=0.000068, GD
+p=0.000554, IGD p=0.000101) -- l'écart n'est pas comblé, mais c'est la
+première fois qu'un remède progresse de façon rigoureusement mesurée, à
+coût nul.
+
+Script conservé : `sensitivity/compare_route_repair_final.py`. Log complet :
+`sensitivity/route_repair_final_campaign_log.txt`.
+
 ## Conclusion
 
 Après un diagnostic structurel clair (déficit de diversité chromosome ×13,
@@ -649,7 +695,16 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   d'effet. Mais le coût de calcul (~15x plus lent que le baseline à pleine
   échelle, plus lent que NSGA-III lui-même) le disqualifie en pratique
   indépendamment du résultat statistique -- documenté comme signal positif
-  non actionnable plutôt que rejeté comme A-F.
+  non actionnable plutôt que rejeté comme A-F. Sa variante pratique
+  (`repair_final_front` -- réparer uniquement le front de Pareto final,
+  une fois, au lieu de chaque individu à chaque génération) lève cette
+  disqualification : même mécanisme de réparation, coût de temps
+  quasi-nul (211.4s vs 219.8s baseline), et à 7 seeds, un gain
+  **statistiquement significatif** sur HV (+39.3 %, p=0.026) et IGD
+  (-12.8 %, p=0.026) -- le premier de tous les remèdes testés (A-G) à
+  atteindre une vraie significativité plutôt qu'une séparation totale
+  limitée par le plancher du test à 3 seeds. Toujours significativement
+  moins bon que NSGA-III.
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le
