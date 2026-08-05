@@ -234,8 +234,9 @@ def test_repair_route_result_leaves_already_optimal_route_unchanged():
 # ── _route_f1_contribution ───────────────────────────────────────────────
 # Performance fix: _repair_route_result originally called compute_f1 on a
 # full scratch route_result per candidate (correct, but O(whole network)
-# per candidate -- measured ~29x slower than baseline on the real IRP,
-# sensitivity/compare_route_repair.py). _route_f1_contribution computes
+# per candidate -- measured ~43x slower than baseline on the real IRP,
+# sensitivity/route_repair_timing_check_iter5.txt, instance 100, gen=10).
+# _route_f1_contribution computes
 # only the ONE repaired route's y1+y3 contribution, O(route length). This
 # test proves the two are exactly equivalent as an acceptance criterion,
 # using the real compute_f1 formula on a route_result with a SECOND,

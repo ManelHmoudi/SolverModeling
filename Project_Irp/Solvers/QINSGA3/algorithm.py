@@ -1154,6 +1154,13 @@ def run_qinsga3(
     every generation. Baldwinian: the repair never changes the chromosome,
     only the fitness it is scored with. See
     docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+    Consequence: the returned Pareto front's pareto_F reflects repaired
+    fitness, but pareto_X (the chromosomes) will NOT reproduce those exact
+    objective values if decoded through the normal
+    decode_chromosome/build_routes/compute_f1..f4 path without also
+    re-running _repair_route_result -- the repair is Baldwinian
+    (fitness-only), never re-encoded into the chromosome, matching this
+    module's other design notes on the same topic.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem

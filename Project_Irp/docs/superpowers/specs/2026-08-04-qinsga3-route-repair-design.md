@@ -123,19 +123,27 @@ every `routes_data[t][k]["path"]` with more than 3 nodes:
   tau_max exemption, but it guarantees repair never makes a period's
   worst-case travel time worse than what construction already produced — it
   can only hold steady or improve.
-- For each candidate that passes the guard, apply it to a scratch copy of
-  `route_result` (updating that route's `path`, and its `x`/`f`/
-  `arrival_times` entries via the same suffix-sum/arc-flow logic
-  `build_routes` uses at its tail end, `decoder.py:353-368`, factored out as
-  a third small local helper `_rebuild_route_arcs`), then call `compute_f1`
-  (unchanged, reused) on the whole scratch `route_result`; **accept** the
-  first candidate whose f1 is strictly lower than the pre-swap f1, apply it
-  to the real `route_result`, and restart the scan on the modified path.
-  Recomputing whole-individual f1 per candidate is more expensive than a
-  route-local delta, but reuses `compute_f1` as the single source of truth
-  for "improvement" instead of re-deriving its formula (transport cost +
-  holding cost + time-window penalty) redundantly inside `repair.py` — a
-  real but bounded runtime cost (see Risk).
+- For each candidate that passes the guard, apply it to compute trial
+  `x`/`f`/`arrival_times` via `_rebuild_route_arcs` (same suffix-sum/arc-flow
+  logic `build_routes` uses at its tail end, `decoder.py:353-368`, factored
+  out as a third small local helper), then compute ONLY that route's
+  contribution to f1 via `_route_f1_contribution(candidate_path, trial_f,
+  trial_arrivals, t, k, params_)` — O(route length), not O(whole network) —
+  and compare it against the same route's pre-swap contribution (computed
+  the same way). **Accept** the first candidate whose contribution is
+  strictly lower than the pre-swap contribution, apply the update via
+  `_replace_route_arcs`, and restart the scan on the modified path. This is
+  provably exact: every other term in f1 (holding cost, every other route's
+  transport cost and time-window penalty) is unchanged by a single-route
+  swap and cancels exactly in the delta — proven by
+  `test_route_f1_contribution_delta_matches_compute_f1_delta` in
+  `Solvers/QINSGA3/test_repair.py`, which checks this against the real
+  `compute_f1` on a route_result with a second, untouched route present (not
+  just a single-route fixture, which would trivially agree). An earlier
+  version of this design called `compute_f1` on a full scratch
+  `route_result` per candidate — correct but O(whole network) — and was
+  replaced after being measured at ~43x slower than baseline
+  (`sensitivity/route_repair_timing_check_iter5.txt`).
 - Stop when no improving-and-guard-passing candidate exists for the current
   path, or after `_MAX_REPAIR_ITER` iterations (internal constant, not
   exposed — see New Parameters), then move to the next route.
@@ -217,16 +225,18 @@ same format as A-F.
 
 ## Risk
 
-- **Runtime cost**: recomputing whole-individual f1 per candidate 2-opt swap
-  (not a route-local delta) means repair cost scales with the number of
-  candidate swaps tried × the cost of a full f1 evaluation, on top of the
-  existing per-generation evaluation cost — for `pop_size=200`,
-  `max_gen=300`, this could measurably slow each run (prior remedies'
-  baseline runs were ~208-220s each for 300 generations). Worth an
-  instrumented timing check early in implementation (a small-scale run,
-  e.g. instance 5 clients) before committing to the full 3-seed/300-gen
-  campaign, so a runtime blowup is caught before a long validation run, not
-  after.
+- **Runtime cost**: this materialized. The whole-network approach (recomputing
+  whole-individual f1 per candidate 2-opt swap, not a route-local delta) was
+  tried first and measured at ~43x slower than baseline
+  (`sensitivity/route_repair_timing_check_iter5.txt`) — well past the 10x
+  threshold this bullet anticipated — and was replaced by the route-local
+  delta (`_route_f1_contribution`), which brought a small-scale timing check
+  down to ~5.7x (`sensitivity/route_repair_timing_check_delta.txt`). Even
+  after that fix, the real full-scale campaign (3 seeds, 300 generations)
+  still measured ~15.2x (`sensitivity/route_repair_campaign_log.txt`), since
+  the ratio grows with generation count rather than staying constant. This
+  is exactly the practical disqualification the project's final
+  documentation records for this remedy.
 - **Baldwinian repair may have limited effect on the search itself**: since
   the repaired route never feeds back into the chromosome, a repair that
   reliably improves fitness might still not change *which* chromosomes get

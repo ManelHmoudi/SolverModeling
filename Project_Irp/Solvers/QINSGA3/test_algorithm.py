@@ -641,3 +641,34 @@ def test_build_g_constraints_matches_hand_verified_formula():
     G = _build_g_constraints(route_result, sets_, params_)
 
     assert G == [-80, -20, -70, -30, 2, 0, -40, -45, 10, -48]
+
+
+def test_build_g_constraints_matches_real_irpproblem_evaluate():
+    """Live drift guard: _build_g_constraints is a deliberate duplication of
+    IRPProblem._evaluate's G-list construction (problem.py:67-85, see
+    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md) --
+    this compares it against the REAL IRPProblem on a real decoded
+    chromosome, catching drift if problem.py's G-list formula ever changes
+    (the hand-verified test above catches transcription bugs in this file,
+    but can't catch drift in the other file it's meant to stay in sync
+    with)."""
+    from models.parametres import load_instance
+    from Solvers.NSGA3.problem import IRPProblem
+    from Solvers.NSGA3.decoder import decode_chromosome, build_routes
+
+    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sets_, params_ = load_instance(os.path.join(project_dir, "data", "instance_3_clients.json"))
+    problem = IRPProblem(sets_, params_)
+
+    rng = np.random.default_rng(0)
+    x = rng.uniform(problem.xl, problem.xu)
+
+    out = {}
+    problem._evaluate(x, out)
+    expected_G = out["G"]
+
+    quantities, priorities = decode_chromosome(x, sets_)
+    route_result = build_routes(quantities, sets_, params_, priorities)
+    actual_G = _build_g_constraints(route_result, sets_, params_)
+
+    assert actual_G == expected_G

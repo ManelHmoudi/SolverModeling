@@ -112,8 +112,9 @@ def _route_f1_contribution(path: list, f_vars: dict, arrival_times: dict, t, k, 
     which verifies this equivalence against the real compute_f1 formula.
     Replaces an earlier version of this search that called compute_f1 on a
     full scratch route_result per candidate -- correct, but O(whole network)
-    per candidate; measured ~29x slower than baseline on the real IRP
-    (sensitivity/compare_route_repair.py, instance 100), which this fixes.
+    per candidate; measured ~43x slower than baseline on the real IRP
+    (sensitivity/route_repair_timing_check_iter5.txt, instance 100, gen=10),
+    which this fixes.
     """
     c_ijk = params_["c_ijk"]
     d     = params_["d"]

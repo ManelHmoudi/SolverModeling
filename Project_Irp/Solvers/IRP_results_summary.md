@@ -525,6 +525,11 @@ au-delà de sa valeur d'avant réparation (garde-fou C13). Réparation
 dans le chromosome (l'ordre de visite réparé n'a pas d'inverse défini vers
 les gènes de priorité). Design complet :
 `docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md`.
+Conséquence directe de ce caractère baldwinien : les valeurs `pareto_F` du
+front retourné ne sont reproductibles qu'en ré-exécutant la réparation sur
+les chromosomes `pareto_X` retournés, pas par un simple re-décodage --
+quiconque ré-analyse plus tard les chromosomes du front de cette campagne
+doit le savoir.
 
 **Correction de performance en cours de campagne** : la première
 implémentation recalculait f1 sur tout le réseau de tournées à chaque
@@ -566,7 +571,16 @@ seeds (2/C(6,3) = 0.10, même limite structurelle déjà rencontrée pour le
 remède F), pas une absence d'effet -- une séparation totale à 3 seeds est
 la configuration la plus favorable possible avant de scaler. Le fossé avec
 NSGA-III reste néanmoins significatif (HV p=0.0079, GD p=0.026, IGD
-p=0.0045) : la réparation aide mais ne comble pas l'écart.
+p=0.0045) : la réparation aide mais ne comble pas l'écart. Cette baisse de
+diversité chromosome combinée à une hausse de qualité est l'exact inverse
+du pattern des remèdes A et B (diversité forcée à la hausse, qualité
+dégradée) -- preuve directe, dans les deux sens, que le facteur limitant
+n'est pas un déficit de diversité mais la fragilité du décodeur. Sur des
+solutions décodées réelles, f2 (CO2) et f3 (temps de trajet) ont aussi été
+observés s'améliorer aux côtés de f1 dans tous les cas vérifiés, jamais de
+régression -- l'hypothèse de corrélation avec f1 (piloté par la distance)
+se vérifie en pratique, même si ce n'est pas suivi dans les métriques
+HV/GD/IGD/Spacing du tableau.
 
 **Disqualifié en pratique malgré le signal, sur le coût de calcul** :
 même après la correction de performance, le rapport temps réparation/
