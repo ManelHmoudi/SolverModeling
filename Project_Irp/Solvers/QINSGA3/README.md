@@ -69,26 +69,33 @@ the returned Pareto set.
 
 ## Parameters and references
 
+### Communs avec NSGA-III (repris tels quels)
+
+`pop_size=200` / `max_gen=300` (shared search budget), the SBX/PM operators
+(`p_cross=0.9`, `eta_cross=20`, `eta_mut=20`, `p_mut=1/D`, applied in
+X-space at step 5) and the Das-Dennis reference-direction construction
+(`N_PARTITIONS=8`) are exactly `Solvers/NSGA3`'s own values and machinery —
+see [`Solvers/NSGA3/README.md#parameters-and-references`](../NSGA3/README.md#parameters-and-references)
+for the full rationale and references, not repeated here.
+
+### Spécifiques au principe quantique (θ-space)
+
 | Parameter | Value | Rationale / reference |
 |---|---|---|
-| `pop_size` | 200 | Fixed search budget, matched to `Solvers/NSGA3` for a fair comparison |
-| `max_gen` | 300 | Same reasoning — equal generation budget across both solvers |
+| Measurement `x = xl + cos²(θ)(xu−xl)` | — | Li & Wang (2007), eq. 3 — the one formula with no NSGA-III equivalent, see [Concept](#concept) |
 | `alpha_max` | 0.10π | Vmax = ±0.1π — Li et al. (ICNC 2008) |
 | `alpha_min` | 0.001π | Vmin = ±0.001π — Li et al. (ICNC 2008) |
-| `rotation_type` | `"tanh"` | Aggressive saturation, Li et al. (ICNC 2008). Alternatives: `"tanh_soft"` (empirical, gentler saturation) and `"linear"` (Han & Kim 2002, §II-B, standard continuous-domain adaptation) |
+| `rotation_type` | `"tanh"` | Aggressive saturation, Li et al. (ICNC 2008). Alternatives: `"tanh_soft"` (empirical, gentler saturation) and `"linear"` (Han & Kim 2002, §II-B) |
 | Initial θ | π/4 ± 0.05 | Maximum superposition — Han & Kim (2002), §II-A. The ±0.05 rad perturbation breaks symmetry so the first measurement doesn't collapse every individual to the same point |
-| `noise_scale` (measurement) | 0.02 | Diversity noise on measurement, `σ = noise_scale·|sin(2θ)|·(xu−xl)` — Platel et al. (2009), §4.2. Prevents nearby θ values from collapsing to identical integer routes after the IRP decoder rounds to integers |
-| SBX `p_cross` | 0.9 | X-space crossover probability |
-| SBX `eta_cross` | 20 | X-space distribution index — matches `Solvers/NSGA3`'s own SBX exactly (Deb, 2001) |
-| PM `eta_mut` | 20 | X-space distribution index — matches `Solvers/NSGA3`'s own PM exactly (Deb & Agrawal, 1995) |
-| PM `p_mut` | `1 / D` (D = number of decision variables) | Matches NSGA-III's `pm = 1/D` convention (Deb & Jain, 2014) |
-| `N_PARTITIONS` (Das-Dennis) | 8 → 165 reference directions for 4 objectives | Same construction as `Solvers/NSGA3` — Das & Dennis (1998), as prescribed by Deb & Jain (2014) |
-| `migration_period` | 10 generations | Frequency of archive → population injection (Han & Kim, 2002, migration principle) |
-| `n_migrate` | 10 individuals | Number of individuals refreshed from the archive per migration event |
-| External archive cap | 500 | Bounded via NSGA-II crowding-distance trimming (Deb et al., 2002, §III-B) when exceeded |
+| `noise_scale` (measurement) | 0.02 | Diversity noise, `σ = noise_scale·|sin(2θ)|·(xu−xl)` — Platel et al. (2009), §4.2. Prevents nearby θ values from collapsing to identical integer routes after the IRP decoder rounds to integers |
+| `migration_period` / `n_migrate` | 10 gen / 10 individuals | Archive → population injection (Han & Kim, 2002, migration principle) |
+| External archive cap | 500 | Bounded via NSGA-II crowding-distance trimming (Deb et al., 2002, §III-B) when exceeded — the only place this project reuses an NSGA-II mechanism outside `Solvers/NSGA3` itself |
 
-Dominance checks throughout (`_archive_update`) follow Zitzler's (1999,
-Def. 2) definition.
+Four sources ground everything specific to the quantum mechanism: Li & Wang
+(2007) for the measurement, Li et al. (ICNC 2008) for the rotation gate and
+its magnitude schedule (also the source of the 9th remedy, PSO-momentum
+rotation — see `Solvers/IRP_results_summary.md`), Han & Kim (2002) for
+initial θ and migration, and Platel et al. (2009) for measurement noise.
 
 ## Design history — what changed and why
 
