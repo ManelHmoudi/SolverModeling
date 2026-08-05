@@ -37,6 +37,30 @@ def test_two_opt_candidates_single_client_path_yields_nothing():
     assert list(_two_opt_candidates(path)) == []
 
 
+def test_two_opt_candidates_default_max_window_is_unbounded():
+    """max_window=None (the default) must yield exactly the same pairs as
+    calling without the parameter at all -- confirms the windowed search
+    added later is purely additive, not a behaviour change to the
+    unbounded default every existing caller/test relies on."""
+    path = [0, 1, 2, 3, 4, 5, 0]   # 5 interior positions -> C(5,2) = 10 pairs
+    assert list(_two_opt_candidates(path)) == list(_two_opt_candidates(path, max_window=None))
+    assert len(list(_two_opt_candidates(path))) == 10
+
+
+def test_two_opt_candidates_max_window_excludes_distant_pairs():
+    """Same 7-node path (5 interior positions, 1..5), max_window=2: only
+    pairs with j - i <= 2 survive. Hand-enumerated from the 10 unbounded
+    pairs (i,j) with distance d=j-i: (1,2)d1 (1,3)d2 (1,4)d3 (1,5)d4
+    (2,3)d1 (2,4)d2 (2,5)d3 (3,4)d1 (3,5)d2 (4,5)d1 -- excluding d>2 leaves
+    exactly 7: (1,2) (1,3) (2,3) (2,4) (3,4) (3,5) (4,5)."""
+    path = [0, 1, 2, 3, 4, 5, 0]
+
+    pairs = [(i, j) for i, j, _ in _two_opt_candidates(path, max_window=2)]
+
+    assert pairs == [(1, 2), (1, 3), (2, 3), (2, 4), (3, 4), (3, 5), (4, 5)]
+    assert all(j - i <= 2 for i, j in pairs)
+
+
 # ── _route_traversal_time ────────────────────────────────────────────────
 
 def test_route_traversal_time_sums_distance_over_speed_plus_service():

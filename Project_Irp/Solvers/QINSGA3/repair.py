@@ -11,15 +11,29 @@ unchanged, from Solvers/QINSGA3/algorithm.py's _evaluate_with_repair.
 """
 
 
-def _two_opt_candidates(path: list):
+def _two_opt_candidates(path: list, max_window: int | None = None):
     """Yield (i, j, candidate_path) for every 2-opt segment reversal of the
     interior of path (positions 1..len(path)-2 -- the depot at both ends,
     index 0 and index len(path)-1, is never moved). Pure: never inspects
     distances, costs, or any domain state.
+
+    max_window (optional, default None): when None, yields every (i, j)
+    pair -- the original, exhaustive behaviour this function has always
+    had. When set to an int, only yields pairs with j - i <= max_window,
+    bounding the search to nearby positions -- real IRP routes average
+    ~18 nodes and range up to 29 (measured on instance_100_clients.json),
+    so full O(n^2) candidate generation is worth bounding on the longer
+    ones. UNLIKE every other optimisation in this module, this is NOT
+    mathematically guaranteed equivalent to the unbounded search: an
+    improving swap between two distant positions could exist and never be
+    tried. This is a deliberate, documented trade-off of search
+    completeness for speed (see docs/superpowers/specs/
+    2026-08-04-qinsga3-route-repair-design.md), not a bug.
     """
     n = len(path)
     for i in range(1, n - 2):
-        for j in range(i + 1, n - 1):
+        j_upper = n - 1 if max_window is None else min(n - 1, i + 1 + max_window)
+        for j in range(i + 1, j_upper):
             candidate = path[:i] + path[i:j + 1][::-1] + path[j + 1:]
             yield i, j, candidate
 
@@ -221,6 +235,15 @@ _MAX_REPAIR_ITER = 20   # internal constant, not exposed -- see design doc's "Ne
 # doc's original value now that the real bottleneck is fixed, rather than
 # trading search thoroughness for speed.
 
+_TWO_OPT_WINDOW = 8   # internal constant, not exposed -- bounds each 2-opt
+# candidate scan to (i, j) pairs with j - i <= 8. Real IRP routes average
+# ~18 nodes and range up to 29 (measured on instance_100_clients.json), so
+# full O(n^2) candidate generation is worth bounding on the longer ones.
+# Trades search completeness for speed (see _two_opt_candidates's
+# docstring) -- unlike _MAX_REPAIR_ITER and the delta-cost/merged-pass
+# optimisations above, this one is NOT mathematically guaranteed
+# equivalent to the unbounded search.
+
 
 def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict:
     """First-improvement 2-opt local search per route: for every truck's
@@ -256,7 +279,7 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict
 
             for _ in range(_MAX_REPAIR_ITER):
                 improved = False
-                for i, j, candidate in _two_opt_candidates(path):
+                for i, j, candidate in _two_opt_candidates(path, max_window=_TWO_OPT_WINDOW):
                     evaluated = _evaluate_candidate(
                         candidate, qty_on_route, t, k, tau_return_before, params_
                     )
