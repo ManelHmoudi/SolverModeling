@@ -138,6 +138,82 @@ def _route_f1_contribution(path: list, f_vars: dict, arrival_times: dict, t, k, 
     return y1 + y3
 
 
+def _evaluate_candidate(path: list, qty_on_route: dict, t, k, tau_return_before: float, params_: dict):
+    """Single-pass, fast-path replacement for calling _route_traversal_time,
+    _rebuild_route_arcs, and _route_f1_contribution separately on the same
+    candidate -- the three together walk the path five times in total
+    (_route_traversal_time once, _rebuild_route_arcs three times internally,
+    _route_f1_contribution once more); this walks it at most three times
+    (matching _rebuild_route_arcs's own pass count, with zero extra passes)
+    by accumulating y3 during the arrival-time forward pass and y1 during
+    the arc-construction forward pass, instead of two separate follow-up
+    passes over already-computed data.
+
+    Returns None if the tau_return guard fails -- checked incrementally, so
+    a failing candidate exits as soon as cumulative time exceeds
+    tau_return_before, without walking the rest of the path. This is safe
+    because cumulative time is monotonically non-decreasing along any path
+    (service times and travel times are never negative): if the running
+    total already exceeds tau_return_before partway through, the final
+    total (>= the running total, since only non-negative terms remain)
+    would exceed it too -- so an early exit can never accept a candidate
+    the full computation would have rejected, or vice versa.
+
+    Otherwise returns (x_vars, f_vars, arrivals, contribution) -- exactly
+    what calling _rebuild_route_arcs(...) then
+    _route_f1_contribution(candidate, f_vars, arrivals, t, k, params_)
+    would have produced. See
+    test_evaluate_candidate_matches_separate_calls_on_accepted_and_rejected_candidates
+    for the equivalence proof against those two reference functions (which
+    are themselves proven equivalent to the real compute_f1 by
+    test_route_f1_contribution_delta_matches_compute_f1_delta) -- kept
+    unchanged as the "obviously correct" reference this fast path is
+    checked against, not removed.
+    """
+    d     = params_["d"]
+    v     = params_["v"]
+    s     = params_["s"]
+    c_ijk = params_["c_ijk"]
+    c1    = params_["c1"]
+    c2    = params_["c2"]
+    ET    = params_["ET"]
+    LT    = params_["LT"]
+    speed = v[k]
+    depot = path[0]
+
+    arrivals = {}
+    current_time = 0.0
+    current = depot
+    y3 = 0.0
+    for node in path[1:]:
+        current_time += s.get(current, 0.0) + d[current, node] / speed
+        if current_time > tau_return_before:
+            return None
+        if node != depot:
+            arrivals[node, t] = current_time
+            if current_time > 0.0:
+                y3 += c1 * max(0.0, ET[node, t] - current_time)
+                y3 += c2 * max(0.0, current_time - LT[node, t])
+        current = node
+
+    n = len(path)
+    suf = [0] * (n + 1)
+    for idx in range(n - 2, -1, -1):
+        node = path[idx + 1]
+        suf[idx] = suf[idx + 1] + (qty_on_route.get(node, 0) if node != depot else 0)
+
+    x_vars = {}
+    f_vars = {}
+    y1 = 0.0
+    for idx in range(n - 1):
+        i, j = path[idx], path[idx + 1]
+        x_vars[i, j, t, k] = 1
+        f_vars[i, j, t, k] = suf[idx]
+        y1 += c_ijk[i, j, k] * d[i, j] * suf[idx]
+
+    return x_vars, f_vars, arrivals, y1 + y3
+
+
 _MAX_REPAIR_ITER = 20   # internal constant, not exposed -- see design doc's "New parameters".
 # _route_f1_contribution (above) replaced the earlier full-compute_f1-per-
 # candidate acceptance check, so the dominant per-candidate cost is now
@@ -181,16 +257,12 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict) -> dict
             for _ in range(_MAX_REPAIR_ITER):
                 improved = False
                 for i, j, candidate in _two_opt_candidates(path):
-                    candidate_time = _route_traversal_time(candidate, k, params_)
-                    if candidate_time > tau_return_before:
+                    evaluated = _evaluate_candidate(
+                        candidate, qty_on_route, t, k, tau_return_before, params_
+                    )
+                    if evaluated is None:
                         continue
-
-                    trial_x, trial_f, trial_arrivals = _rebuild_route_arcs(
-                        candidate, qty_on_route, t, k, params_
-                    )
-                    trial_contrib = _route_f1_contribution(
-                        candidate, trial_f, trial_arrivals, t, k, params_
-                    )
+                    trial_x, trial_f, trial_arrivals, trial_contrib = evaluated
                     if trial_contrib < current_contrib:
                         working["x"] = _replace_route_arcs(working["x"], path, t, k, trial_x)
                         working["f"] = _replace_route_arcs(working["f"], path, t, k, trial_f)

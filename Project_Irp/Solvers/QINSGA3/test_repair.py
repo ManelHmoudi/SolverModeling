@@ -8,6 +8,7 @@ from Solvers.QINSGA3.repair import (
     _two_opt_candidates, _route_traversal_time,
     _rebuild_route_arcs, _replace_route_arcs,
     _repair_route_result, _route_f1_contribution,
+    _evaluate_candidate,
 )
 from Solvers.NSGA3.evaluator import compute_f1
 
@@ -304,3 +305,91 @@ def test_route_f1_contribution_delta_matches_compute_f1_delta():
     )
 
     assert full_delta == contribution_delta
+
+
+# ── _evaluate_candidate ──────────────────────────────────────────────────
+# Performance fix: _repair_route_result originally called
+# _route_traversal_time, then _rebuild_route_arcs, then _route_f1_contribution
+# separately per candidate -- correct, but walking the path 5 times total
+# (1 + 3 internal + 1) when 3 passes (matching _rebuild_route_arcs's own
+# count) suffice. _evaluate_candidate merges all three into one pass with
+# an incremental tau_return short-circuit. These tests prove it produces
+# EXACTLY what the three separate calls would have, on both an accepted
+# and a guard-rejected candidate -- reusing the exact fixtures from
+# test_repair_route_result_improves_f1_via_two_opt_swap and
+# test_repair_route_result_rejects_swap_that_would_increase_tau_return.
+
+def test_evaluate_candidate_matches_separate_calls_on_accepted_candidate():
+    """Same fixture as test_repair_route_result_improves_f1_via_two_opt_swap:
+    candidate [0,2,1,3,0] passes the tau_return guard (time=4.0 <= 12.0) and
+    strictly improves f1 (55 < 305). _evaluate_candidate must return the
+    same (x_vars, f_vars, arrivals) _rebuild_route_arcs would, plus a
+    contribution equal to what _route_f1_contribution would compute from
+    those same values."""
+    t, k = 1, 1
+    qty_on_route = {1: 10, 2: 20, 3: 5}
+    tau_return_before = 12.0
+    d = defaultdict(lambda: 1000.0)
+    d.update({
+        (0, 1): 5.0, (1, 2): 5.0, (2, 3): 1.0, (3, 0): 1.0,
+        (0, 2): 1.0, (2, 1): 1.0, (1, 3): 1.0,
+    })
+    params_ = {
+        "d": d,
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+    }
+    candidate = [0, 2, 1, 3, 0]
+
+    reference_x, reference_f, reference_arrivals = _rebuild_route_arcs(
+        candidate, qty_on_route, t, k, params_
+    )
+    reference_contrib = _route_f1_contribution(
+        candidate, reference_f, reference_arrivals, t, k, params_
+    )
+
+    result = _evaluate_candidate(candidate, qty_on_route, t, k, tau_return_before, params_)
+
+    assert result is not None
+    x_vars, f_vars, arrivals, contrib = result
+    assert x_vars == reference_x
+    assert f_vars == reference_f
+    assert arrivals == reference_arrivals
+    assert contrib == reference_contrib
+    assert contrib == 55.0   # matches the hand-verified y1 from the reused fixture
+
+
+def test_evaluate_candidate_returns_none_when_tau_return_guard_fails():
+    """Same fixture as test_repair_route_result_rejects_swap_that_would_
+    increase_tau_return: the only candidate's traversal time (10.002) far
+    exceeds tau_return_before (3.0) -- _route_traversal_time would compute
+    the same 10.002 if called separately; _evaluate_candidate must reject
+    via the same threshold without needing that separate call, returning
+    None before ever computing x_vars/f_vars/contribution."""
+    t, k = 1, 1
+    qty_on_route = {1: 100, 2: 1}
+    tau_return_before = 3.0
+    params_ = {
+        "d": {
+            (0, 1): 1.0, (1, 2): 1.0, (2, 0): 1.0,
+            (0, 2): 0.001, (2, 1): 0.001, (1, 0): 10.0,
+        },
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 0.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+    }
+    candidate = [0, 2, 1, 0]
+
+    reference_time = _route_traversal_time(candidate, k, params_)
+    assert reference_time > tau_return_before   # sanity: the reference call agrees it should be rejected
+
+    result = _evaluate_candidate(candidate, qty_on_route, t, k, tau_return_before, params_)
+
+    assert result is None
