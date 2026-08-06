@@ -1,0 +1,73 @@
+============================================================================================
+  ROUTE REPAIR — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=165 | gen=10
+  Seeds    : [42]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (no repair) (prod. actuelle)
+  seed=42 ... front=30  time=20.4s
+
+>>> Route repair (test)
+  seed=42 ... front=19  time=95.3s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18888.03809711  1050.29135276    85.97140959  4669.23287671]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.544140  std=0.168119
+    baseline (no repair)             mean=0.033181  std=0.000000
+    Route repair (test)              mean=0.052988  std=0.000000
+
+  GD (v)
+    NSGA-III (reference)             mean=0.161144  std=0.076423
+    baseline (no repair)             mean=0.999201  std=0.000000
+    Route repair (test)              mean=0.852404  std=0.000000
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.359986  std=0.031095
+    baseline (no repair)             mean=0.963269  std=0.000000
+    Route repair (test)              mean=0.858810  std=0.000000
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.044908  std=0.021513
+    baseline (no repair)             mean=0.035277  std=0.000000
+    Route repair (test)              mean=0.049946  std=0.000000
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             0.001180
+    Route repair (test)              0.001142
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs Route repair (test)
+--------------------------------------------------------------------------------------------
+  HV       : pas assez de runs valides pour un test
+  GD       : pas assez de runs valides pour un test
+  IGD      : pas assez de runs valides pour un test
+  Spacing  : pas assez de runs valides pour un test
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : Route repair (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       : pas assez de runs valides pour un test
+  GD       : pas assez de runs valides pour un test
+  IGD      : pas assez de runs valides pour un test
+  Spacing  : pas assez de runs valides pour un test
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (no repair)             mean=20.4s
+    Route repair (test)              mean=95.3s
+
+============================================================================================
+

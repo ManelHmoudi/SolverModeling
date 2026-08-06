@@ -1,0 +1,77 @@
+============================================================================================
+  CROWDING-DISTANCE GUIDES — QINSGA-III (baseline ray-closest vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (ray-closest) (prod. actuelle)
+  seed=42 ... front=63  time=208.8s
+  seed=137 ... front=41  time=207.5s
+  seed=271 ... front=45  time=208.3s
+
+>>> Crowding-distance (test)
+  seed=42 ... front=62  time=208.3s
+  seed=137 ... front=47  time=206.8s
+  seed=271 ... front=71  time=207.8s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18091.94938196  1004.54339728    82.6652497   4653.20547945]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + test)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.453396  std=0.190114
+    baseline (ray-closest)           mean=0.140398  std=0.033100
+    Crowding-distance (test)         mean=0.152976  std=0.030695
+
+  GD (v)
+    NSGA-III (reference)             mean=0.235962  std=0.135912
+    baseline (ray-closest)           mean=0.634873  std=0.078976
+    Crowding-distance (test)         mean=0.615103  std=0.074931
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.391928  std=0.069654
+    baseline (ray-closest)           mean=0.636284  std=0.060725
+    Crowding-distance (test)         mean=0.631984  std=0.056766
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.056540  std=0.027792
+    baseline (ray-closest)           mean=0.047569  std=0.009861
+    Crowding-distance (test)         mean=0.036715  std=0.006769
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (ray-closest)           0.003984
+    Crowding-distance (test)         0.003642
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs Crowding-distance (test)
+--------------------------------------------------------------------------------------------
+  HV       U=3.0  p=0.700000  -> non significatif
+  GD       U=4.0  p=1.000000  -> non significatif
+  IGD      U=4.0  p=1.000000  -> non significatif
+  Spacing  U=7.0  p=0.400000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : Crowding-distance (test) vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=17.0  p=0.267645  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (ray-closest)           mean=208.2s
+    Crowding-distance (test)         mean=207.6s
+
+============================================================================================
+
