@@ -1,0 +1,77 @@
+============================================================================================
+  ROTATION PARTIELLE PAR STABILITE (frac=0.15, select=least_stable) — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (frac=1.0, prod. actuelle)
+  seed=42 ... front=63  time=367.9s
+  seed=137 ... front=41  time=509.9s
+  seed=271 ... front=45  time=441.3s
+
+>>> frac=0.15 (test)
+  seed=42 ... front=56  time=313.4s
+  seed=137 ... front=55  time=352.6s
+  seed=271 ... front=62  time=366.9s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18649.94365124  1017.44987808    83.78881147  4650.32876712]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + rotation partielle)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.486624  std=0.182915
+    baseline (frac=1.0)              mean=0.231079  std=0.044436
+    frac=0.15 (test)                 mean=0.128473  std=0.015453
+
+  GD (v)
+    NSGA-III (reference)             mean=0.201404  std=0.112392
+    baseline (frac=1.0)              mean=0.449558  std=0.074129
+    frac=0.15 (test)                 mean=0.693727  std=0.052000
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.377110  std=0.053611
+    baseline (frac=1.0)              mean=0.518562  std=0.052379
+    frac=0.15 (test)                 mean=0.669857  std=0.025253
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.051422  std=0.024053
+    baseline (frac=1.0)              mean=0.043785  std=0.019382
+    frac=0.15 (test)                 mean=0.041300  std=0.004042
+
+--------------------------------------------------------------------------------------------
+  Diversite chromosome  Var(X_norm)  (pooled sur tous les runs testes)
+--------------------------------------------------------------------------------------------
+    baseline (frac=1.0)              0.003984
+    frac=0.15 (test)                 0.004168
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs frac=0.15
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.100000  -> non significatif
+  GD       U=0.0  p=0.100000  -> non significatif
+  IGD      U=0.0  p=0.100000  -> non significatif
+  Spacing  U=3.0  p=0.700000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : frac=0.15 vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=24.0  p=0.634670  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (frac=1.0)              mean=439.7s
+    frac=0.15 (test)                 mean=344.3s
+
+============================================================================================
+

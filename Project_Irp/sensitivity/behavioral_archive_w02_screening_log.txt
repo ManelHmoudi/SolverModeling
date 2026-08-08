@@ -1,0 +1,78 @@
+============================================================================================
+  ARCHIVE COMPORTEMENTALE (w_structural=0.2, report_size=30) — QINSGA-III
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (F-crowding seul, trim a report_size=30)
+  seed=42 ... front_full=63  front_report=30  route_div=0.3845  time=249.8s
+  seed=137 ... front_full=41  front_report=30  route_div=0.4911  time=245.2s
+  seed=271 ... front_full=45  front_report=30  route_div=0.3555  time=227.1s
+
+>>> w_structural=0.2 (test, trim a report_size=30)
+  seed=42 ... front_report=30  route_div=0.4050  time=218.4s
+  seed=137 ... front_report=30  route_div=0.4899  time=216.7s
+  seed=271 ... front_report=30  route_div=0.3801  time=229.4s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18091.94938196  1004.54339728    82.09595179  4644.57534247]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + archive comportementale)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.439795  std=0.192063
+    baseline (F-crowding seul)       mean=0.181749  std=0.042194
+    w_structural=0.2 (test)          mean=0.123295  std=0.031400
+
+  GD (v)
+    NSGA-III (reference)             mean=0.250459  std=0.146330
+    baseline (F-crowding seul)       mean=0.572265  std=0.077028
+    w_structural=0.2 (test)          mean=0.703159  std=0.065575
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.398842  std=0.077407
+    baseline (F-crowding seul)       mean=0.585119  std=0.063360
+    w_structural=0.2 (test)          mean=0.676687  std=0.062594
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.058038  std=0.028005
+    baseline (F-crowding seul)       mean=0.056885  std=0.022258
+    w_structural=0.2 (test)          mean=0.058330  std=0.012756
+
+--------------------------------------------------------------------------------------------
+  Diversite de tournees du front rapporte  (Jaccard, all-pairs par run) -- METRIQUE CIBLE
+--------------------------------------------------------------------------------------------
+    baseline (F-crowding seul)       mean=0.410363  std=0.058292
+    w_structural=0.2 (test)          mean=0.424997  std=0.047028
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs w_structural=0.2
+--------------------------------------------------------------------------------------------
+  HV       U=7.0  p=0.400000  -> non significatif
+  GD       U=1.0  p=0.200000  -> non significatif
+  IGD      U=2.0  p=0.400000  -> non significatif
+  Spacing  U=4.0  p=1.000000  -> non significatif
+  route_div U=4.0  p=1.000000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : w_structural=0.2 vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.001129  -> significatif (p<0.05)
+  GD       U=60.0  p=0.001129  -> significatif (p<0.05)
+  IGD      U=60.0  p=0.001129  -> significatif (p<0.05)
+  Spacing  U=37.0  p=0.572558  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (F-crowding seul)       mean=240.7s
+    w_structural=0.2 (test)          mean=221.5s
+
+============================================================================================
+

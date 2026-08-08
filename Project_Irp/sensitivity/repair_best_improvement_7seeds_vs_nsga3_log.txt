@@ -1,0 +1,86 @@
+============================================================================================
+  REPARATION 2-OPT BEST-IMPROVEMENT vs FIRST-IMPROVEMENT (fenetre=8) — QINSGA-III
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271, 491, 613, 733, 857]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> un seul run de recherche par seed (repair_final_front=False), puis les deux reparations
+  seed=42 ... recherche ... front=63  t_search=218.7s  t_repair_first=3.3s  t_repair_best=3.7s
+  seed=137 ... recherche ... front=41  t_search=219.6s  t_repair_first=2.5s  t_repair_best=3.1s
+  seed=271 ... recherche ... front=45  t_search=233.7s  t_repair_first=3.5s  t_repair_best=3.6s
+  seed=491 ... recherche ... front=44  t_search=254.5s  t_repair_first=3.3s  t_repair_best=3.8s
+  seed=613 ... recherche ... front=47  t_search=243.1s  t_repair_first=3.4s  t_repair_best=3.9s
+  seed=733 ... recherche ... front=57  t_search=247.9s  t_repair_first=3.0s  t_repair_best=3.5s
+  seed=857 ... recherche ... front=65  t_search=227.9s  t_repair_first=3.9s  t_repair_best=4.6s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18165.36661428  1012.98026621    82.85521932  4651.56164384]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + les deux variantes)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.462276  std=0.187583
+    baseline (first-improvement, prod) mean=0.200709  std=0.036799
+    best-improvement (test)          mean=0.205620  std=0.037753
+
+  GD (v)
+    NSGA-III (reference)             mean=0.225455  std=0.129008
+    baseline (first-improvement, prod) mean=0.516479  std=0.074442
+    best-improvement (test)          mean=0.507865  std=0.073366
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.386405  std=0.064544
+    baseline (first-improvement, prod) mean=0.553963  std=0.046244
+    best-improvement (test)          mean=0.544818  std=0.044321
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.055288  std=0.026966
+    baseline (first-improvement, prod) mean=0.043056  std=0.018723
+    best-improvement (test)          mean=0.045739  std=0.017040
+
+--------------------------------------------------------------------------------------------
+  Comparaison APPARIEE (meme front pareto_X, meme seed)
+--------------------------------------------------------------------------------------------
+  HV       best-improvement meilleur: 6/7  pire: 1/7  egal: 0/7  (diffs=['0.0032', '0.0046', '0.0086', '0.0025', '0.0105', '-0.0012', '0.0062'])
+  GD       best-improvement meilleur: 6/7  pire: 1/7  egal: 0/7  (diffs=['0.0066', '0.0062', '0.0304', '-0.0003', '0.0084', '0.0038', '0.0052'])
+  IGD      best-improvement meilleur: 6/7  pire: 1/7  egal: 0/7  (diffs=['0.0053', '0.0068', '0.0196', '0.0188', '0.0077', '-0.0023', '0.0082'])
+  Spacing  best-improvement meilleur: 2/7  pire: 5/7  egal: 0/7  (diffs=['-0.0028', '-0.0039', '0.0074', '-0.0019', '-0.0160', '-0.0030', '0.0014'])
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U (non apparie) : first-improvement vs best-improvement
+--------------------------------------------------------------------------------------------
+  HV       U=19.0  p=0.534965  -> non significatif
+  GD       U=28.0  p=0.710373  -> non significatif
+  IGD      U=31.0  p=0.455711  -> non significatif
+  Spacing  U=24.0  p=1.000000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Wilcoxon signed-rank APPARIE (meme front de depart par seed -- test correct pour ce design)
+--------------------------------------------------------------------------------------------
+  HV       stat=27.0  p=0.015625  -> best-improvement meilleur, significatif (p<0.05)
+  GD       stat=27.0  p=0.015625  -> best-improvement meilleur, significatif (p<0.05)
+  IGD      stat=27.0  p=0.015625  -> best-improvement meilleur, significatif (p<0.05)
+  Spacing  stat=7.0  p=0.890625  -> best-improvement meilleur, non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : best-improvement vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=4.0  p=0.000027  -> significatif (p<0.05)
+  GD       U=135.0  p=0.000043  -> significatif (p<0.05)
+  IGD      U=135.0  p=0.000043  -> significatif (p<0.05)
+  Spacing  U=54.0  p=0.399845  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen (recherche + reparation)
+--------------------------------------------------------------------------------------------
+    baseline (first-improvement, prod) mean=238.3s
+    best-improvement (test)          mean=238.8s
+
+============================================================================================
+

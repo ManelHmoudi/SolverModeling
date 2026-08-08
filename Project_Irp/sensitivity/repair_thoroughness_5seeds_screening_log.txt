@@ -1,0 +1,68 @@
+============================================================================================
+  REPARATION 2-OPT EXHAUSTIVE vs FENETRE=8 (repair_final_front) — QINSGA-III
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271, 491, 613]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> un seul run de recherche par seed (repair_final_front=False), puis les deux reparations
+  seed=42 ... recherche ... front=63  t_search=225.0s  t_repair_w8=3.5s  t_repair_exhaustif=4.8s
+  seed=137 ... recherche ... front=41  t_search=214.5s  t_repair_w8=2.6s  t_repair_exhaustif=3.3s
+  seed=271 ... recherche ... front=45  t_search=216.7s  t_repair_w8=3.1s  t_repair_exhaustif=4.0s
+  seed=491 ... recherche ... front=44  t_search=217.7s  t_repair_w8=2.7s  t_repair_exhaustif=3.7s
+  seed=613 ... recherche ... front=47  t_search=218.8s  t_repair_w8=2.8s  t_repair_exhaustif=3.8s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [17954.98385169  1004.54339728    82.47928501  4647.45205479]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + les deux variantes)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.440662  std=0.191548
+    baseline (fenetre=8, prod)       mean=0.187859  std=0.037813
+    exhaustif (window=None, test)    mean=0.178409  std=0.049620
+
+  GD (v)
+    NSGA-III (reference)             mean=0.249089  std=0.144831
+    baseline (fenetre=8, prod)       mean=0.542974  std=0.073797
+    exhaustif (window=None, test)    mean=0.573602  std=0.097312
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.397692  std=0.076149
+    baseline (fenetre=8, prod)       mean=0.577105  std=0.054489
+    exhaustif (window=None, test)    mean=0.588046  std=0.068288
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.058409  std=0.028791
+    baseline (fenetre=8, prod)       mean=0.043801  std=0.017692
+    exhaustif (window=None, test)    mean=0.046421  std=0.020399
+
+--------------------------------------------------------------------------------------------
+  Comparaison APPARIEE (meme front pareto_X, meme seed) : signe(HV_exhaustif - HV_w8) par seed
+--------------------------------------------------------------------------------------------
+  HV       exhaustif meilleur: 1/5  pire: 4/5  egal: 0/5  (diffs=['0.0094', '-0.0035', '-0.0245', '-0.0268', '-0.0018'])
+  GD       exhaustif meilleur: 0/5  pire: 5/5  egal: 0/5  (diffs=['-0.0011', '-0.0007', '-0.0540', '-0.0837', '-0.0136'])
+  IGD      exhaustif meilleur: 2/5  pire: 3/5  egal: 0/5  (diffs=['0.0091', '0.0010', '-0.0318', '-0.0310', '-0.0020'])
+  Spacing  exhaustif meilleur: 4/5  pire: 1/5  egal: 0/5  (diffs=['0.0005', '0.0020', '0.0081', '0.0013', '-0.0250'])
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline (fenetre=8) vs exhaustif (window=None)
+--------------------------------------------------------------------------------------------
+  HV       U=17.0  p=0.420635  -> non significatif
+  GD       U=9.0  p=0.547619  -> non significatif
+  IGD      U=11.0  p=0.841270  -> non significatif
+  Spacing  U=14.0  p=0.841270  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen (recherche + reparation)
+--------------------------------------------------------------------------------------------
+    baseline (fenetre=8, prod)       mean=221.5s
+    exhaustif (window=None, test)    mean=222.4s
+
+============================================================================================
+

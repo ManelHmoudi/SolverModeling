@@ -645,6 +645,259 @@ coût nul.
 Script conservé : `sensitivity/compare_route_repair_final.py`. Log complet :
 `sensitivity/route_repair_final_campaign_log.txt`.
 
+### Remède G -- perfectionnements ultérieurs (une piste adoptée, deux rejetées)
+
+Trois pistes indépendantes pour aller plus loin que `repair_final_front`,
+explorées après les remèdes H et I (voir plus bas) une fois établi que le
+décodeur, pas la diversité, est le vrai levier :
+
+**Rejeté -- fenêtre 2-opt exhaustive** (`sensitivity/
+compare_repair_thoroughness.py`) : `_repair_route_result` borne sa
+recherche 2-opt à une fenêtre de 8 positions (`_TWO_OPT_WINDOW`), un
+compromis vitesse/exhaustivité documenté comme non garanti optimal. Comme
+`repair_final_front` ne répare qu'une fois le front final (41-65 solutions),
+une fenêtre illimitée reste quasi gratuite (~1.1x-1.8x de candidats en
+plus) -- testée en comparaison **appariée** (même front de départ par
+seed, seule la réparation change) sur 5 seeds : résultat mitigé, GD pire
+sur 5/5 seeds, HV pire sur 4/5. Diagnostic : `_repair_route_result` est en
+**première-amélioration** (accepte le premier échange qui améliore) --
+élargir la fenêtre change seulement QUEL échange est trouvé en premier,
+pas si l'optimum local atteint est meilleur ; la recherche peut partir sur
+une trajectoire différente, pas forcément meilleure. Log :
+`sensitivity/repair_thoroughness_5seeds_screening_log.txt`.
+
+**Rejeté -- réparation partielle de l'archive en cours de recherche**
+(`sensitivity/compare_archive_repair.py`) : au lieu de réparer seulement le
+front final une fois, réparer le front de Pareto de la génération courante
+(parent ET enfants, ~10-20 individus sur 200, mesuré directement) à chaque
+génération, avant qu'il entre dans l'archive -- pour que
+`_supplement_from_archive` (déjà en production) voie des guides de niche
+réparés pendant la recherche, pas seulement à la fin. Design complet :
+`docs/superpowers/specs/2026-08-06-qinsga3-partial-archive-repair-design.md`.
+Signal prometteur à 3 seeds (HV +16.8%, GD -10.6%, IGD -8%, les 4 métriques
+dans le bon sens) qui s'est **entièrement dissous à 5 seeds** (HV +2.1%,
+GD +0.6%, IGD +0.7% -- U entre 11 et 14 sur un maximum de 25, quasiment la
+valeur attendue sous absence d'effet) : faux positif de petit échantillon,
+pas un vrai signal qui s'affaiblit -- contrairement à `repair_final_front`
+lui-même, dont le signal s'était renforcé de 3 à 7 seeds. Coût : ×4.8 au
+départ, réduit à ×1.46 après avoir corrigé une implémentation qui réparait
+séquentiellement dans le processus principal au lieu d'utiliser le pool de
+workers déjà disponible (`_worker_eval_repaired`, déjà utilisé par
+`use_route_repair`) -- optimisation gardée dans le script, mais le résultat
+de qualité reste nul avec ou sans elle (réparation déterministe : mêmes
+seeds -> mêmes résultats, seule la vitesse a changé). Logs :
+`sensitivity/archive_repair_5seeds_optimized_screening_log.txt`.
+
+**Adopté -- réparation en meilleure-amélioration** (`sensitivity/
+compare_repair_best_improvement.py`) : plutôt qu'élargir la fenêtre
+(rejeté ci-dessus), changer la RÈGLE D'ACCEPTATION elle-même -- à chaque
+itération, évaluer tous les candidats de la fenêtre (toujours 8, inchangée)
+et appliquer strictement le meilleur, pas le premier qui améliore. Garantie
+mathématique, pas seulement empirique : à chaque étape, meilleure-
+amélioration voit le même candidat que première-amélioration aurait choisi,
+plus tous les autres, donc ne peut jamais faire pire à cette étape.
+Comparaison **appariée** (même front de départ par seed, recherche
+identique, seule la réparation finale change) :
+
+| Indicateur | Victoires (20 seeds) | Wilcoxon signed-rank apparié |
+|---|---|---|
+| HV ↑ | 18/20 | **p=0.000508** |
+| GD ↓ | 19/20 | **p=0.000002** |
+| IGD ↓ | 17/20 | **p=0.00003** |
+| Spacing ↓ | 9/20 | p=0.74 (non significatif) |
+
+Coût nul (317.7s vs 318.3s en moyenne sur 20 seeds). Face à NSGA-III,
+l'écart reste significatif sur HV/GD/IGD (p<0.000001, cohérent avec tous
+les remèdes précédents) -- **mais QI-NSGA-III devient significativement
+meilleur que NSGA-III sur Spacing** (0.039840 contre 0.054238, p=0.0439) :
+un front moins étendu (HV plus faible) mais plus régulièrement réparti,
+nouveau et jamais observé aussi nettement dans les remèdes précédents.
+Confirmé à 7 seeds (p=0.0156 sur les 3 métriques) avant de scaler à 20 --
+signal qui se **renforce** en ajoutant des seeds (p passe de 0.016 à
+0.0005/0.000002/0.00003), le pattern inverse du faux positif de la
+réparation d'archive ci-dessus, et le signe d'un effet réel. **Adopté en
+production** (`Solvers/QINSGA3/repair.py::_repair_route_result`, et
+répercuté dans `Livrables_Prof/IRP_100clients_NSGA3_vs_QINSGA3_Colab.ipynb`)
+le 2026-08-08. Logs : `sensitivity/repair_best_improvement_20seeds_screening_log.txt`,
+`sensitivity/repair_best_improvement_7seeds_vs_nsga3_log.txt`,
+`sensitivity/repair_best_improvement_20seeds_vs_nsga3_log.txt`.
+
+### Remède J -- décodeur à anticipation déterministe (non retenu)
+
+Première tentative de cette campagne à changer le PRINCIPE de construction
+du décodeur glouton lui-même, plutôt que de le réparer après coup. Une
+première tentative dans ce sens existait déjà et avait échoué : le
+"décodeur adouci" (`sensitivity/compare_soft_decoder.py`, tirage
+aléatoire pondéré au lieu du strict meilleur candidat) -- tendance
+négative, probablement à cause du bruit d'évaluation introduit (le même
+chromosome peut décoder différemment à chaque appel).
+
+Ce remède teste une alternative **déterministe** : à chaque étape de
+construction, au lieu de choisir directement le candidat au meilleur score,
+comparer les k=2 meilleurs candidats en simulant un pas de plus pour
+chacun (anticipation façon "regret"), et choisir celui qui minimise le
+coût cumulé sur 2 pas. Aucun aléatoire introduit -- un même chromosome
+décode toujours vers la même tournée. Isolation identique au décodeur
+adouci : fork privé du décodeur (`sensitivity/compare_lookahead_decoder.py`),
+le décodeur partagé et les résultats NSGA-III (cache) restent inchangés.
+
+**Résultat (3 seeds, 300 générations, instance 100 clients)** :
+
+| Indicateur | Baseline (décodeur original) | Anticipation k=2 | Mann-Whitney |
+|---|---|---|---|
+| HV ↑ | 0.233612 | 0.147213 (-37%) | **U=9.0, p=0.10 (séparation totale)** |
+| GD ↓ | 0.441924 | 0.593290 (+34% pire) | **U=0.0, p=0.10 (séparation totale)** |
+| IGD ↓ | 0.515874 | 0.645289 (+25% pire) | **U=0.0, p=0.10 (séparation totale)** |
+| Spacing ↓ | 0.044070 | 0.052168 | p=0.40 (non sig.) |
+
+Séparation totale, mais dans le sens **inverse** de celui recherché --
+contrairement au décodeur adouci, l'échec n'est pas dû au bruit d'évaluation
+(déterministe ici). Hypothèse retenue : changer la règle de construction
+gloutonne perturbe la relation implicite que la recherche évolutive avait
+apprise entre les gènes de priorité et les tournées résultantes, sans la
+remplacer par quelque chose de mieux -- même un choix "plus intelligent"
+localement peut casser cet équilibre. Confirme, sur un axe encore différent
+(principe de construction, pas réparation post-hoc), que le seul levier qui
+fonctionne sur cette instance reste la réparation locale APRÈS décodage
+(remède G), pas une modification de la construction elle-même. Non scalé
+à 20 seeds (séparation totale déjà dans le mauvais sens à 3 seeds).
+
+Script conservé : `sensitivity/compare_lookahead_decoder.py`. Log complet :
+`sensitivity/lookahead_decoder_k2_screening_log.txt`.
+
+### Remède H -- rotation partielle par gène (deux critères, non retenu)
+
+Les remèdes A-G touchent tous la rotation dans son ensemble (fréquence,
+cible, règle, ou magnitude) ou le décodeur. Cette piste teste un axe encore
+non couvert : au lieu de faire tourner tous les gènes de tous les individus
+chaque génération, n'en faire tourner qu'une fraction (`frac=0.15`),
+sélectionnée par gène plutôt qu'au hasard par individu -- contrairement à
+`rotation_prob` (voir "Premières tentatives" ci-dessus, sans effet mesurable
+sur la diversité). Deux critères de sélection testés indépendamment,
+`sensitivity/compare_partial_rotation.py` et `sensitivity/
+compare_partial_rotation_correlation.py`, design complet dans
+`docs/superpowers/specs/2026-08-06-qinsga3-partial-rotation-by-stability-design.md` :
+
+- **H1 -- stabilité** : par individu, on ne fait tourner que les gènes déjà
+  les plus proches des élites de la niche (`_elite_rms_distance`, réutilisée
+  telle quelle depuis le remède E) -- les gènes divergents restent gelés ce
+  tour-ci, façonnés uniquement par SBX/PM.
+- **H2 -- corrélation aux améliorations passées** : globalement à la
+  population (pas par individu -- une histoire par individu serait rompue
+  par le remélange complet qu'effectue la survie élitiste chaque génération,
+  le même problème d'identité déjà documenté pour `pbest`/`lambda`), on
+  suit une corrélation glissante (fenêtre de 30 générations) entre
+  l'amplitude du pas de rotation de chaque gène et la qualité du front ; ne
+  sont tournés que les gènes dont l'activité a le mieux suivi les
+  améliorations passées.
+
+**Résultat (3 seeds, 300 générations, instance 100 clients)** :
+
+| Indicateur | Baseline | H1 (stabilité) | H2 (corrélation) |
+|---|---|---|---|
+| HV ↑ | 0.213276 / 0.213909 | 0.172665 (-19 %), U=7.0 p=0.40 | 0.135927 (-36 %), **U=9.0 p=0.10** |
+| GD ↓ | 0.480850 / 0.476642 | 0.602452 (+25 %), U=1.0 p=0.20 | 0.680655 (+43 %), **U=0.0 p=0.10** |
+| IGD ↓ | 0.543743 / 0.543711 | 0.602943 (+11 %), U=2.0 p=0.40 | 0.648593 (+19 %), **U=0.0 p=0.10** |
+| Diversité chromosome | 0.003984 | **0.020392 (×5.1)** | **0.011978 (×3.0)** |
+
+Les deux critères déplacent la diversité chromosome bien plus que tout
+remède précédent (H1 : le plus gros mouvement de diversité des huit remèdes
+testés), confirmant que cibler QUELS gènes tournent -- et pas seulement
+quand ou combien -- change vraiment la dynamique. Mais dans les deux cas la
+qualité se dégrade sur HV/GD/IGD, pas seulement sans effet comme
+`rotation_prob` : H2 atteint même une séparation totale (U=0.0/9.0, le
+plancher p=0.10 du test à 3 seeds, comme les remèdes F et G) mais dans le
+sens **inverse** de celui recherché. Même schéma « diversité forcée à la
+hausse, qualité dégradée » que les remèdes A et B, sur un axe (par gène)
+jamais testé auparavant -- **non scalé à 20 seeds**, même règle de décision
+que pour A/B (scaler seulement sur signal positif).
+
+**H1b -- critère inversé (`select=least_stable`)** : hypothèse de suivi --
+puisque H1 protège les gènes qui n'ont besoin d'aucune correction (déjà
+proches des élites) et abandonne à SBX/PM les gènes qui en auraient le plus
+besoin, inverser le critère (ne faire tourner QUE les gènes les plus
+éloignés des élites, `sensitivity/compare_partial_rotation.py --select
+least_stable`) devrait cibler l'effort de rotation là où il sert vraiment.
+Résultat (3 seeds, 300 générations) : encore pire que H1, avec séparation
+totale sur 3 métriques sur 4 :
+
+| Indicateur | Baseline | H1b (least_stable) |
+|---|---|---|
+| HV ↑ | 0.231079 | 0.128473 (-44 %), **U=9.0 p=0.10** |
+| GD ↓ | 0.449558 | 0.693727 (+54 % pire), **U=0.0 p=0.10** |
+| IGD ↓ | 0.518562 | 0.669857 (+29 % pire), **U=0.0 p=0.10** |
+| Diversité chromosome | 0.003984 | 0.004168 (quasi inchangée, +4.6 %) | 
+
+Fait notable : cette fois la diversité chromosome bouge à peine, alors que
+c'est le pire résultat de qualité des trois critères -- la preuve la plus
+nette que ce n'est pas QUEL sous-ensemble de gènes est choisi qui compte,
+mais la **couverture** : limiter la rotation à 15 % des gènes par génération
+prive 85 % du génome de correction dirigée à chaque génération pendant tout
+le run, quel que soit le critère de sélection.
+
+Scripts conservés : `sensitivity/compare_partial_rotation.py` (`--select
+most_stable|least_stable`), `sensitivity/
+compare_partial_rotation_correlation.py`. Logs complets :
+`sensitivity/partial_rotation_screening_log.txt`,
+`sensitivity/partial_rotation_correlation_screening_log.txt`,
+`sensitivity/partial_rotation_least_stable_screening_log.txt`.
+
+### Remède I -- archive comportementale (diversité structurelle des tournées, non retenu)
+
+Piste distincte des remèdes A-H : au lieu de toucher la dynamique de
+recherche (rotation), on cible l'élagage final de l'archive (`_crowding_trim`,
+`algorithm.py:964-974`), qui aujourd'hui sélectionne les solutions à
+rapporter uniquement par crowding distance en espace objectif (F) --
+X/theta ne sont que des données transportées. Hypothèse : deux tournées
+structurellement très différentes peuvent avoir un coût quasi identique (les
+quatre objectifs sont des sommes sur les arcs/flux, `Solvers/NSGA3/
+evaluator.py`), donc l'élagage F-seul peut retenir des tournées redondantes
+et jeter des tournées structurellement distinctes.
+
+Contexte du diagnostic déjà fait (H3, section "Diagnostic diversité/
+décodeur") : la diversité des tournées décodées de la population entière
+n'est que légèrement inférieure à celle de NSGA-III (ratio 0.846, très loin
+du ratio chromosome ×13) -- donc la prémisse "les tournées sont redondantes"
+n'est pas fortement soutenue au niveau population. Ce remède teste une
+question plus étroite : l'archive, elle, quand elle élague, jette-t-elle
+quand même de la diversité structurelle pour rien ?
+
+**Calibrage nécessaire** : l'élagage final ne se déclenche que si le front
+dépasse `pop_size` (200) -- or les fronts finaux mesurés font 41 à 65
+solutions, donc l'élagage à `pop_size` ne s'active quasiment jamais. Testé
+à la place à une taille de rapport plus petite (`report_size=30`, un besoin
+réaliste : présenter un sous-ensemble diversifié gérable à un décideur),
+appliquée identiquement au baseline (F-crowding seul) et au test (F-crowding
++ diversité structurelle de Jaccard, réutilisant `_route_arcset`/
+`_jaccard_distance` de `sensitivity/test_route_diversity.py`), score combiné
+`w_structural * structurel + (1-w_structural) * F`. Contrairement aux
+remèdes A-H, celui-ci ne touche jamais la boucle de recherche -- seulement
+quels non-dominés (déjà tous Pareto-valides) sont rapportés à la fin.
+
+**Résultat (3 seeds, 300 générations, deux poids testés)** :
+
+| Indicateur | Baseline | w=0.5 | w=0.2 |
+|---|---|---|---|
+| HV ↑ | 0.181749 | 0.121062 (-33 %), p=0.40 | 0.123295 (-32 %), p=0.40 |
+| GD ↓ | 0.572265 | 0.704934 (+23 % pire), p=0.20 | 0.703159 (+23 % pire), p=0.20 |
+| IGD ↓ | 0.585119 | 0.680763 (+16 % pire), p=0.40 | 0.676687 (+16 % pire), p=0.40 |
+| Diversité tournées (cible) | 0.410363 | 0.434851 (+6 %), p=0.40 | 0.424997 (+3.6 %), p=1.00 |
+
+Le compromis n'est favorable à aucun des deux poids : réduire `w_structural`
+de 0.5 à 0.2 ne réduit presque pas le coût en qualité (HV toujours -32/33 %)
+mais réduit le gain sur la métrique visée -- le pire des deux mondes. Le
+critère F-crowding de production semble déjà proche d'un optimum pour ce
+problème : même une déviation modeste vers la diversité structurelle coûte
+cher en HV/GD/IGD (mesurées entièrement en espace F) sans acheter grand-chose
+en diversité de tournées, ce qui suggère que les points extrêmes du front
+(ceux qui maximisent le spread F) sont déjà de bons représentants de la
+diversité structurelle. Non scalé à 20 seeds (même règle : signal négatif
+aux deux poids testés).
+
+Script conservé : `sensitivity/compare_behavioral_archive.py`. Logs
+complets : `sensitivity/behavioral_archive_screening_log.txt`,
+`sensitivity/behavioral_archive_w02_screening_log.txt`.
+
 ## Conclusion
 
 Après un diagnostic structurel clair (déficit de diversité chromosome ×13,
@@ -705,6 +958,57 @@ aucun n'a produit de gain réel. Le pattern est net et cohérent :
   atteindre une vraie significativité plutôt qu'une séparation totale
   limitée par le plancher du test à 3 seeds. Toujours significativement
   moins bon que NSGA-III.
+- Trois perfectionnements du remède G testés ensuite (section "Remède G --
+  perfectionnements ultérieurs") : élargir la fenêtre 2-opt (rejeté,
+  mitigé/négatif) et réparer l'archive en continu pendant la recherche
+  (rejeté, faux positif à 3 seeds qui s'est dissous à 5) échouent tous les
+  deux -- mais passer de première- à **meilleure-amélioration** dans la
+  réparation elle-même réussit, avec le signal le plus net et le plus
+  robuste de toute la campagne (Wilcoxon apparié à 20 seeds : HV p=0.0005,
+  GD p=0.000002, IGD p=0.00003, coût nul, signal qui se renforce avec
+  l'échantillon au lieu de se diluer) -- **adopté en production**. Révèle
+  aussi un résultat nouveau : QI-NSGA-III devient significativement meilleur
+  que NSGA-III sur Spacing (p=0.044) à cette échelle, même si HV/GD/IGD
+  restent significativement en sa défaveur.
+- Le remède J, première tentative à changer le PRINCIPE de construction du
+  décodeur (anticipation déterministe à 2 pas) plutôt que de le réparer
+  après coup, échoue aussi -- séparation totale à 3 seeds mais dans le
+  mauvais sens (HV -37 %, GD +34 %, IGD +25 %), sans le défaut du décodeur
+  adouci (bruit d'évaluation, puisque déterministe) : changer la règle de
+  construction perturbe la relation apprise entre gènes de priorité et
+  tournées, sans la remplacer par mieux. Dixième confirmation indépendante
+  que seule la réparation locale POST-décodage (remède G) fonctionne sur
+  cette instance -- ni la diversité, ni la construction elle-même.
+- Le remède H, qui cible pour la première fois QUELS gènes tournent (par
+  stabilité ou par corrélation aux améliorations passées) plutôt que la
+  fréquence, la cible ou la règle de la rotation dans son ensemble, produit
+  le plus gros déplacement de diversité chromosome de tous les remèdes
+  (×5.1 et ×3.0) -- confirmant que l'axe « par gène » a un effet réel,
+  contrairement à `rotation_prob` (par individu, aléatoire) qui n'avait
+  quasiment rien bougé. Mais la qualité se dégrade dans les deux variantes,
+  avec pour la variante par corrélation une séparation totale (p=0.10) dans
+  le sens inverse de celui recherché -- huitième confirmation indépendante
+  que plus de diversité chromosome ne comble pas l'écart avec NSGA-III sur
+  cette instance. Une troisième variante (H1b, critère de stabilité inversé
+  -- faire tourner les gènes les MOINS stables, ceux qui ont le plus besoin
+  d'être corrigés) donne le résultat le pire des trois (séparation totale
+  sur HV/GD/IGD) alors que la diversité chromosome, cette fois, bouge à
+  peine -- la preuve la plus nette que ce n'est pas QUEL sous-ensemble de
+  gènes est choisi qui compte, mais que limiter la couverture de la rotation
+  à 15 % du génome, quel que soit le critère, prive le reste d'une
+  correction dirigée pendant tout le run.
+- Le remède I, seul remède à toucher l'élagage de l'archive plutôt que la
+  dynamique de recherche (aucun risque sur la convergence -- il ne choisit
+  qu'entre solutions déjà non-dominées), teste si combiner le crowding en
+  espace F avec une diversité structurelle des tournées (distance de Jaccard
+  sur les arcs) améliore le front rapporté. Aux deux poids testés (0.5 et
+  0.2), le gain sur la diversité de tournées reste faible et non significatif
+  (+6 % puis +3.6 %) pour un coût constant en qualité (HV -32/33 %, non
+  significatif à 3 seeds mais cohérent) -- réduire le poids ne réduit pas le
+  coût, seulement le bénéfice. Neuvième confirmation indépendante, sur un
+  axe pourtant différent (représentation du front final, pas dynamique de
+  recherche) : le critère F-crowding de production est déjà difficile à
+  battre pour ce problème.
 
 **Hypothèse retenue pour le mémoire** : le mécanisme de rotation guidée de
 QI-NSGA-III repose sur une hypothèse de régularité (« un petit pas vers le

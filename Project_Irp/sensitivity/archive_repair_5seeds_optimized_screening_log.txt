@@ -1,0 +1,75 @@
+============================================================================================
+  REPARATION PARTIELLE EN COURS DE RECHERCHE (archive seule) — QINSGA-III
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271, 491, 613]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (repair_final_front seul, prod. actuelle)
+  seed=42 ... front=63  time=229.1s
+  seed=137 ... front=41  time=234.0s
+  seed=271 ... front=45  time=224.2s
+  seed=491 ... front=44  time=232.8s
+  seed=613 ... front=47  time=235.9s
+
+>>> archive repair (test, reparation du front courant a chaque generation)
+  seed=42 ... front=56  time=338.1s
+  seed=137 ... front=43  time=332.0s
+  seed=271 ... front=44  time=343.2s
+  seed=491 ... front=39  time=332.6s
+  seed=613 ... front=57  time=341.0s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [17954.98385169  1004.54339728    82.06054929  4653.61643836]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage NSGA-III + baseline + archive repair)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.443205  std=0.192006
+    baseline (repair_final_front seul) mean=0.196837  std=0.038900
+    archive repair (test)            mean=0.200930  std=0.050629
+
+  GD (v)
+    NSGA-III (reference)             mean=0.247713  std=0.143535
+    baseline (repair_final_front seul) mean=0.532478  std=0.074937
+    archive repair (test)            mean=0.535585  std=0.107272
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.397471  std=0.074656
+    baseline (repair_final_front seul) mean=0.559615  std=0.054281
+    archive repair (test)            mean=0.563382  std=0.084590
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.058231  std=0.029000
+    baseline (repair_final_front seul) mean=0.043392  std=0.017126
+    archive repair (test)            mean=0.040272  std=0.010515
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs archive repair
+--------------------------------------------------------------------------------------------
+  HV       U=11.0  p=0.841270  -> non significatif
+  GD       U=14.0  p=0.841270  -> non significatif
+  IGD      U=14.0  p=0.841270  -> non significatif
+  Spacing  U=12.0  p=1.000000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : archive repair vs NSGA-III (l'objectif final)
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.003124  -> significatif (p<0.05)
+  GD       U=94.0  p=0.001092  -> significatif (p<0.05)
+  IGD      U=92.0  p=0.002259  -> significatif (p<0.05)
+  Spacing  U=29.0  p=0.169019  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (repair_final_front seul) mean=231.2s
+    archive repair (test)            mean=337.4s
+
+============================================================================================
+
