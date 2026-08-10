@@ -85,15 +85,25 @@ def render_from_instance(data_path):
                 f"Run {i+1}: cached chromosomes have {pareto_X.shape[1]} genes but the "
                 f"current instance requires {n_genes_expected}. Re-run the algorithm."
             )
-        runs_data.append(_evaluate_pareto(pareto_X, sets_, params_, run_cache["meta_base"]))
+        repair = run_cache["meta_base"].get("repair_final_front", False)
+        runs_data.append(_evaluate_pareto(pareto_X, sets_, params_, run_cache["meta_base"], repair=repair))
 
     return _build_report_data(runs_data)
 
 
 def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
               crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-              n_runs=1):
-    """Run NSGA-III n_runs times with distinct seeds, cache all Pareto fronts, return report data."""
+              n_runs=1, repair_final_front: bool = False):
+    """Run NSGA-III n_runs times with distinct seeds, cache all Pareto fronts, return report data.
+
+    repair_final_front (default False, unlike QINSGA3's True): when True,
+    each returned run's Pareto front is decoded through the same
+    post-decode 2-opt local search (Solvers/QINSGA3/repair.py) QI-NSGA-III
+    uses for its own repair_final_front, via _evaluate_pareto(repair=True).
+    Exists so a fair NSGA-III-vs-QI-NSGA-III comparison can apply the same
+    post-processing to both sides -- see
+    sensitivity/compare_2opt_fairness.py.
+    """
     n_runs = max(1, min(20, int(n_runs)))
 
     if data_path is None:
@@ -173,13 +183,14 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
         )
 
     base_meta = {
-        "instance":       f"{n_clients}_clients",
-        "pop_size":       effective_pop,
-        "n_gen":          n_gen,
-        "crossover_prob": crossover_prob,
-        "mutation_prob":  mutation_prob,
-        "n_runs":         n_runs,
-        "n_completed":    len(raw_runs),
+        "instance":           f"{n_clients}_clients",
+        "pop_size":           effective_pop,
+        "n_gen":              n_gen,
+        "crossover_prob":     crossover_prob,
+        "mutation_prob":      mutation_prob,
+        "n_runs":             n_runs,
+        "n_completed":        len(raw_runs),
+        "repair_final_front": repair_final_front,
     }
 
     runs_data = []
@@ -190,7 +201,9 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
             "seed":      raw["seed"],
             "elapsed_s": round(raw["elapsed"], 1),
         }
-        runs_data.append(_evaluate_pareto(raw["pareto_X"], sets_, params_, per_run_meta))
+        runs_data.append(_evaluate_pareto(
+            raw["pareto_X"], sets_, params_, per_run_meta, repair=repair_final_front,
+        ))
 
     # Cache all runs (supports multi-run refresh via render_from_instance)
     cache = {
@@ -213,8 +226,11 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
 def run_nsga3_report(output_path=DEFAULT_REPORT_PATH, data_path=None,
                      pop_size=POP_SIZE, n_gen=N_GEN,
                      crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-                     n_runs=1):
-    data = run_nsga3(data_path, pop_size, n_gen, crossover_prob, mutation_prob, n_runs)
+                     n_runs=1, repair_final_front: bool = False):
+    data = run_nsga3(
+        data_path, pop_size, n_gen, crossover_prob, mutation_prob, n_runs,
+        repair_final_front=repair_final_front,
+    )
     return write_report(data, output_path)
 
 
