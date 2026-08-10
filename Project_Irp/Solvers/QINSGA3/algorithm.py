@@ -1309,10 +1309,30 @@ def run_qinsga3(
             # docstring. Not yet populated on generation 0 (before survival.do()
             # has run once), so that first generation falls back to a
             # from-scratch estimate exactly as before.
+            #
+            # Uses F_parent (the REAL objectives), NOT F_pen_parent, for the
+            # exact same reason the elitist survival step below already uses
+            # F_true_pool instead of a penalised F (see that step's own
+            # comment): _penalised_F adds the SAME scalar penalty to every
+            # objective, which for an infeasible individual is orders of
+            # magnitude larger than the objectives themselves -- normalising
+            # that collapses the individual's direction in objective space
+            # onto a near-constant ray (proportional to 1/(nadir-ideal) per
+            # objective), independent of its actual F. Every infeasible
+            # individual in the population was therefore being assigned to
+            # (effectively) the SAME reference direction / niche, regardless
+            # of where it actually sat in objective space -- corrupting guide
+            # selection for exactly the individuals furthest from feasibility.
+            # F_pen_parent is still the right choice for pareto_idx above
+            # (ranking: penalised F correctly makes any infeasible individual
+            # dominated by any feasible one) -- only the DIRECTION computation
+            # here needs the real objectives, matching the survival step's own
+            # already-established "real F for niching, penalty for ranking"
+            # split.
             if survival.norm.nadir_point is None:
-                F_norm = _normalise_F(F_pen_parent)
+                F_norm = _normalise_F(F_parent)
             else:
-                F_norm = _normalise_F(F_pen_parent, survival.norm.ideal_point, survival.norm.nadir_point)
+                F_norm = _normalise_F(F_parent, survival.norm.ideal_point, survival.norm.nadir_point)
             assoc  = _assign_ref_dirs(F_norm, ref_dirs)
 
             if use_chaotic_rotation and lam is None:
