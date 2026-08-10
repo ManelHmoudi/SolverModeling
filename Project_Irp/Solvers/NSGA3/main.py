@@ -151,7 +151,20 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
                 ref_dirs  = ref_dirs,
                 sampling  = FloatRandomSampling(),
                 crossover = SBX(prob=crossover_prob, eta=20),
-                mutation  = PM(prob=mutation_prob,   eta=20),
+                # prob_var (per-gene rate), NOT prob (pymoo's per-INDIVIDUAL
+                # mutation gate, core/mutation.py -- Mutation.do() computes
+                # mutated X for every individual via _do(), then applies it
+                # only where rng.random() <= prob, unmutated otherwise).
+                # mutation_prob = 1/D is the per-gene rate recommended by
+                # Deb & Jain (2014); passing it as `prob` silently fed the
+                # wrong gate -- at n_genes ~ hundreds, only ~1/D of the
+                # population was even considered for mutation each
+                # generation, while each considered individual mutated genes
+                # at PM's own get_prob_var() fallback (min(0.5, 1/n_var))
+                # instead of mutation_prob. `prob` is left at PM's own
+                # default (0.9) -- the per-individual gate NSGA-III's own
+                # design already assumes, unrelated to this fix.
+                mutation  = PM(prob_var=mutation_prob, eta=20),
             )
 
             t_start = time.time()

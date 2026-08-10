@@ -113,7 +113,10 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed):
         ref_dirs  = ref_dirs,
         sampling  = FloatRandomSampling(),
         crossover = SBX(prob=0.9, eta=20),
-        mutation  = PM(prob=1.0 / n_genes, eta=20),
+        # prob_var (per-gene rate), not prob (pymoo's per-individual
+        # mutation gate) -- matches the fix in Solvers/NSGA3/main.py::
+        # run_nsga3, which this function mirrors.
+        mutation  = PM(prob_var=1.0 / n_genes, eta=20),
     )
     result = minimize(
         problem, algorithm, get_termination("n_gen", max_gen), seed=seed, verbose=False,

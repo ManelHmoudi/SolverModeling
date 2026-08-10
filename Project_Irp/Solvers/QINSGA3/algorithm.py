@@ -1381,6 +1381,17 @@ def run_qinsga3(
                 pairs   = idx[: n_pairs * 2].reshape(n_pairs, 2)
                 X_pairs = np.transpose(X_rotated[pairs], (1, 0, 2))  # (2, n_matings, n_var)
                 Q       = sbx_op._do(problem, X_pairs, random_state=rng)
+                # Per-pair crossover probability p_cross, applied explicitly:
+                # sbx_op is called via _do() directly (not pymoo's own
+                # Crossover.do() wrapper, core/crossover.py), so self.prob
+                # (set to p_cross at construction) is never consulted --
+                # _do() always produces crossed offspring for every pair.
+                # do()'s own semantics (compute Q for all pairs, then keep it
+                # only for pairs selected by rng.random(n) < prob, copying
+                # the parents through unchanged otherwise) are reproduced
+                # here since do() itself is bypassed.
+                cross            = rng.random(n_pairs) < p_cross
+                Q[:, ~cross]     = X_pairs[:, ~cross]
                 X_rotated[pairs[:, 0]] = Q[0]
                 X_rotated[pairs[:, 1]] = Q[1]
             X_varied = np.clip(pm_op._do(problem, X_rotated, random_state=rng), xl, xu)
