@@ -56,7 +56,11 @@ in mind: any QI-NSGA-III advantage there is confounded with QI-NSGA-III
 having spent roughly 2x the function evaluations, not isolated to the
 rotation-gate mechanism alone. The "Effet 2-opt" section is NOT affected by
 this (it compares each algorithm only to itself, at whatever budget it
-actually used).
+actually used). Pass --qinsga3-gen (e.g. --gen 300 --qinsga3-gen 150) to run
+QI-NSGA-III at a different generation count than NSGA-III specifically to
+match real evaluation budgets instead of max_gen -- 150 gives
+effective_pop*(2*150+1), within 0.3% of NSGA-III's effective_pop*300 at the
+project's own pop=200 (60200 vs 60000).
 
 NSGA-III's search is replicated locally (same pymoo setup
 Solvers/NSGA3/main.py::run_nsga3 uses) rather than calling run_nsga3
@@ -168,7 +172,19 @@ def _stats(vals) -> dict:
     return {"mean": float(a.mean()), "std": float(a.std())}
 
 
-def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int) -> None:
+def run_comparison(
+    instance: str, seeds: list[int], max_gen: int, pop_size: int,
+    qinsga3_gen: int | None = None,
+) -> None:
+    """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
+    DIFFERENT generation count than NSGA-III, specifically to match real
+    evaluation budgets rather than max_gen (see the module docstring's "NOTE
+    on evaluation budget" -- effective_pop*(2*qinsga3_gen+1) vs.
+    effective_pop*max_gen). qinsga3_gen=max_gen//2 makes the two counts
+    approximately equal (exactly equal up to the "+1" final-pass term)."""
+    if qinsga3_gen is None:
+        qinsga3_gen = max_gen
+
     data_path = os.path.join(PROJECT_DIR, "data", f"instance_{instance}_clients.json")
     sets_, params_ = load_instance(data_path)
     ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
@@ -177,7 +193,11 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
     print("=" * 92)
     print("  2-OPT FAIRNESS CAMPAIGN -- NSGA-III vs QI-NSGA-III, 4 configurations")
     print("=" * 92)
-    print(f"  Instance : {instance} clients | pop={effective_pop} | gen={max_gen}")
+    print(f"  Instance : {instance} clients | pop={effective_pop} | "
+          f"gen(NSGA-III)={max_gen} | gen(QI-NSGA-III)={qinsga3_gen}")
+    if qinsga3_gen != max_gen:
+        print("  NOTE: asymmetric generation counts -- budget-matched run, "
+              "not a max_gen-matched run. See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -198,12 +218,12 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         t0 = time.time()
         X_qinsga3, _, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
-            pop_size=effective_pop, max_gen=max_gen, seed=seed,
+            pop_size=effective_pop, max_gen=qinsga3_gen, seed=seed,
             repair_final_front=False,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
-        qinsga3_n_eval = _qinsga3_n_eval(effective_pop, max_gen)
+        qinsga3_n_eval = _qinsga3_n_eval(effective_pop, qinsga3_gen)
         n_eval_qinsga3.append(qinsga3_n_eval)
         print(f"  QI-NSGA-III search done in {t_qinsga3:.1f}s | front={n_qi} | n_eval={qinsga3_n_eval}")
 
@@ -278,10 +298,15 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
     print(f"    NSGA-III     n_eval  mean={ns['mean']:.0f}  std={ns['std']:.0f}")
     print(f"    QI-NSGA-III  n_eval  mean={qs['mean']:.0f}  std={qs['std']:.0f}")
     print(f"    ratio QI-NSGA-III / NSGA-III : {ratio:.2f}x")
-    print("    -> la section \"Effet moteur quantique\" ci-dessous compare deux")
-    print("       moteurs a budget d'evaluations DIFFERENT (voir note dans le")
-    print("       docstring du module) -- lire les p-values de cette section")
-    print("       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.")
+    if abs(ratio - 1.0) < 0.05:
+        print("    -> budgets approximativement apparies (dans 5%) -- la section")
+        print("       \"Effet moteur quantique\" ci-dessous compare les deux moteurs")
+        print("       a evaluations comparables, pas seulement a max_gen egal.")
+    else:
+        print("    -> la section \"Effet moteur quantique\" ci-dessous compare deux")
+        print("       moteurs a budget d'evaluations DIFFERENT (voir note dans le")
+        print("       docstring du module) -- lire les p-values de cette section")
+        print("       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.")
 
     print(f"\n{'-'*92}")
     print("  Effet moteur quantique (Mann-Whitney U -- fronts independants)")
@@ -319,5 +344,11 @@ if __name__ == "__main__":
     parser.add_argument("--seeds", type=int, nargs="+", default=DEFAULT_SEEDS)
     parser.add_argument("--gen", type=int, default=300)
     parser.add_argument("--pop", type=int, default=POP_SIZE)
+    parser.add_argument("--qinsga3-gen", type=int, default=None,
+                        help="Generation count for QI-NSGA-III only, if different from "
+                             "--gen (NSGA-III's count). Use max_gen//2 to roughly match "
+                             "real evaluation budgets instead of matching max_gen -- see "
+                             "the module docstring's evaluation-budget note. Default: "
+                             "same as --gen (current behaviour, budgets differ ~2x).")
     args = parser.parse_args()
-    run_comparison(args.instance, args.seeds, args.gen, args.pop)
+    run_comparison(args.instance, args.seeds, args.gen, args.pop, args.qinsga3_gen)
