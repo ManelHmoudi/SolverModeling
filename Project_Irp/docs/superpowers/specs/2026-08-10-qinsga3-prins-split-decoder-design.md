@@ -134,3 +134,56 @@ and the giant-tour prototype's greedy fill, neither of which optimizes
 CO2/travel-time during construction either — all four objectives are
 measured after decoding, in `evaluator.py`, unchanged. No attempt to make
 segment cost load-context-dependent (documented simplification above).
+
+## Result: continuity smoke test (5 seeds, instance 100 clients)
+
+`sensitivity/diagnose_prins_split_continuity.py`, 78 pooled real NSGA-III
+chromosomes, real production alpha schedule (`GENS_TO_TEST = [0, 50, 100,
+150, 200, 250, 300]`):
+
+| gen | alpha | Jaccard original | Jaccard giant-tour | Jaccard Prins-split |
+|---|---|---|---|---|
+| 0 | 0.31416 | 0.7657 | 0.9355 | 0.9535 |
+| 50 | 0.26232 | 0.7224 | 0.9062 | 0.9282 |
+| 100 | 0.21049 | 0.6802 | 0.8866 | 0.9191 |
+| 150 | 0.15865 | 0.6727 | 0.9038 | 0.9315 |
+| 200 | 0.10681 | 0.5784 | 0.8460 | 0.8933 |
+| 250 | 0.05498 | 0.4293 | 0.7653 | 0.8383 |
+| 300 | 0.00314 | 0.0800 | 0.1881 | 0.3181 |
+
+Correlation (alpha, Jaccard): original r=0.8849, giant-tour r=0.7464,
+Prins-split r=0.7178.
+
+**Null result — worse than both existing decoders, not better.** At the
+smallest production alpha (end of run, where continuity matters most),
+Prins-split's Jaccard route-distance (0.3181) is nearly 4x the original
+decoder's (0.0800) and still well above giant-tour's already-poor 0.1881.
+Prins-split's correlation with alpha is also the *weakest* of the three —
+it saturates toward its ceiling even faster than the other two, the
+opposite of the "real gradient" signature that would indicate restored
+continuity.
+
+**Interpretation**: DP optimality does not imply stability. Greedy-fill and
+the original nearest-neighbour decoder each make a *sequence* of small,
+locally-scoped argmin choices — still capable of cascading (that's the
+original diagnosed chaos), but each individual choice only compares a
+handful of local candidates. The Prins DP split instead computes one
+*global* argmin over every contiguous partition of the whole order — a
+combinatorially larger space, and one where a small quantity change (from a
+small theta perturbation, which is what generates the priority-driven
+giant-tour order in the first place) can just as easily flip which global
+partition wins, because the winning and second-best partition can be
+separated by an arbitrarily thin cost margin anywhere in that larger
+search space. Optimising harder does not mean the optimum moves smoothly OR
+by less than a large intermediate change — it means the optimum is
+selected by a sharper argmin, which is more exposed to exactly the kind of
+ties/near-ties the original diagnostic chapter already identified as the
+mechanism behind decoder chaos (see `Solvers/IRP_results_summary.md`'s
+"decision margin" diagnostics).
+
+**Decision**: not scaled to a full quality campaign
+(`sensitivity/compare_prins_split.py`, Task 2 of the Scope section above) —
+the continuity smoke test is strictly worse on the metric this remedy was
+designed to fix, so a quality campaign is not worth running. Recorded here
+as a rejected remedy, same convention as the giant-tour and other null/
+negative results in `Solvers/IRP_results_summary.md`.
