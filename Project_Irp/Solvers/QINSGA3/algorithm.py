@@ -193,6 +193,41 @@ def _penalised_F(F: np.ndarray, G: np.ndarray) -> np.ndarray:
     return F + penalty
 
 
+def _tournament_select_parents(G: np.ndarray, pop_size: int, rng: np.random.Generator) -> np.ndarray:
+    """CV-based binary tournament mating selection, matching pymoo's own
+    NSGA-III default (TournamentSelection(func_comp=comp_by_cv_then_random),
+    pymoo/algorithms/moo/nsga3.py) -- QI-NSGA-III previously had no mating
+    selection at all (pure random.permutation pairing), a real asymmetry a
+    fairness audit found: on a heavily constrained problem where a sizeable
+    fraction of the population is infeasible each generation, NSGA-III's
+    mating gets real per-generation pressure toward feasible parents that
+    QI-NSGA-III's pairing lacked.
+
+    Draws pop_size winners, one per parent slot (pop_size//2 pairs of 2),
+    via binary tournaments: two candidates per slot, drawn from
+    concatenated random permutations of the population (matches pymoo's own
+    random_permutations use -- avoids the slight non-uniformity of plain
+    sampling-with-replacement, e.g. an individual facing itself). Whichever
+    candidate has strictly lower total constraint violation wins; if either
+    is infeasible and both have equal CV (including the case where both are
+    feasible, CV=0), the winner is random -- exactly comp_by_cv_then_random's
+    own rule, just vectorised instead of pymoo's per-slot Python loop.
+    """
+    cv = np.maximum(G, 0.0).sum(axis=1)
+
+    n_random = pop_size * 2
+    n_perms  = -(-n_random // pop_size)  # ceil division
+    perms    = np.concatenate([rng.permutation(pop_size) for _ in range(n_perms)])[:n_random]
+    a, b     = perms[0::2], perms[1::2]
+
+    cv_a, cv_b = cv[a], cv[b]
+    prefer_a   = cv_a < cv_b
+    prefer_b   = cv_b < cv_a
+    coin       = rng.random(pop_size) < 0.5
+
+    return np.where(prefer_a, a, np.where(prefer_b, b, np.where(coin, a, b)))
+
+
 def _compute_nadir(F: np.ndarray, ideal: np.ndarray) -> np.ndarray:
     """Nadir via extreme points + hyperplane intercepts (Deb & Jain 2014, §IV-A).
 
@@ -1395,9 +1430,14 @@ def run_qinsga3(
 
             # --- Variation step: SBX + PM in X-SPACE (matches NSGA-III) -----
             if p_cross > 0.0:
-                idx     = rng.permutation(pop_size)
+                # CV-based tournament (matches pymoo's NSGA-III default
+                # mating selection, see _tournament_select_parents's
+                # docstring) -- winners paired consecutively into pop_size//2
+                # mating pairs, same shape the old pure-random permutation
+                # pairing produced.
+                winners = _tournament_select_parents(G_parent, pop_size, rng)
                 n_pairs = pop_size // 2
-                pairs   = idx[: n_pairs * 2].reshape(n_pairs, 2)
+                pairs   = winners[: n_pairs * 2].reshape(n_pairs, 2)
                 X_pairs = np.transpose(X_rotated[pairs], (1, 0, 2))  # (2, n_matings, n_var)
                 Q       = sbx_op._do(problem, X_pairs, random_state=rng)
                 # Per-pair crossover probability p_cross, applied explicitly:
