@@ -23,6 +23,14 @@ once to ~tens of individuals instead of every generation to pop_size x 2.
 Already wired into production run_qinsga3 as repair_final_front (default
 False) -- no separate reimplementation needed.
 
+CAVEAT: the "vs NSGA-III (l'objectif final)" comparison this script prints
+loads Solvers/NSGA3/nsga3_chromosomes.json's cache and decodes it with the
+plain, unmodified decoder -- NSGA-III never receives the 2-opt repair here.
+That comparison therefore conflates the evolutionary-engine effect with the
+2-opt post-processing effect. See sensitivity/compare_2opt_fairness.py for
+a 4-configuration campaign that isolates the two by applying (or not
+applying) the same repair to both algorithms.
+
 Usage:
     python -m sensitivity.compare_route_repair_final
     python -m sensitivity.compare_route_repair_final --seeds 42 137 271
@@ -212,6 +220,9 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
 
     print(f"\n{'-'*92}")
     print(f"  Mann-Whitney U : {test_lbl} vs NSGA-III (l'objectif final)")
+    print("  NOTE: NSGA-III ci-dessous n'a PAS recu le 2-opt -- comparaison non")
+    print("  equitable a elle seule (effet moteur + effet 2-opt confondus). Voir")
+    print("  sensitivity/compare_2opt_fairness.py (4 configurations).")
     print(f"{'-'*92}")
     for metric in ("HV", "GD", "IGD", "Spacing"):
         a, b = groups[test_lbl][metric], groups["NSGA-III (reference)"][metric]
