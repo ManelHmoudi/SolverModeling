@@ -136,3 +136,54 @@ beyond the single proportional-cut rule above (e.g. no periodic
 re-zoning, no dynamic rebalancing if a zone is consistently
 over/under-loaded across periods). No cross-zone spillover for infeasible
 clients (documented simplification above).
+
+## Result: continuity smoke test (5 seeds, instance 100 clients)
+
+`sensitivity/diagnose_zone_locked_continuity.py`, 78 pooled real NSGA-III
+chromosomes, real production alpha schedule (`GENS_TO_TEST = [0, 50, 100,
+150, 200, 250, 300]`):
+
+| gen | alpha | Jaccard original | Jaccard giant-tour | Jaccard Prins-split | Jaccard zone-locked |
+|---|---|---|---|---|---|
+| 0 | 0.31416 | 0.7657 | 0.9355 | 0.9535 | 0.6062 |
+| 50 | 0.26232 | 0.7224 | 0.9062 | 0.9282 | 0.5394 |
+| 100 | 0.21049 | 0.6802 | 0.8866 | 0.9191 | 0.4969 |
+| 150 | 0.15865 | 0.6727 | 0.9038 | 0.9315 | 0.4404 |
+| 200 | 0.10681 | 0.5784 | 0.8460 | 0.8933 | 0.3500 |
+| 250 | 0.05498 | 0.4293 | 0.7653 | 0.8383 | 0.2184 |
+| 300 | 0.00314 | 0.0800 | 0.1881 | 0.3181 | 0.0217 |
+
+Correlation (alpha, Jaccard): original r=0.8849, giant-tour r=0.7464,
+Prins-split r=0.7178, **zone-locked r=0.9624**.
+
+**Positive result — both interpretation criteria met, first time in this
+whole remedy sequence (this session's giant-tour, Prins-split, and the
+eleven earlier A-J remedies in `Solvers/IRP_results_summary.md`).** At the
+smallest production alpha (end of run), zone-locked's Jaccard
+route-distance (0.0217) is roughly **1/4 of the original decoder's**
+(0.0800), and far below giant-tour (0.1881) and Prins-split (0.3181).
+Zone-locked's correlation with alpha (r=0.9624) is also the *strongest* of
+the four — a cleaner, more linear gradient, not the early saturation the
+other three decoders show near the production alpha floor.
+
+**Interpretation**: bounding the *reach* of a perturbation — rather than
+changing the decision rule that resolves it — is the first mechanism in
+this entire diagnostic campaign to move the needle on continuity itself.
+Locking each client to a fixed geographic zone means a theta-driven
+priority swing can still reorder or drop clients within its own zone (that
+residual chaos is why zone-locked's Jaccard isn't zero), but it can never
+relocate a client into a different truck's route the way every previous
+decoder allowed — cutting off the long-range cascades that the original
+diagnostic chapter's "decision margin" analysis identified as the
+mechanism behind decoder chaos.
+
+**Decision**: scale to a full quality campaign
+(`sensitivity/compare_zone_locked.py`, Task 2 of the Scope section above)
+— this is a follow-up plan of its own, not part of this one. Continuity
+alone does not guarantee HV/GD/IGD gains (a zone-locked decoder also loses
+the free cross-zone truck reassignment production relies on for capacity
+slack, and the "known simplification" — no cross-zone spillover — could
+cost served demand under some instances/periods; the smoke test's
+`_unserved_count` was not inspected here and should be checked first in
+the campaign script). But this is the first remedy in the whole sequence
+worth carrying to that next stage on its own continuity signal.
