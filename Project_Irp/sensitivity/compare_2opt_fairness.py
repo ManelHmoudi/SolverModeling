@@ -41,6 +41,23 @@ Solvers/QINSGA3/README.md's "small-sample Mann-Whitney floor" discussion),
 which affects the "Effet moteur" section instead. Use 6+ seeds before
 trusting a non-significant "Effet 2-opt" result.
 
+NOTE on evaluation budget: matching max_gen and pop_size does NOT match the
+number of objective-function evaluations actually spent. NSGA-III evaluates
+exactly effective_pop individuals per generation (pop_size infills each
+iteration, pymoo's own GeneticAlgorithm default) -> effective_pop * max_gen
+total. QI-NSGA-III's run_qinsga3 evaluates the PARENT population (needed
+every generation since qpop.measure() redraws measurement noise, so a
+survivor's cached F from the previous generation is stale) AND the offspring
+population each generation, plus one final measurement pass after the loop
+-> effective_pop * (2 * max_gen + 1) total -- essentially double. This
+script reports both algorithms' real evaluation counts (n_eval) alongside
+every result so the "Effet moteur quantique" section can be read with this
+in mind: any QI-NSGA-III advantage there is confounded with QI-NSGA-III
+having spent roughly 2x the function evaluations, not isolated to the
+rotation-gate mechanism alone. The "Effet 2-opt" section is NOT affected by
+this (it compares each algorithm only to itself, at whatever budget it
+actually used).
+
 NSGA-III's search is replicated locally (same pymoo setup
 Solvers/NSGA3/main.py::run_nsga3 uses) rather than calling run_nsga3
 itself, since that function has no low-level mode that skips writing the
@@ -98,11 +115,12 @@ _CONFIGS = [
 
 def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed):
     """Local replication of Solvers/NSGA3/main.py::run_nsga3's search setup,
-    returning the raw final chromosome array -- run_nsga3 itself has no
-    low-level equivalent that skips writing the shared chromosome cache
-    file, so this mirrors its exact pymoo configuration instead (same
-    pattern sensitivity/compare_route_repair_final.py already uses for
-    QI-NSGA-III's low-level run_qinsga3 call)."""
+    returning (pareto_X, n_eval) -- run_nsga3 itself has no low-level
+    equivalent that skips writing the shared chromosome cache file, so this
+    mirrors its exact pymoo configuration instead (same pattern
+    sensitivity/compare_route_repair_final.py already uses for QI-NSGA-III's
+    low-level run_qinsga3 call). n_eval is pymoo's own evaluation counter
+    (result.algorithm.evaluator.n_eval), not a derived estimate."""
     np.random.seed(seed)
     _random.seed(seed)
 
@@ -121,7 +139,17 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed):
     result = minimize(
         problem, algorithm, get_termination("n_gen", max_gen), seed=seed, verbose=False,
     )
-    return result.X if result.X is not None else np.empty((0, n_genes))
+    pareto_X = result.X if result.X is not None else np.empty((0, n_genes))
+    return pareto_X, result.algorithm.evaluator.n_eval
+
+
+def _qinsga3_n_eval(effective_pop: int, max_gen: int) -> int:
+    """QI-NSGA-III's real evaluation count: run_qinsga3 (Solvers/QINSGA3/
+    algorithm.py) calls _eval_batch on the parent population and the
+    offspring population every generation (lines ~1297, ~1421), plus one
+    final _eval_batch(X_final) after the loop (line ~1498) -- confirmed by
+    grepping every _eval_batch( call site, not assumed."""
+    return effective_pop * (2 * max_gen + 1)
 
 
 def _config_F(pareto_X, sets_, params_, repair: bool) -> np.ndarray:
@@ -155,14 +183,17 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
 
     F_by_config:       dict[str, list[np.ndarray]] = {c: [] for c in _CONFIGS}
     elapsed_by_config: dict[str, list[float]]      = {c: [] for c in _CONFIGS}
+    n_eval_nsga3:   list[int] = []
+    n_eval_qinsga3: list[int] = []
 
     for seed in seeds:
         print(f"\n>>> seed={seed}")
 
         t0 = time.time()
-        X_nsga3 = _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed)
+        X_nsga3, nsga3_n_eval = _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed)
         t_nsga3 = time.time() - t0
-        print(f"  NSGA-III    search done in {t_nsga3:.1f}s | front={len(X_nsga3)}")
+        n_eval_nsga3.append(nsga3_n_eval)
+        print(f"  NSGA-III    search done in {t_nsga3:.1f}s | front={len(X_nsga3)} | n_eval={nsga3_n_eval}")
 
         t0 = time.time()
         X_qinsga3, _, _ = run_qinsga3(
@@ -172,7 +203,9 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
-        print(f"  QI-NSGA-III search done in {t_qinsga3:.1f}s | front={n_qi}")
+        qinsga3_n_eval = _qinsga3_n_eval(effective_pop, max_gen)
+        n_eval_qinsga3.append(qinsga3_n_eval)
+        print(f"  QI-NSGA-III search done in {t_qinsga3:.1f}s | front={n_qi} | n_eval={qinsga3_n_eval}")
 
         for label, X, base_elapsed, repair in (
             ("NSGA-III sans 2-opt",    X_nsga3,   t_nsga3,   False),
@@ -235,6 +268,20 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int)
                 continue
             sig = "significatif (p<0.05)" if p < 0.05 else "non significatif"
             print(f"    {ind:<8} W={stat:.1f}  p={p:.6f}  -> {sig}")
+
+    print(f"\n{'-'*92}")
+    print("  Budget d'evaluations reel (max_gen egal ne veut PAS dire n_eval egal)")
+    print(f"{'-'*92}")
+    ns = _stats(n_eval_nsga3)
+    qs = _stats(n_eval_qinsga3)
+    ratio = qs["mean"] / ns["mean"] if ns["mean"] else float("nan")
+    print(f"    NSGA-III     n_eval  mean={ns['mean']:.0f}  std={ns['std']:.0f}")
+    print(f"    QI-NSGA-III  n_eval  mean={qs['mean']:.0f}  std={qs['std']:.0f}")
+    print(f"    ratio QI-NSGA-III / NSGA-III : {ratio:.2f}x")
+    print("    -> la section \"Effet moteur quantique\" ci-dessous compare deux")
+    print("       moteurs a budget d'evaluations DIFFERENT (voir note dans le")
+    print("       docstring du module) -- lire les p-values de cette section")
+    print("       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.")
 
     print(f"\n{'-'*92}")
     print("  Effet moteur quantique (Mann-Whitney U -- fronts independants)")
