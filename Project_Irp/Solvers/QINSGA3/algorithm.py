@@ -1518,5 +1518,13 @@ def run_qinsga3(
 
     if repair_final_front:
         pareto_F, pareto_G = _repair_pareto_front(pareto_X, sets_, params_)
+        # Repair optimises f1 only, per individual -- it can newly dominate
+        # another front member (confirmed on a real front: 40/40
+        # non-dominated before repair, only 26/40 after). Re-filter to
+        # non-dominated so the returned "Pareto front" still is one.
+        from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+        nd_idx = NonDominatedSorting().do(pareto_F)[0]
+        if len(nd_idx) < len(pareto_X):
+            pareto_X, pareto_F, pareto_G = pareto_X[nd_idx], pareto_F[nd_idx], pareto_G[nd_idx]
 
     return pareto_X, pareto_F, pareto_G

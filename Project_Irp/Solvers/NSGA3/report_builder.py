@@ -95,6 +95,23 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False):
     F = np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
                    s["objectives"]["f3"], s["objectives"]["f4"]]
                   for s in solutions])
+
+    if repair and len(solutions) > 0:
+        # The 2-opt repair above optimises f1 only, per individual -- it can
+        # improve one solution's f1 while worsening its f2/f3, which can
+        # make it newly dominated by another solution in the same front
+        # (confirmed on a real cached front: 40/40 non-dominated before
+        # repair, only 26/40 after). Re-filter to non-dominated before
+        # reporting/scoring, or HV/GD/IGD/Spacing get computed over a set
+        # that isn't actually a Pareto front any more.
+        from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+        nd_idx = NonDominatedSorting().do(F)[0]
+        if len(nd_idx) < len(solutions):
+            solutions = [solutions[i] for i in nd_idx]
+            for new_id, s in enumerate(solutions):
+                s["id"] = new_id
+            F = F[nd_idx]
+
     quality = compute_pareto_metrics(F)
 
     return {
