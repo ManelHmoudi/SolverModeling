@@ -182,7 +182,7 @@ def _build_report_data(runs_data):
         "I_O_init_frigo":    first["I_O_init_frigo"],
         "I_O_init_nonfrigo": first["I_O_init_nonfrigo"],
     }
-    for _extra in ("algorithm", "alpha_max", "alpha_min", "eta_cross"):
+    for _extra in ("algorithm", "alpha_max", "alpha_min", "eta_cross", "repair_final_front"):
         if _extra in first:
             outer_meta[_extra] = first[_extra]
 

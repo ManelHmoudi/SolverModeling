@@ -153,7 +153,11 @@ def run_qinsga3_solver(
                 seed                = seed,
                 rotation_type       = rotation_type,
                 callback            = _progress,
-                repair_final_front  = repair_final_front,
+                # run_qinsga3_solver does its own repair later via
+                # _evaluate_pareto (which decodes pareto_X from scratch), so
+                # the returned pareto_F here is never used -- always skip the
+                # internal repair to avoid repairing the final front twice.
+                repair_final_front  = False,
             )
             elapsed = time.time() - t_start
 
@@ -167,7 +171,7 @@ def run_qinsga3_solver(
                 flush=True,
             )
             raw_runs.append({"seed": seed, "elapsed": elapsed,
-                              "pareto_X": pareto_X, "pareto_F": pareto_F})
+                              "pareto_X": pareto_X})
     finally:
         _run_lock.release()
 

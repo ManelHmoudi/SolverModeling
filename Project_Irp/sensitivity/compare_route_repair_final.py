@@ -21,7 +21,7 @@ unaffected (identical to baseline), and only the reported front is
 once to ~tens of individuals instead of every generation to pop_size x 2.
 
 Already wired into production run_qinsga3 as repair_final_front (default
-False) -- no separate reimplementation needed.
+True) -- no separate reimplementation needed.
 
 CAVEAT: the "vs NSGA-III (l'objectif final)" comparison this script prints
 loads Solvers/NSGA3/nsga3_chromosomes.json's cache and decodes it with the

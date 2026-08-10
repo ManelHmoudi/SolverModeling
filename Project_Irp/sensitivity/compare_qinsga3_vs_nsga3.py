@@ -16,6 +16,16 @@ global-ideal/nadir approach, extended across both algorithms so HV in
 particular (which depends on the reference point) is measured on the same
 scale for both.
 
+CAVEAT: _decode_to_F decodes both algorithms' cached chromosomes with the
+plain, unmodified decoder regardless of what each cache's
+meta_base["repair_final_front"] says -- this script deliberately does NOT
+apply the 2-opt final-front repair to either side, even if the cache was
+produced with repair_final_front=True. That is intentional here: this
+script wants the raw evolutionary-engine gap between the two algorithms,
+not a gap that also depends on whether 2-opt repair was applied. See
+sensitivity/compare_2opt_fairness.py for a 4-configuration comparison that
+does account for repair_final_front.
+
 Usage:
     python -m sensitivity.compare_qinsga3_vs_nsga3
     python -m sensitivity.compare_qinsga3_vs_nsga3 --instance 100

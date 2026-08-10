@@ -297,6 +297,9 @@ function renderSummaryBar(){
     ['Pareto solutions',RUN_META.n_pareto],
     ['Runtime',         RUN_META.elapsed_s + 's'],
   ];
+  if (M.repair_final_front !== undefined) {
+    items.push(['2-opt final', M.repair_final_front ? 'yes' : 'no']);
+  }
   document.getElementById('summaryBar').innerHTML = items.map(([k,v]) =>
     `<span class="sp"><b>${v}</b> ${k}</span>`).join('');
 }

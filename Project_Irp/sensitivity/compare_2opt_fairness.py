@@ -30,6 +30,17 @@ Statistics separate the two effects:
       answers "is the quantum mechanism itself better", isolated from the
       repair).
 
+NOTE on statistical power at the default seed count: DEFAULT_SEEDS below is
+a 3-seed smoke count. The exact two-sided Wilcoxon signed-rank test used for
+the paired "Effet 2-opt" section has a floor of p=0.25 at n=3 -- it
+literally cannot reach p<0.05 no matter how large the real effect is, so a
+"non significatif" verdict from that section at the default seed count means
+nothing and should not be read as "2-opt has no effect". This is a smaller-
+sample floor than Mann-Whitney's own n=3 floor (p=0.10, see
+Solvers/QINSGA3/README.md's "small-sample Mann-Whitney floor" discussion),
+which affects the "Effet moteur" section instead. Use 6+ seeds before
+trusting a non-significant "Effet 2-opt" result.
+
 NSGA-III's search is replicated locally (same pymoo setup
 Solvers/NSGA3/main.py::run_nsga3 uses) rather than calling run_nsga3
 itself, since that function has no low-level mode that skips writing the
