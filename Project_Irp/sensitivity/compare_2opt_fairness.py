@@ -174,14 +174,28 @@ def _stats(vals) -> dict:
 
 def run_comparison(
     instance: str, seeds: list[int], max_gen: int, pop_size: int,
-    qinsga3_gen: int | None = None,
+    qinsga3_gen: int | None = None, noise_scale: float = 0.02,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
     evaluation budgets rather than max_gen (see the module docstring's "NOTE
     on evaluation budget" -- effective_pop*(2*qinsga3_gen+1) vs.
     effective_pop*max_gen). qinsga3_gen=max_gen//2 makes the two counts
-    approximately equal (exactly equal up to the "+1" final-pass term)."""
+    approximately equal (exactly equal up to the "+1" final-pass term).
+
+    noise_scale (default 0.02, run_qinsga3's own production default): the
+    measurement-noise magnitude added every time QuantumPopulation.measure()
+    converts theta to X (Solvers/QINSGA3/chromosome.py, sigma_j = noise_scale
+    * |sin(2*theta_j)| * (xu_j - xl_j)). A fairness audit found this adds
+    ~10-12% of each normalised objective's range as noise to F every
+    generation, breaking elitism (a survivor's cached F goes stale the moment
+    it is re-measured) and flipping feasibility on 40-90% of repeated
+    measurements of the same feasible theta in isolated trials -- an effect
+    NSGA-III's exact, noiseless X has no equivalent of. Existing project
+    ablations only ever swept this UPWARD (0.05/0.08/0.15, monotonically
+    worse); 0.0 (or a small nonzero value) has never been tested. Pass
+    --noise-scale 0.0 to test whether this, not the rotation-gate mechanism
+    itself, is driving QI-NSGA-III's gap."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -194,10 +208,14 @@ def run_comparison(
     print("  2-OPT FAIRNESS CAMPAIGN -- NSGA-III vs QI-NSGA-III, 4 configurations")
     print("=" * 92)
     print(f"  Instance : {instance} clients | pop={effective_pop} | "
-          f"gen(NSGA-III)={max_gen} | gen(QI-NSGA-III)={qinsga3_gen}")
+          f"gen(NSGA-III)={max_gen} | gen(QI-NSGA-III)={qinsga3_gen} | "
+          f"noise_scale(QI)={noise_scale}")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
+    if noise_scale != 0.02:
+        print("  NOTE: noise_scale != production default (0.02) -- measurement-noise "
+              "ablation run, not a production-parameter run. See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -219,7 +237,7 @@ def run_comparison(
         X_qinsga3, _, _ = run_qinsga3(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=qinsga3_gen, seed=seed,
-            repair_final_front=False,
+            repair_final_front=False, noise_scale=noise_scale,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
@@ -350,5 +368,12 @@ if __name__ == "__main__":
                              "real evaluation budgets instead of matching max_gen -- see "
                              "the module docstring's evaluation-budget note. Default: "
                              "same as --gen (current behaviour, budgets differ ~2x).")
+    parser.add_argument("--noise-scale", type=float, default=0.02,
+                        help="QI-NSGA-III's measurement-noise magnitude (run_qinsga3's "
+                             "own production default: 0.02). Pass 0.0 to disable it and "
+                             "test whether measurement noise, not the rotation-gate "
+                             "mechanism, drives QI-NSGA-III's HV/IGD gap -- see the "
+                             "module docstring's noise_scale note.")
     args = parser.parse_args()
-    run_comparison(args.instance, args.seeds, args.gen, args.pop, args.qinsga3_gen)
+    run_comparison(args.instance, args.seeds, args.gen, args.pop,
+                    args.qinsga3_gen, args.noise_scale)
