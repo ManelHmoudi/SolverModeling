@@ -187,3 +187,71 @@ cost served demand under some instances/periods; the smoke test's
 `_unserved_count` was not inspected here and should be checked first in
 the campaign script). But this is the first remedy in the whole sequence
 worth carrying to that next stage on its own continuity signal.
+
+## Result: quality campaign (3 seeds, 300 generations, instance 100 clients)
+
+`sensitivity/compare_zone_locked.py`, standard protocol (shared ideal/nadir
+with the NSGA-III cache, `repair_final_front=True` on both arms,
+Mann-Whitney U). Fast smoke run (`--gen 5 --seeds 42`) confirmed the
+pipeline runs end-to-end before committing to the full campaign — but
+already surfaced 12 unserved clients at the final-front repair step alone,
+an early warning that materialised at full scale:
+
+| Indicateur | NSGA-III | Baseline (décodeur original) | Zone-locked (test) |
+|---|---|---|---|
+| HV ↑ | 0.532343 | 0.236667 | **0.001367** |
+| GD ↓ | 0.168827 | 0.400671 | **1.124735** |
+| IGD ↓ | 0.370646 | 0.478762 | **1.331274** |
+| Spacing ↓ | 0.048527 | 0.034096 | 0.000000 |
+| Front size | — | 26–62 | **1 (all 3 seeds)** |
+| Temps moyen | — | 214.8s | 359.8s (~1.7x plus lent) |
+
+Mann-Whitney U: baseline vs. zone-locked — total separation on every
+metric (HV/GD/IGD U=9.0/0.0/0.0, Spacing U=9.0), p=0.100 (the 3-seed
+Mann-Whitney floor, same structural limit already seen for remèdes F/G —
+not an absence of effect, every single zone-locked seed was worse than
+every single baseline seed). Zone-locked vs. NSGA-III: significant on all
+four metrics (p<0.05, HV/GD/IGD at U=0.0/60.0/60.0).
+
+Unserved-client count at the final-front repair step alone (main process
+only — see the code comment in `compare_zone_locked.py::run_comparison`;
+the actual 300-generation search's own unserved-client rate, evaluated
+inside `ProcessPoolExecutor` workers, isn't observable through this
+counter and is almost certainly higher): **23**, up from 12 at `gen=5` —
+confirmed non-zero and growing, not a fluke of the short smoke run.
+
+**Negative result — a genuinely different failure mode from every prior
+remedy.** Every previous remedy (giant-tour, Prins-split, and the eleven
+A-J remedies) failed by *not* restoring continuity. Zone-locked is the
+first to actually restore it (see the smoke-test Result above) and *still*
+collapse in quality — to a single-solution front on all 3 seeds, a level
+of degeneracy well past ordinary "worse HV." **Root cause**: the "no
+cross-zone spillover" simplification (documented in Design as a known
+approximation, not verified non-degenerate beforehand) is far costlier on
+this real instance than anticipated. Locking a client to one truck's zone
+means a demand spike that truck's capacity can't absorb has no fallback —
+unlike production's free `truck_idx` roaming, which lets any later truck
+pick up the slack. This chronically violates the per-client cumulative-
+demand constraint (`IRPProblemZoneLocked`'s G-constraint block, `cum_dem -
+cum_del`, one of `2*|T|` + `|clients|*|T|` + `2*|T|` inequality
+constraints), especially on the mandatory final period — `_penalised_F`
+then penalises nearly the entire population so heavily that
+`ReferenceDirectionSurvival` has almost nothing feasible left to select
+from, collapsing the returned front to a single point.
+
+**Decision**: not scaled further (same rule as every other remedy: scale
+only on a positive signal). The continuity smoke test's positive result
+stands on its own terms — bounding perturbation reach *is* the mechanism
+that restores theta→route continuity, the first in this whole campaign to
+do so — but this specific zone-locked implementation is disqualified for
+production consideration by its quality collapse, independently
+confirmed by both the quality drop (worse than NSGA-III, not just
+baseline) and the added runtime cost (~1.7x slower, the opposite of
+remedy G's `repair_final_front` variant, which was fast *and* effective).
+**Candidate follow-up, not pursued in this campaign**: bounded cross-zone
+spillover (e.g. overflow to the angularly-adjacent zone only, rather than
+no fallback at all) might recover most of the continuity gain while
+restoring feasibility — a genuinely different design from a straightforward
+parameter tweak, since it changes which simplification the decoder makes,
+not a magnitude/frequency dial. Documented here as a starting point if this
+thread is picked back up, not attempted.
