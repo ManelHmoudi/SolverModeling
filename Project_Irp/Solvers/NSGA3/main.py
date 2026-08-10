@@ -161,10 +161,14 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
                 # population was even considered for mutation each
                 # generation, while each considered individual mutated genes
                 # at PM's own get_prob_var() fallback (min(0.5, 1/n_var))
-                # instead of mutation_prob. `prob` is left at PM's own
-                # default (0.9) -- the per-individual gate NSGA-III's own
-                # design already assumes, unrelated to this fix.
-                mutation  = PM(prob_var=mutation_prob, eta=20),
+                # instead of mutation_prob. `prob=1.0` disables pymoo's
+                # per-individual gate entirely (every individual is a
+                # mutation candidate every generation, matching QINSGA3's
+                # own PM call in Solvers/QINSGA3/algorithm.py, which calls
+                # pm_op._do() directly and so never applies that gate
+                # either -- textbook polynomial mutation has no such gate,
+                # only the per-gene rate).
+                mutation  = PM(prob=1.0, prob_var=mutation_prob, eta=20),
             )
 
             t_start = time.time()
