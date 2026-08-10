@@ -1235,13 +1235,31 @@ def run_qinsga3(
         "use_ring_guides and use_crowding_guides both replace the same "
         "guide-selection step and are mutually exclusive"
     )
+    assert sum([use_rqpso_rotation, use_pso_rotation, use_chaotic_rotation]) <= 1, (
+        "use_rqpso_rotation, use_pso_rotation and use_chaotic_rotation all "
+        "replace the same rotation-gate step and are mutually exclusive "
+        "(the per-generation dispatch below silently applies only the "
+        "first True flag, in that priority order, if more than one is set)"
+    )
 
     qpop     = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type,
                                   noise_scale=noise_scale)
     sorter   = NonDominatedSorting()
     survival = ReferenceDirectionSurvival(ref_dirs)
     sbx_op   = SBX(prob=p_cross, eta=eta_cross)
-    pm_op    = PM(prob=p_mut,    eta=eta_mut)
+    # prob_var (per-gene rate), NOT prob (pymoo's per-INDIVIDUAL mutation
+    # gate): pm_op is invoked below via _do() directly (not pymoo's own
+    # Mutation.do() wrapper, which is what actually reads self.prob), so
+    # self.prob is never consulted here -- only self.prob_var controls the
+    # per-gene rate _do() uses (PolynomialMutation._do -> get_prob_var()).
+    # Passing p_mut as `prob` (as before) silently discarded it: pymoo's own
+    # get_prob_var() fallback (min(0.5, 1/problem.n_var)) took over instead,
+    # making p_mut a dead parameter -- see sensitivity/compare_pmut.py, which
+    # varies p_mut expecting a real effect. At p_mut's own default (1/n_genes
+    # == 1/problem.n_var), this fallback already matched p_mut numerically,
+    # so this fix is a no-op for every default-parameter run; it only
+    # restores effect for callers that pass a non-default p_mut.
+    pm_op    = PM(prob_var=p_mut, eta=eta_mut)
 
     arch_X:    list[np.ndarray] = []
     arch_F:    list[np.ndarray] = []
