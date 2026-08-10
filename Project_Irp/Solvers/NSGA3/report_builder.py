@@ -38,16 +38,24 @@ def _build_delivery_rows(route_result, sets_, params_):
     return deliveries
 
 
-def _evaluate_pareto(pareto_X, sets_, params_, meta_base):
+def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False):
     """Evaluate Pareto chromosomes and return the run data dict.
 
     Called after a fresh solver run and on every report refresh
-    (with potentially updated instance data).
+    (with potentially updated instance data). When repair=True, each
+    decoded route is passed through QINSGA3's post-decode 2-opt local
+    search (Solvers/QINSGA3/repair.py, Baldwinian: the chromosome itself
+    is unaffected, only the fitness/routes reported) before objectives
+    are computed -- shared by both NSGA3 and QINSGA3's report pipelines so
+    a repair_final_front flag means the same thing for either algorithm.
     """
     solutions = []
     for i, chromosome in enumerate(pareto_X):
         quantities, priorities = decode_chromosome(chromosome, sets_)
         route_result = build_routes(quantities, sets_, params_, priorities)
+        if repair:
+            from Solvers.QINSGA3.repair import _repair_route_result
+            route_result = _repair_route_result(route_result, sets_, params_)
 
         f1         = compute_f1(route_result, sets_, params_)
         f2         = compute_f2(route_result, sets_, params_)
