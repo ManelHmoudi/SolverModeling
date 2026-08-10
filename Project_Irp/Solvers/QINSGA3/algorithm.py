@@ -345,7 +345,6 @@ def _select_guides_ring(
     _supplement_from_archive afterward exactly as with _select_guides, since
     that mechanism is unrelated to the ring topology.
     """
-    N   = len(assoc)
     ref_norms = np.linalg.norm(ref_dirs, axis=1, keepdims=True)
     ref_unit  = ref_dirs / np.where(ref_norms > 1e-9, ref_norms, 1.0)
 

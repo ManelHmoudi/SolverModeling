@@ -72,7 +72,7 @@ def compute_pareto_metrics(
         )
 
     n_obj   = F_norm.shape[1]
-    ref_set = _reference_set(n_obj, n_partitions=12)
+    ref_set = _reference_set(n_obj, n_partitions=_METRIC_N_PARTITIONS)
 
     # ref_point sits 10% beyond the nadir (standard HV margin), so the raw
     # pymoo HV is bounded by ref_point.prod() = 1.1**n_obj (~1.46 for 4

@@ -1,5 +1,4 @@
 """Unit tests for sensitivity.zone_locked's Sweep zoning and zone-locked decoder."""
-import math
 import os
 import sys
 

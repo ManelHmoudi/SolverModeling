@@ -92,7 +92,6 @@ def main() -> None:
     F = _decode_to_F(X.tolist(), sets_, params_)
 
     theta = _encode_theta(X, xl, xu)
-    n_genes = theta.shape[1]
 
     ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
     F_norm = _normalise_F(F)

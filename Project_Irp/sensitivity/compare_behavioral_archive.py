@@ -350,7 +350,6 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int, pop_size: int,
                     w_structural: float, report_size: int) -> None:
     data_path = os.path.join(PROJECT_DIR, "data", f"instance_{instance}_clients.json")
     sets_, params_ = load_instance(data_path)
-    problem_ref = IRPProblem(sets_, params_)
     ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
     effective_pop = max(pop_size, len(ref_dirs))
 

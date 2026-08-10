@@ -56,7 +56,6 @@ from models.parametres          import load_instance
 from Solvers.NSGA3.decoder       import decode_chromosome, build_routes
 from Solvers.NSGA3.evaluator     import compute_f1, compute_f2, compute_f3, compute_f4
 from Solvers.NSGA3.metrics       import compute_pareto_metrics
-from Solvers.NSGA3.problem       import IRPProblem
 from Solvers.QINSGA3.algorithm   import run_qinsga3, _repair_pareto_front, _build_g_constraints
 from Solvers.QINSGA3.repair      import (
     _two_opt_candidates, _evaluate_candidate, _replace_route_arcs,
