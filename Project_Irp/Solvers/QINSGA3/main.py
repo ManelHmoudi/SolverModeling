@@ -66,6 +66,7 @@ def run_qinsga3_solver(
     n_migrate:        int        = 10,
     n_runs:           int        = 1,
     rotation_type:    str        = "tanh",
+    repair_final_front: bool     = True,
 ) -> dict:
     """Run QINSGA-III and return structured report data.
 
@@ -82,6 +83,9 @@ def run_qinsga3_solver(
         migration_period: Every N generations, inject archive solutions into population.
         n_migrate:        Number of individuals updated per migration event.
         n_runs:           Independent runs (different seeds); results are merged.
+        repair_final_front: Post-decode 2-opt repair on the returned Pareto
+                             front only (Baldwinian -- see
+                             Solvers/QINSGA3/repair.py). Default True.
     """
     n_runs = max(1, min(20, int(n_runs)))
 
@@ -133,22 +137,23 @@ def run_qinsga3_solver(
 
             t_start = time.time()
             pareto_X, pareto_F, pareto_G = run_qinsga3(
-                sets_             = sets_,
-                params_           = params_,
-                ref_dirs          = ref_dirs,
-                pop_size          = effective_pop,
-                max_gen           = n_gen,
-                alpha_max         = alpha_max,
-                alpha_min         = alpha_min,
-                p_cross           = p_cross,
-                eta_cross         = eta_cross,
-                p_mut             = p_mut,
-                eta_mut           = eta_mut,
-                migration_period  = migration_period,
-                n_migrate         = n_migrate,
-                seed              = seed,
-                rotation_type     = rotation_type,
-                callback          = _progress,
+                sets_               = sets_,
+                params_             = params_,
+                ref_dirs            = ref_dirs,
+                pop_size            = effective_pop,
+                max_gen             = n_gen,
+                alpha_max           = alpha_max,
+                alpha_min           = alpha_min,
+                p_cross             = p_cross,
+                eta_cross           = eta_cross,
+                p_mut               = p_mut,
+                eta_mut             = eta_mut,
+                migration_period    = migration_period,
+                n_migrate           = n_migrate,
+                seed                = seed,
+                rotation_type       = rotation_type,
+                callback            = _progress,
+                repair_final_front  = repair_final_front,
             )
             elapsed = time.time() - t_start
 
@@ -173,18 +178,19 @@ def run_qinsga3_solver(
         )
 
     base_meta = {
-        "instance":       f"{n_clients}_clients",
-        "pop_size":       effective_pop,
-        "n_gen":          n_gen,
-        "alpha_max":      round(alpha_max, 6),
-        "alpha_min":      round(alpha_min, 6),
-        "crossover_prob": round(p_cross, 6),
-        "eta_cross":      round(float(eta_cross), 6),
-        "mutation_prob":  round(p_mut, 6),
-        "eta_mut":        round(float(eta_mut), 6),
-        "n_runs":         n_runs,
-        "n_completed":    len(raw_runs),
-        "algorithm":      "QINSGA3",
+        "instance":           f"{n_clients}_clients",
+        "pop_size":           effective_pop,
+        "n_gen":              n_gen,
+        "alpha_max":          round(alpha_max, 6),
+        "alpha_min":          round(alpha_min, 6),
+        "crossover_prob":     round(p_cross, 6),
+        "eta_cross":          round(float(eta_cross), 6),
+        "mutation_prob":      round(p_mut, 6),
+        "eta_mut":            round(float(eta_mut), 6),
+        "n_runs":             n_runs,
+        "n_completed":        len(raw_runs),
+        "algorithm":          "QINSGA3",
+        "repair_final_front": repair_final_front,
     }
 
     runs_data = []
@@ -195,7 +201,9 @@ def run_qinsga3_solver(
             "seed":      raw["seed"],
             "elapsed_s": round(raw["elapsed"], 1),
         }
-        runs_data.append(_evaluate_pareto(raw["pareto_X"], sets_, params_, per_run_meta))
+        runs_data.append(_evaluate_pareto(
+            raw["pareto_X"], sets_, params_, per_run_meta, repair=repair_final_front,
+        ))
 
     cache = {
         "algorithm": "QINSGA3",
@@ -235,7 +243,8 @@ def render_from_instance(data_path: str) -> dict:
                 f"Run {i+1}: cached chromosomes have {pareto_X.shape[1]} genes but "
                 f"current instance requires {n_genes_expected}. Re-run the algorithm."
             )
-        runs_data.append(_evaluate_pareto(pareto_X, sets_, params_, run_cache["meta_base"]))
+        repair = run_cache["meta_base"].get("repair_final_front", False)
+        runs_data.append(_evaluate_pareto(pareto_X, sets_, params_, run_cache["meta_base"], repair=repair))
 
     return _build_report_data(runs_data)
 
@@ -255,6 +264,7 @@ def run_qinsga3_report(
     n_migrate:        int        = 10,
     n_runs:           int        = 1,
     rotation_type:    str        = "tanh",
+    repair_final_front: bool     = True,
 ) -> str:
     data = run_qinsga3_solver(
         data_path, pop_size, n_gen, alpha_max, alpha_min,
@@ -263,6 +273,7 @@ def run_qinsga3_report(
         n_migrate=n_migrate,
         n_runs=n_runs,
         rotation_type=rotation_type,
+        repair_final_front=repair_final_front,
     )
     return write_report(data, output_path, algo_label="QI-NSGA-III")
 
