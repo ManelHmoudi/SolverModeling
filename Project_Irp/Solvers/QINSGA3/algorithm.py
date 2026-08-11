@@ -1119,7 +1119,7 @@ def run_qinsga3(
     migration_period: int   = 10,
     n_migrate:        int   = 10,
     delta_similar:    float = 0.0,
-    noise_scale:      float = 0.02,
+    noise_scale:      float = 0.0,
     use_rqpso_rotation: bool = False,
     use_ring_guides:  bool   = False,
     use_crowding_guides: bool = False,
@@ -1150,16 +1150,17 @@ def run_qinsga3(
     Ablation-only until validated against Solvers/NSGA3 with the project's
     shared ideal/nadir + Mann-Whitney protocol.
 
-    noise_scale is exposed here (default 0.02, unchanged) so ablations can
-    test strengthening QuantumPopulation.measure()'s diversity noise -- see
-    Guzel et al. (2022), "QNSGA-II: A Quantum Computing-Inspired Approach to
-    Multi-Objective Optimization" (IEEE ISNCC): QNSGA-II's whole population
-    starts from IDENTICAL quantum chromosomes and relies entirely on
-    probabilistic measurement (not chromosome-level separation) for
-    diversity. QINSGA3 already has a measurement-noise term
-    (chromosome.py::measure, Platel et al. 2009) but it defaults to a small
-    value tuned only to break integer-rounding ties, not to carry the
-    diversity load the way QNSGA-II's measurement does.
+    noise_scale defaults to 0.0 (disabled): a 20/30-seed ablation campaign
+    (sensitivity/compare_2opt_fairness.py --noise-scale 0.0, see
+    sensitivity/2opt_fairness_100clients_20seed_noisezero_campaign_log.txt)
+    found the measurement-noise term (chromosome.py::measure, Platel et al.
+    2009 -- originally added to break integer-rounding ties after the IRP
+    decoder rounds theta-measured X to integers) measurably hurt HV/GD/
+    Spacing in production conditions without a compensating benefit, so it
+    was turned off by default. Exposed here so it can still be re-enabled
+    for ablations, e.g. to test strengthening QuantumPopulation.measure()'s
+    diversity noise per Guzel et al. (2022), "QNSGA-II: A Quantum Computing-
+    Inspired Approach to Multi-Objective Optimization" (IEEE ISNCC).
 
     use_rqpso_rotation (disabled by default) replaces the tanh rotation gate
     with the dual-attractor update from Bodha, Arun, Awasthi, Mahato & Fotis

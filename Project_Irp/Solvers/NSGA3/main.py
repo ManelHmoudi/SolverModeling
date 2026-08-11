@@ -93,16 +93,17 @@ def render_from_instance(data_path):
 
 def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
               crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-              n_runs=1, repair_final_front: bool = False):
+              n_runs=1, repair_final_front: bool = True):
     """Run NSGA-III n_runs times with distinct seeds, cache all Pareto fronts, return report data.
 
-    repair_final_front (default False, unlike QINSGA3's True): when True,
-    each returned run's Pareto front is decoded through the same
-    post-decode 2-opt local search (Solvers/QINSGA3/repair.py) QI-NSGA-III
-    uses for its own repair_final_front, via _evaluate_pareto(repair=True).
-    Exists so a fair NSGA-III-vs-QI-NSGA-III comparison can apply the same
-    post-processing to both sides -- see
-    sensitivity/compare_2opt_fairness.py.
+    repair_final_front (default True, matches QINSGA3): each returned run's
+    Pareto front is decoded through the same post-decode 2-opt local search
+    (Solvers/QINSGA3/repair.py) QI-NSGA-III uses for its own
+    repair_final_front, via _evaluate_pareto(repair=True). Kept symmetric
+    with QINSGA3 so the app doesn't silently favour one algorithm with
+    post-processing the other doesn't get -- see
+    sensitivity/compare_2opt_fairness.py for the campaign that surfaced
+    this asymmetry.
     """
     n_runs = max(1, min(20, int(n_runs)))
 
@@ -243,7 +244,7 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
 def run_nsga3_report(output_path=DEFAULT_REPORT_PATH, data_path=None,
                      pop_size=POP_SIZE, n_gen=N_GEN,
                      crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-                     n_runs=1, repair_final_front: bool = False):
+                     n_runs=1, repair_final_front: bool = True):
     data = run_nsga3(
         data_path, pop_size, n_gen, crossover_prob, mutation_prob, n_runs,
         repair_final_front=repair_final_front,

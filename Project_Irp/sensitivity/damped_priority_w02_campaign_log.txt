@@ -1,0 +1,71 @@
+============================================================================================
+  PRIORITE AMORTIE (w=0.2) — QINSGA-III (baseline vs NSGA-III cache)
+============================================================================================
+  Instance : 100 clients | pop=200 | gen=300
+  Seeds    : [42, 137, 271]
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe, decodeur ORIGINAL)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (decodeur original, prod. actuelle) -- depuis le cache QINSGA3, pas de re-run
+  seed=42 ... front=26  time(cache)=208.8s
+  seed=137 ... front=62  time(cache)=210.0s
+  seed=271 ... front=42  time(cache)=225.6s
+
+>>> priorite amortie w=0.2 (test)
+  seed=42 ... front=58  time=215.2s
+  seed=137 ... front=42  time=216.8s
+  seed=271 ... front=29  time=215.3s
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [17948.28203074  1004.54339728    82.06054929  4651.97260274]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.441380  std=0.192143
+    baseline (decodeur original)     mean=0.136055  std=0.012015
+    priorite amortie w=0.2 (test)    mean=0.181468  std=0.024095
+
+  GD (v)
+    NSGA-III (reference)             mean=0.249601  std=0.144801
+    baseline (decodeur original)     mean=0.642074  std=0.021595
+    priorite amortie w=0.2 (test)    mean=0.516824  std=0.036879
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.398242  std=0.075676
+    baseline (decodeur original)     mean=0.634697  std=0.033648
+    priorite amortie w=0.2 (test)    mean=0.578735  std=0.025569
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.058441  std=0.029036
+    baseline (decodeur original)     mean=0.042065  std=0.006720
+    priorite amortie w=0.2 (test)    mean=0.039848  std=0.013449
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs priorite amortie w=0.2
+--------------------------------------------------------------------------------------------
+  HV       U=0.0  p=0.100000  -> non significatif
+  GD       U=9.0  p=0.100000  -> non significatif
+  IGD      U=9.0  p=0.100000  -> non significatif
+  Spacing  U=6.0  p=0.700000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : priorite amortie w=0.2 vs NSGA-III
+--------------------------------------------------------------------------------------------
+  HV       U=3.0  p=0.007905  -> significatif (p<0.05)
+  GD       U=56.0  p=0.012422  -> significatif (p<0.05)
+  IGD      U=58.0  p=0.004517  -> significatif (p<0.05)
+  Spacing  U=15.0  p=0.196499  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run  (SURCOUT DU DECODEUR A SURVEILLER)
+--------------------------------------------------------------------------------------------
+    baseline (decodeur original)     mean=214.8s
+    priorite amortie w=0.2 (test)    mean=215.8s
+
+============================================================================================
+

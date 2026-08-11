@@ -54,7 +54,7 @@ class QuantumPopulation:
         xu:            np.ndarray,
         rng:           np.random.Generator | None = None,
         rotation_type: str = "tanh",
-        noise_scale:   float = 0.02,
+        noise_scale:   float = 0.0,
     ) -> None:
         if rotation_type not in _ROTATION_TYPES:
             raise ValueError(f"rotation_type must be one of {_ROTATION_TYPES}, got '{rotation_type}'")
@@ -89,12 +89,13 @@ class QuantumPopulation:
 
         The noise amplitude is proportional to |sin(2θ)|, which peaks at
         superposition (θ ≈ π/4) and vanishes at convergence (θ → 0 or π/2).
-        This prevents nearby θ values from collapsing to identical integer
-        routes after the IRP decoder rounds to integers — noise_scale
-        defaults to 0.02 (the value this was originally tuned at for the
-        IRP) so every existing caller is unaffected; it exists as a
-        parameter so continuous-domain callers (no integer rounding to
-        protect against) can set it to 0 without touching this file again.
+        It was originally added (tuned to 0.02) to prevent nearby θ values
+        from collapsing to identical integer routes after the IRP decoder
+        rounds to integers. An ablation campaign
+        (sensitivity/2opt_fairness_100clients_20seed_noisezero_campaign_log.txt)
+        found it measurably hurt HV/GD/Spacing without a compensating
+        benefit, so noise_scale now defaults to 0.0 (disabled) — kept as a
+        parameter for callers that want to re-enable it.
         """
         p     = np.cos(self.theta) ** 2
         mu    = self.xl + p * (self.xu - self.xl)

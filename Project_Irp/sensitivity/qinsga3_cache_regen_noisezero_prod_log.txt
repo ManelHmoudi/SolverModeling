@@ -1,0 +1,50 @@
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+[QINSGA3] p_mut = 1/D = 1/600 = 0.001667
+[QINSGA3] 100 clients | 5 periods | 6 vehicles | 600 genes | pop=200 gen=300 | α_max=0.3142 | p_cross=0.90 | runs=1
+
+[QINSGA3] === Run 1/1  seed=42 ===
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+[QINSGA3]  gen    0 | Pareto=16 | feasible=16
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+<frozen runpy>:128: RuntimeWarning: 'Solvers.QINSGA3.main' found in sys.modules after import of package 'Solvers.QINSGA3', but prior to execution of 'Solvers.QINSGA3.main'; this may result in unpredictable behaviour
+[QINSGA3]  gen   10 | Pareto=15 | feasible=15
+[QINSGA3]  gen   20 | Pareto=42 | feasible=42
+[QINSGA3]  gen   30 | Pareto=49 | feasible=49
+[QINSGA3]  gen   40 | Pareto=65 | feasible=65
+[QINSGA3]  gen   50 | Pareto=70 | feasible=70
+[QINSGA3]  gen   60 | Pareto=62 | feasible=62
+[QINSGA3]  gen   70 | Pareto=62 | feasible=62
+[QINSGA3]  gen   80 | Pareto=67 | feasible=67
+[QINSGA3]  gen   90 | Pareto=87 | feasible=87
+[QINSGA3]  gen  100 | Pareto=69 | feasible=69
+[QINSGA3]  gen  110 | Pareto=71 | feasible=71
+[QINSGA3]  gen  120 | Pareto=76 | feasible=76
+[QINSGA3]  gen  130 | Pareto=81 | feasible=81
+[QINSGA3]  gen  140 | Pareto=86 | feasible=86
+[QINSGA3]  gen  150 | Pareto=88 | feasible=88
+[QINSGA3]  gen  160 | Pareto=92 | feasible=92
+[QINSGA3]  gen  170 | Pareto=80 | feasible=80
+[QINSGA3]  gen  180 | Pareto=89 | feasible=89
+[QINSGA3]  gen  190 | Pareto=65 | feasible=65
+[QINSGA3]  gen  200 | Pareto=75 | feasible=75
+[QINSGA3]  gen  210 | Pareto=58 | feasible=58
+[QINSGA3]  gen  220 | Pareto=62 | feasible=62
+[QINSGA3]  gen  230 | Pareto=75 | feasible=75
+[QINSGA3]  gen  240 | Pareto=71 | feasible=71
+[QINSGA3]  gen  250 | Pareto=85 | feasible=85
+[QINSGA3]  gen  260 | Pareto=79 | feasible=79
+[QINSGA3]  gen  270 | Pareto=93 | feasible=93
+[QINSGA3]  gen  280 | Pareto=100 | feasible=100
+[QINSGA3]  gen  290 | Pareto=92 | feasible=92
+[QINSGA3]  gen  299 | Pareto=95 | feasible=95
+[QINSGA3] Run 1 done in 365.1s | Pareto front: 169 solutions
+[QINSGA3] Report → C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Solvers\QINSGA3\qinsga3_report_100clients.html

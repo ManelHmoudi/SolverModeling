@@ -1,0 +1,272 @@
+============================================================================================
+  DECODEUR INCREMENTAL (prototype sequentiel) — 3 seeds, 300 gen
+============================================================================================
+
+Decodage du front NSGA-III (cache, reference fixe)...
+  NSGA-III : 20 runs, 341 solutions
+
+>>> baseline (decodeur original, prod. actuelle) -- depuis le cache QINSGA3
+  seed=42 ... front=26  time(cache)=208.8s
+  seed=137 ... front=62  time(cache)=210.0s
+  seed=271 ... front=42  time(cache)=225.6s
+
+>>> decodeur incremental (test, sequentiel)
+  seed=42 ... ============================================================================================
+  PROTOTYPE DECODEUR INCREMENTAL (sequentiel, pas de campagne) -- 300 gen, seed=42
+============================================================================================
+  gen=   0  alpha=0.3142  k_moves= 20  incremental=   60  fallback= 1940  f1_mean=1548753571.0  archive=6
+  gen=   5  alpha=0.3090  k_moves= 20  incremental=  406  fallback=11594  f1_mean=1468188491.1  archive=16
+  gen=  10  alpha=0.3038  k_moves= 19  incremental=  915  fallback=21085  f1_mean=1332498378.4  archive=22
+  gen=  15  alpha=0.2986  k_moves= 19  incremental= 1520  fallback=30480  f1_mean=1297343433.1  archive=25
+  gen=  20  alpha=0.2934  k_moves= 19  incremental= 2223  fallback=39777  f1_mean=1302078384.2  archive=23
+  gen=  25  alpha=0.2882  k_moves= 18  incremental= 2965  fallback=49035  f1_mean=1136313337.9  archive=33
+  gen=  30  alpha=0.2831  k_moves= 18  incremental= 3736  fallback=58264  f1_mean=1126373328.2  archive=37
+  gen=  35  alpha=0.2779  k_moves= 18  incremental= 4530  fallback=67470  f1_mean=859768335.4  archive=35
+  gen=  40  alpha=0.2727  k_moves= 17  incremental= 5355  fallback=76645  f1_mean=1080933312.8  archive=35
+  gen=  45  alpha=0.2675  k_moves= 17  incremental= 6215  fallback=85785  f1_mean=1040963357.1  archive=41
+  gen=  50  alpha=0.2623  k_moves= 17  incremental= 7103  fallback=94897  f1_mean=875058387.9  archive=38
+  gen=  55  alpha=0.2571  k_moves= 16  incremental= 7968  fallback=104032  f1_mean=950643390.8  archive=40
+  gen=  60  alpha=0.2520  k_moves= 16  incremental= 8910  fallback=113090  f1_mean=1106233273.9  archive=32
+  gen=  65  alpha=0.2468  k_moves= 16  incremental= 9886  fallback=122114  f1_mean=1046138342.4  archive=33
+  gen=  70  alpha=0.2416  k_moves= 15  incremental=10835  fallback=131165  f1_mean=1156743315.3  archive=33
+  gen=  75  alpha=0.2364  k_moves= 15  incremental=11855  fallback=140145  f1_mean=955543264.7  archive=37
+  gen=  80  alpha=0.2312  k_moves= 15  incremental=12825  fallback=149175  f1_mean=1071143272.6  archive=39
+  gen=  85  alpha=0.2260  k_moves= 14  incremental=13840  fallback=158160  f1_mean=1015703291.3  archive=42
+  gen=  90  alpha=0.2209  k_moves= 14  incremental=14918  fallback=167082  f1_mean=1212128254.0  archive=46
+  gen=  95  alpha=0.2157  k_moves= 14  incremental=16033  fallback=175967  f1_mean=980573257.5  archive=50
+  gen= 100  alpha=0.2105  k_moves= 13  incremental=17194  fallback=184806  f1_mean=1005913292.7  archive=54
+  gen= 105  alpha=0.2053  k_moves= 13  incremental=18327  fallback=193673  f1_mean=1241993255.9  archive=44
+  gen= 110  alpha=0.2001  k_moves= 13  incremental=19493  fallback=202507  f1_mean=945378253.1  archive=37
+  gen= 115  alpha=0.1949  k_moves= 12  incremental=20625  fallback=211375  f1_mean=965698262.6  archive=40
+  gen= 120  alpha=0.1898  k_moves= 12  incremental=21795  fallback=220205  f1_mean=859893251.4  archive=44
+  gen= 125  alpha=0.1846  k_moves= 12  incremental=23025  fallback=228975  f1_mean=895058282.5  archive=46
+  gen= 130  alpha=0.1794  k_moves= 11  incremental=24228  fallback=237772  f1_mean=910293268.9  archive=48
+  gen= 135  alpha=0.1742  k_moves= 11  incremental=25496  fallback=246504  f1_mean=854958307.7  archive=45
+  gen= 140  alpha=0.1690  k_moves= 11  incremental=26698  fallback=255302  f1_mean=829623252.1  archive=47
+  gen= 145  alpha=0.1638  k_moves= 10  incremental=27911  fallback=264089  f1_mean=905323225.1  archive=46
+  gen= 150  alpha=0.1587  k_moves= 10  incremental=29130  fallback=272870  f1_mean=834833228.7  archive=43
+  gen= 155  alpha=0.1535  k_moves= 10  incremental=30325  fallback=281675  f1_mean=784478250.8  archive=46
+  gen= 160  alpha=0.1483  k_moves=  9  incremental=31540  fallback=290460  f1_mean=930503261.0  archive=45
+  gen= 165  alpha=0.1431  k_moves=  9  incremental=32766  fallback=299234  f1_mean=930298256.8  archive=42
+  gen= 170  alpha=0.1379  k_moves=  9  incremental=34010  fallback=307990  f1_mean=980683236.5  archive=42
+  gen= 175  alpha=0.1327  k_moves=  8  incremental=35302  fallback=316698  f1_mean=925368229.6  archive=42
+  gen= 180  alpha=0.1275  k_moves=  8  incremental=36607  fallback=325393  f1_mean=890263249.0  archive=43
+  gen= 185  alpha=0.1224  k_moves=  8  incremental=37966  fallback=334034  f1_mean=789643232.0  archive=45
+  gen= 190  alpha=0.1172  k_moves=  7  incremental=39288  fallback=342712  f1_mean=940628223.3  archive=47
+  gen= 195  alpha=0.1120  k_moves=  7  incremental=40575  fallback=351425  f1_mean=859923252.3  archive=51
+  gen= 200  alpha=0.1068  k_moves=  7  incremental=41925  fallback=360075  f1_mean=990823233.3  archive=52
+  gen= 205  alpha=0.1016  k_moves=  6  incremental=43268  fallback=368732  f1_mean=653708207.1  archive=41
+  gen= 210  alpha=0.0964  k_moves=  6  incremental=44545  fallback=377455  f1_mean=809573233.6  archive=43
+  gen= 215  alpha=0.0913  k_moves=  6  incremental=45813  fallback=386187  f1_mean=854828206.1  archive=45
+  gen= 220  alpha=0.0861  k_moves=  5  incremental=47065  fallback=394935  f1_mean=673773222.7  archive=46
+  gen= 225  alpha=0.0809  k_moves=  5  incremental=48370  fallback=403630  f1_mean=804458224.5  archive=47
+  gen= 230  alpha=0.0757  k_moves=  5  incremental=49680  fallback=412320  f1_mean=950358265.0  archive=38
+  gen= 235  alpha=0.0705  k_moves=  4  incremental=50930  fallback=421070  f1_mean=814648248.3  archive=38
+  gen= 240  alpha=0.0653  k_moves=  4  incremental=52240  fallback=429760  f1_mean=739318181.3  archive=40
+  gen= 245  alpha=0.0602  k_moves=  4  incremental=53483  fallback=438517  f1_mean=699093223.7  archive=41
+  gen= 250  alpha=0.0550  k_moves=  3  incremental=54747  fallback=447253  f1_mean=719088245.0  archive=39
+  gen= 255  alpha=0.0498  k_moves=  3  incremental=55989  fallback=456011  f1_mean=724293258.4  archive=40
+  gen= 260  alpha=0.0446  k_moves=  3  incremental=57235  fallback=464765  f1_mean=769273240.1  archive=40
+  gen= 265  alpha=0.0394  k_moves=  3  incremental=58488  fallback=473512  f1_mean=819813276.6  archive=40
+  gen= 270  alpha=0.0342  k_moves=  2  incremental=59683  fallback=482317  f1_mean=799568260.3  archive=40
+  gen= 275  alpha=0.0291  k_moves=  2  incremental=60927  fallback=491073  f1_mean=819628299.2  archive=45
+  gen= 280  alpha=0.0239  k_moves=  2  incremental=62121  fallback=499879  f1_mean=683928332.1  archive=46
+  gen= 285  alpha=0.0187  k_moves=  1  incremental=63357  fallback=508643  f1_mean=870003265.5  archive=46
+  gen= 290  alpha=0.0135  k_moves=  1  incremental=64607  fallback=517393  f1_mean=804478239.7  archive=44
+  gen= 295  alpha=0.0083  k_moves=  1  incremental=65804  fallback=526196  f1_mean=724038321.1  archive=44
+  gen= 299  alpha=0.0042  k_moves=  1  incremental=66784  fallback=533216  f1_mean=910278279.1  archive=44
+
+--------------------------------------------------------------------------------------------
+  Termine en 449.3s (300 generations, sequentiel, pop=200)
+  Chemins incrementaux pris : 66784  Fallback complet : 533216  Ratio incrementaux : 11.1%
+  29055 evaluations avec violation de contrainte (max=15.00) -- normal en debut de run, comme en production
+============================================================================================
+
+front=44  time=449.3s  ratio_incremental=11.1%
+  seed=137 ... ============================================================================================
+  PROTOTYPE DECODEUR INCREMENTAL (sequentiel, pas de campagne) -- 300 gen, seed=137
+============================================================================================
+  gen=   0  alpha=0.3142  k_moves= 20  incremental=   41  fallback= 1959  f1_mean=1991863708.0  archive=14
+  gen=   5  alpha=0.3090  k_moves= 20  incremental=  268  fallback=11732  f1_mean=1166893723.1  archive=10
+  gen=  10  alpha=0.3038  k_moves= 19  incremental=  490  fallback=21510  f1_mean=1111578797.4  archive=14
+  gen=  15  alpha=0.2986  k_moves= 19  incremental=  793  fallback=31207  f1_mean=1015683735.5  archive=18
+  gen=  20  alpha=0.2934  k_moves= 19  incremental= 1129  fallback=40871  f1_mean=925418719.2  archive=20
+  gen=  25  alpha=0.2882  k_moves= 18  incremental= 1510  fallback=50490  f1_mean=1166713709.5  archive=24
+  gen=  30  alpha=0.2831  k_moves= 18  incremental= 1971  fallback=60029  f1_mean=945398796.5  archive=28
+  gen=  35  alpha=0.2779  k_moves= 18  incremental= 2398  fallback=69602  f1_mean=965633691.8  archive=32
+  gen=  40  alpha=0.2727  k_moves= 17  incremental= 2894  fallback=79106  f1_mean=980798699.9  archive=35
+  gen=  45  alpha=0.2675  k_moves= 17  incremental= 3415  fallback=88585  f1_mean=965638687.1  archive=34
+  gen=  50  alpha=0.2623  k_moves= 17  incremental= 3947  fallback=98053  f1_mean=915103648.4  archive=32
+  gen=  55  alpha=0.2571  k_moves= 16  incremental= 4509  fallback=107491  f1_mean=854748580.5  archive=33
+  gen=  60  alpha=0.2520  k_moves= 16  incremental= 5109  fallback=116891  f1_mean=809628462.3  archive=33
+  gen=  65  alpha=0.2468  k_moves= 16  incremental= 5719  fallback=126281  f1_mean=1071193590.4  archive=35
+  gen=  70  alpha=0.2416  k_moves= 15  incremental= 6326  fallback=135674  f1_mean=834638553.9  archive=36
+  gen=  75  alpha=0.2364  k_moves= 15  incremental= 6979  fallback=145021  f1_mean=804448532.5  archive=42
+  gen=  80  alpha=0.2312  k_moves= 15  incremental= 7626  fallback=154374  f1_mean=920358577.8  archive=42
+  gen=  85  alpha=0.2260  k_moves= 14  incremental= 8268  fallback=163732  f1_mean=774283482.6  archive=42
+  gen=  90  alpha=0.2209  k_moves= 14  incremental= 9013  fallback=172987  f1_mean=1005898487.8  archive=36
+  gen=  95  alpha=0.2157  k_moves= 14  incremental= 9762  fallback=182238  f1_mean=915113528.7  archive=27
+  gen= 100  alpha=0.2105  k_moves= 13  incremental=10515  fallback=191485  f1_mean=1101303498.9  archive=28
+  gen= 105  alpha=0.2053  k_moves= 13  incremental=11323  fallback=200677  f1_mean=960438503.6  archive=30
+  gen= 110  alpha=0.2001  k_moves= 13  incremental=12094  fallback=209906  f1_mean=930238399.3  archive=35
+  gen= 115  alpha=0.1949  k_moves= 12  incremental=12922  fallback=219078  f1_mean=784318504.2  archive=37
+  gen= 120  alpha=0.1898  k_moves= 12  incremental=13759  fallback=228241  f1_mean=844933476.3  archive=39
+  gen= 125  alpha=0.1846  k_moves= 12  incremental=14659  fallback=237341  f1_mean=875068518.2  archive=39
+  gen= 130  alpha=0.1794  k_moves= 11  incremental=15550  fallback=246450  f1_mean=930103403.5  archive=34
+  gen= 135  alpha=0.1742  k_moves= 11  incremental=16446  fallback=255554  f1_mean=894958376.4  archive=35
+  gen= 140  alpha=0.1690  k_moves= 11  incremental=17407  fallback=264593  f1_mean=789323459.2  archive=37
+  gen= 145  alpha=0.1638  k_moves= 10  incremental=18373  fallback=273627  f1_mean=718973457.9  archive=36
+  gen= 150  alpha=0.1587  k_moves= 10  incremental=19399  fallback=282601  f1_mean=875003379.4  archive=35
+  gen= 155  alpha=0.1535  k_moves= 10  incremental=20429  fallback=291571  f1_mean=895098420.9  archive=37
+  gen= 160  alpha=0.1483  k_moves=  9  incremental=21465  fallback=300535  f1_mean=854818399.0  archive=36
+  gen= 165  alpha=0.1431  k_moves=  9  incremental=22524  fallback=309476  f1_mean=884908394.9  archive=36
+  gen= 170  alpha=0.1379  k_moves=  9  incremental=23605  fallback=318395  f1_mean=824573402.8  archive=34
+  gen= 175  alpha=0.1327  k_moves=  8  incremental=24667  fallback=327333  f1_mean=955463408.1  archive=37
+  gen= 180  alpha=0.1275  k_moves=  8  incremental=25788  fallback=336212  f1_mean=829623443.2  archive=41
+  gen= 185  alpha=0.1224  k_moves=  8  incremental=26931  fallback=345069  f1_mean=864798372.5  archive=31
+  gen= 190  alpha=0.1172  k_moves=  7  incremental=28019  fallback=353981  f1_mean=854708346.1  archive=33
+  gen= 195  alpha=0.1120  k_moves=  7  incremental=29138  fallback=362862  f1_mean=854573389.8  archive=29
+  gen= 200  alpha=0.1068  k_moves=  7  incremental=30283  fallback=371717  f1_mean=804478396.8  archive=34
+  gen= 205  alpha=0.1016  k_moves=  6  incremental=31400  fallback=380600  f1_mean=568198386.3  archive=31
+  gen= 210  alpha=0.0964  k_moves=  6  incremental=32543  fallback=389457  f1_mean=809493400.3  archive=31
+  gen= 215  alpha=0.0913  k_moves=  6  incremental=33684  fallback=398316  f1_mean=734038358.0  archive=31
+  gen= 220  alpha=0.0861  k_moves=  5  incremental=34831  fallback=407169  f1_mean=935228385.1  archive=34
+  gen= 225  alpha=0.0809  k_moves=  5  incremental=35972  fallback=416028  f1_mean=794313383.6  archive=34
+  gen= 230  alpha=0.0757  k_moves=  5  incremental=37131  fallback=424869  f1_mean=839718401.8  archive=35
+  gen= 235  alpha=0.0705  k_moves=  4  incremental=38330  fallback=433670  f1_mean=558128378.1  archive=39
+  gen= 240  alpha=0.0653  k_moves=  4  incremental=39518  fallback=442482  f1_mean=839563388.5  archive=39
+  gen= 245  alpha=0.0602  k_moves=  4  incremental=40671  fallback=451329  f1_mean=618393345.9  archive=39
+  gen= 250  alpha=0.0550  k_moves=  3  incremental=41874  fallback=460126  f1_mean=839703408.5  archive=42
+  gen= 255  alpha=0.0498  k_moves=  3  incremental=43051  fallback=468949  f1_mean=653513384.9  archive=45
+  gen= 260  alpha=0.0446  k_moves=  3  incremental=44281  fallback=477719  f1_mean=769278432.9  archive=46
+  gen= 265  alpha=0.0394  k_moves=  3  incremental=45443  fallback=486557  f1_mean=744123412.1  archive=44
+  gen= 270  alpha=0.0342  k_moves=  2  incremental=46632  fallback=495368  f1_mean=754148390.3  archive=44
+  gen= 275  alpha=0.0291  k_moves=  2  incremental=47883  fallback=504117  f1_mean=673708365.7  archive=47
+  gen= 280  alpha=0.0239  k_moves=  2  incremental=49116  fallback=512884  f1_mean=633348387.8  archive=35
+  gen= 285  alpha=0.0187  k_moves=  1  incremental=50376  fallback=521624  f1_mean=814253409.5  archive=37
+  gen= 290  alpha=0.0135  k_moves=  1  incremental=51626  fallback=530374  f1_mean=749088398.6  archive=38
+  gen= 295  alpha=0.0083  k_moves=  1  incremental=52925  fallback=539075  f1_mean=764198419.2  archive=38
+  gen= 299  alpha=0.0042  k_moves=  1  incremental=53963  fallback=546037  f1_mean=714028412.7  archive=38
+
+--------------------------------------------------------------------------------------------
+  Termine en 435.9s (300 generations, sequentiel, pop=200)
+  Chemins incrementaux pris : 53963  Fallback complet : 546037  Ratio incrementaux : 9.0%
+  26389 evaluations avec violation de contrainte (max=19.00) -- normal en debut de run, comme en production
+============================================================================================
+
+front=38  time=435.9s  ratio_incremental=9.0%
+  seed=271 ... ============================================================================================
+  PROTOTYPE DECODEUR INCREMENTAL (sequentiel, pas de campagne) -- 300 gen, seed=271
+============================================================================================
+  gen=   0  alpha=0.3142  k_moves= 20  incremental=   42  fallback= 1958  f1_mean=1573583770.5  archive=17
+  gen=   5  alpha=0.3090  k_moves= 20  incremental=  291  fallback=11709  f1_mean=1448528566.8  archive=16
+  gen=  10  alpha=0.3038  k_moves= 19  incremental=  665  fallback=21335  f1_mean=1554423534.9  archive=21
+  gen=  15  alpha=0.2986  k_moves= 19  incremental= 1193  fallback=30807  f1_mean=1232383597.8  archive=23
+  gen=  20  alpha=0.2934  k_moves= 19  incremental= 1777  fallback=40223  f1_mean=1554318598.9  archive=25
+  gen=  25  alpha=0.2882  k_moves= 18  incremental= 2347  fallback=49653  f1_mean=1554298639.5  archive=28
+  gen=  30  alpha=0.2831  k_moves= 18  incremental= 3013  fallback=58987  f1_mean=1121413511.5  archive=32
+  gen=  35  alpha=0.2779  k_moves= 18  incremental= 3693  fallback=68307  f1_mean=1297698609.5  archive=37
+  gen=  40  alpha=0.2727  k_moves= 17  incremental= 4386  fallback=77614  f1_mean=1247213610.2  archive=37
+  gen=  45  alpha=0.2675  k_moves= 17  incremental= 5105  fallback=86895  f1_mean=1121588512.0  archive=35
+  gen=  50  alpha=0.2623  k_moves= 17  incremental= 5867  fallback=96133  f1_mean=890093555.2  archive=39
+  gen=  55  alpha=0.2571  k_moves= 16  incremental= 6670  fallback=105330  f1_mean=875138531.6  archive=41
+  gen=  60  alpha=0.2520  k_moves= 16  incremental= 7535  fallback=114465  f1_mean=945283606.5  archive=47
+  gen=  65  alpha=0.2468  k_moves= 16  incremental= 8414  fallback=123586  f1_mean=895058574.7  archive=51
+  gen=  70  alpha=0.2416  k_moves= 15  incremental= 9351  fallback=132649  f1_mean=975463517.5  archive=50
+  gen=  75  alpha=0.2364  k_moves= 15  incremental=10356  fallback=141644  f1_mean=925298535.9  archive=55
+  gen=  80  alpha=0.2312  k_moves= 15  incremental=11414  fallback=150586  f1_mean=804513570.2  archive=57
+  gen=  85  alpha=0.2260  k_moves= 14  incremental=12497  fallback=159503  f1_mean=733988492.8  archive=36
+  gen=  90  alpha=0.2209  k_moves= 14  incremental=13571  fallback=168429  f1_mean=658928517.7  archive=36
+  gen=  95  alpha=0.2157  k_moves= 14  incremental=14627  fallback=177373  f1_mean=824903494.8  archive=40
+  gen= 100  alpha=0.2105  k_moves= 13  incremental=15716  fallback=186284  f1_mean=734488489.9  archive=42
+  gen= 105  alpha=0.2053  k_moves= 13  incremental=16729  fallback=195271  f1_mean=834978455.0  archive=46
+  gen= 110  alpha=0.2001  k_moves= 13  incremental=17728  fallback=204272  f1_mean=885168427.5  archive=50
+  gen= 115  alpha=0.1949  k_moves= 12  incremental=18773  fallback=213227  f1_mean=754178451.7  archive=47
+  gen= 120  alpha=0.1898  k_moves= 12  incremental=19866  fallback=222134  f1_mean=769503456.7  archive=49
+  gen= 125  alpha=0.1846  k_moves= 12  incremental=20934  fallback=231066  f1_mean=885173465.9  archive=52
+  gen= 130  alpha=0.1794  k_moves= 11  incremental=22107  fallback=239893  f1_mean=603523494.9  archive=53
+  gen= 135  alpha=0.1742  k_moves= 11  incremental=23269  fallback=248731  f1_mean=930403465.5  archive=50
+  gen= 140  alpha=0.1690  k_moves= 11  incremental=24428  fallback=257572  f1_mean=669068488.4  archive=54
+  gen= 145  alpha=0.1638  k_moves= 10  incremental=25638  fallback=266362  f1_mean=709303502.5  archive=55
+  gen= 150  alpha=0.1587  k_moves= 10  incremental=26778  fallback=275222  f1_mean=744178458.1  archive=56
+  gen= 155  alpha=0.1535  k_moves= 10  incremental=27981  fallback=284019  f1_mean=809693448.1  archive=49
+  gen= 160  alpha=0.1483  k_moves=  9  incremental=29215  fallback=292785  f1_mean=704258444.5  archive=41
+  gen= 165  alpha=0.1431  k_moves=  9  incremental=30447  fallback=301553  f1_mean=734193422.0  archive=45
+  gen= 170  alpha=0.1379  k_moves=  9  incremental=31686  fallback=310314  f1_mean=769548445.8  archive=41
+  gen= 175  alpha=0.1327  k_moves=  8  incremental=32964  fallback=319036  f1_mean=829683435.4  archive=34
+  gen= 180  alpha=0.1275  k_moves=  8  incremental=34292  fallback=327708  f1_mean=668858333.9  archive=30
+  gen= 185  alpha=0.1224  k_moves=  8  incremental=35675  fallback=336325  f1_mean=744298331.4  archive=31
+  gen= 190  alpha=0.1172  k_moves=  7  incremental=37035  fallback=344965  f1_mean=668828379.1  archive=33
+  gen= 195  alpha=0.1120  k_moves=  7  incremental=38398  fallback=353602  f1_mean=724098327.9  archive=37
+  gen= 200  alpha=0.1068  k_moves=  7  incremental=39793  fallback=362207  f1_mean=689053411.1  archive=30
+  gen= 205  alpha=0.1016  k_moves=  6  incremental=41143  fallback=370857  f1_mean=663603385.5  archive=31
+  gen= 210  alpha=0.0964  k_moves=  6  incremental=42559  fallback=379441  f1_mean=568303308.3  archive=31
+  gen= 215  alpha=0.0913  k_moves=  6  incremental=43942  fallback=388058  f1_mean=734248351.5  archive=31
+  gen= 220  alpha=0.0861  k_moves=  5  incremental=45324  fallback=396676  f1_mean=719223402.8  archive=30
+  gen= 225  alpha=0.0809  k_moves=  5  incremental=46711  fallback=405289  f1_mean=638598374.3  archive=32
+  gen= 230  alpha=0.0757  k_moves=  5  incremental=48054  fallback=413946  f1_mean=623633324.8  archive=35
+  gen= 235  alpha=0.0705  k_moves=  4  incremental=49448  fallback=422552  f1_mean=628668339.7  archive=37
+  gen= 240  alpha=0.0653  k_moves=  4  incremental=50755  fallback=431245  f1_mean=779453369.0  archive=37
+  gen= 245  alpha=0.0602  k_moves=  4  incremental=52089  fallback=439911  f1_mean=628548329.8  archive=40
+  gen= 250  alpha=0.0550  k_moves=  3  incremental=53396  fallback=448604  f1_mean=714188322.7  archive=39
+  gen= 255  alpha=0.0498  k_moves=  3  incremental=54717  fallback=457283  f1_mean=668698410.5  archive=40
+  gen= 260  alpha=0.0446  k_moves=  3  incremental=56059  fallback=465941  f1_mean=658758330.3  archive=41
+  gen= 265  alpha=0.0394  k_moves=  3  incremental=57366  fallback=474634  f1_mean=633483391.7  archive=40
+  gen= 270  alpha=0.0342  k_moves=  2  incremental=58653  fallback=483347  f1_mean=653818301.9  archive=41
+  gen= 275  alpha=0.0291  k_moves=  2  incremental=59928  fallback=492072  f1_mean=769303331.9  archive=43
+  gen= 280  alpha=0.0239  k_moves=  2  incremental=61183  fallback=500817  f1_mean=749178362.1  archive=45
+  gen= 285  alpha=0.0187  k_moves=  1  incremental=62458  fallback=509542  f1_mean=593448361.4  archive=46
+  gen= 290  alpha=0.0135  k_moves=  1  incremental=63709  fallback=518291  f1_mean=739163315.8  archive=46
+  gen= 295  alpha=0.0083  k_moves=  1  incremental=64886  fallback=527114  f1_mean=658738378.2  archive=47
+  gen= 299  alpha=0.0042  k_moves=  1  incremental=65818  fallback=534182  f1_mean=754193384.8  archive=31
+
+--------------------------------------------------------------------------------------------
+  Termine en 443.4s (300 generations, sequentiel, pop=200)
+  Chemins incrementaux pris : 65818  Fallback complet : 534182  Ratio incrementaux : 11.0%
+  28423 evaluations avec violation de contrainte (max=18.00) -- normal en debut de run, comme en production
+============================================================================================
+
+front=31  time=443.4s  ratio_incremental=11.0%
+
+Ideal global partage : [15402.04333833   855.75548506    69.26254057  4548.82191781]
+Nadir global partage  : [18284.01387086  1029.18318561    84.29510976  4665.94520548]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III (reference)             mean=0.500564  std=0.179066
+    baseline (decodeur original)     mean=0.193802  std=0.011633
+    decodeur incremental (test)      mean=0.089987  std=0.006564
+
+  GD (v)
+    NSGA-III (reference)             mean=0.189970  std=0.101103
+    baseline (decodeur original)     mean=0.493985  std=0.019273
+    decodeur incremental (test)      mean=0.840721  std=0.026110
+
+  IGD (v)
+    NSGA-III (reference)             mean=0.370465  std=0.045175
+    baseline (decodeur original)     mean=0.537985  std=0.028190
+    decodeur incremental (test)      mean=0.727816  std=0.042874
+
+  Spacing (v)
+    NSGA-III (reference)             mean=0.050800  std=0.025357
+    baseline (decodeur original)     mean=0.036736  std=0.006094
+    decodeur incremental (test)      mean=0.042416  std=0.007679
+
+--------------------------------------------------------------------------------------------
+  Mann-Whitney U : baseline vs decodeur incremental
+--------------------------------------------------------------------------------------------
+  HV       U=9.0  p=0.100000  -> non significatif
+  GD       U=0.0  p=0.100000  -> non significatif
+  IGD      U=0.0  p=0.100000  -> non significatif
+  Spacing  U=2.0  p=0.400000  -> non significatif
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par run
+--------------------------------------------------------------------------------------------
+    baseline (decodeur original)     mean=214.8s
+    decodeur incremental (test)      mean=442.9s
+============================================================================================
+

@@ -13,10 +13,20 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 _TINY_INSTANCE = os.path.join(PROJECT_DIR, "data", "instance_3_clients.json")
 
 
-def test_run_nsga3_repair_final_front_defaults_to_false(tmp_path, monkeypatch):
+def test_run_nsga3_repair_final_front_defaults_to_true(tmp_path, monkeypatch):
     monkeypatch.setattr(nsga3_main, "_CHROM_CACHE_PATH", str(tmp_path / "nsga3_chromosomes.json"))
 
     data = nsga3_main.run_nsga3(data_path=_TINY_INSTANCE, n_gen=2, n_runs=1)
+
+    assert data["runs"][0]["meta"]["repair_final_front"] is True
+
+
+def test_run_nsga3_repair_final_front_false_runs_and_is_recorded(tmp_path, monkeypatch):
+    monkeypatch.setattr(nsga3_main, "_CHROM_CACHE_PATH", str(tmp_path / "nsga3_chromosomes.json"))
+
+    data = nsga3_main.run_nsga3(
+        data_path=_TINY_INSTANCE, n_gen=2, n_runs=1, repair_final_front=False,
+    )
 
     assert data["runs"][0]["meta"]["repair_final_front"] is False
 

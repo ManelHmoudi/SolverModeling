@@ -87,7 +87,7 @@ for the full rationale and references, not repeated here.
 | `alpha_min` | 0.001π | Vmin = ±0.001π — Li et al. (ICNC 2008) |
 | `rotation_type` | `"tanh"` | Aggressive saturation, Li et al. (ICNC 2008). Alternatives: `"tanh_soft"` (empirical, gentler saturation) and `"linear"` (Han & Kim 2002, §II-B) |
 | Initial θ | π/4 ± 0.05 | Maximum superposition — Han & Kim (2002), §II-A. The ±0.05 rad perturbation breaks symmetry so the first measurement doesn't collapse every individual to the same point |
-| `noise_scale` (measurement) | 0.02 | Diversity noise, `σ = noise_scale·|sin(2θ)|·(xu−xl)` — Platel et al. (2009), §4.2. Prevents nearby θ values from collapsing to identical integer routes after the IRP decoder rounds to integers |
+| `noise_scale` (measurement) | 0.0 (disabled) | Diversity noise, `σ = noise_scale·|sin(2θ)|·(xu−xl)` — Platel et al. (2009), §4.2. Originally 0.02 to prevent nearby θ values from collapsing to identical integer routes after the IRP decoder rounds to integers; a 20/30-seed ablation (`sensitivity/2opt_fairness_100clients_20seed_noisezero_campaign_log.txt`) found it measurably hurt HV/GD/Spacing without a compensating benefit, so it's off by default now — still available as a parameter |
 | `migration_period` / `n_migrate` | 10 gen / 10 individuals | Archive → population injection (Han & Kim, 2002, migration principle) |
 | External archive cap | 500 | Bounded via NSGA-II crowding-distance trimming (Deb et al., 2002, §III-B) when exceeded — the only place this project reuses an NSGA-II mechanism outside `Solvers/NSGA3` itself |
 
