@@ -24,13 +24,14 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(MODULE_DIR))
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
-from pymoo.algorithms.moo.nsga3    import NSGA3
+from pymoo.algorithms.moo.nsga3    import NSGA3, ReferenceDirectionSurvival
 from pymoo.util.ref_dirs           import get_reference_directions
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm   import PM
 from pymoo.operators.sampling.rnd  import FloatRandomSampling
 from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
+from pymoo.util.archive            import MultiObjectiveArchive, SurvivalTruncation
 
 from models.parametres  import load_instance
 from .problem           import IRPProblem
@@ -93,7 +94,8 @@ def render_from_instance(data_path):
 
 def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
               crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-              n_runs=1, repair_final_front: bool = True):
+              n_runs=1, repair_final_front: bool = True,
+              use_archive: bool = False):
     """Run NSGA-III n_runs times with distinct seeds, cache all Pareto fronts, return report data.
 
     repair_final_front (default True, matches QINSGA3): each returned run's
@@ -104,6 +106,28 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     post-processing the other doesn't get -- see
     sensitivity/compare_2opt_fairness.py for the campaign that surfaced
     this asymmetry.
+
+    use_archive (default False -- NOT the production default, ablation-only
+    until validated): a fairness audit found QI-NSGA-III returns its final
+    front from an external archive that accumulates every non-dominated
+    feasible individual seen across the WHOLE run (capped at 500, trimmed to
+    pop_size at the end -- Solvers/QINSGA3/algorithm.py's _archive_update/
+    _crowding_trim), while NSGA-III (pymoo) reports only its very last
+    generation's population (pymoo's own filter_optimum on self.pop) -- a
+    good solution NSGA-III finds early and later loses to niching is gone
+    for good, QI-NSGA-III's never is. pymoo ships a ready-made equivalent
+    (pymoo.util.archive.MultiObjectiveArchive) but it is NOT wired into
+    result.X by default (confirmed by reading Algorithm.result(): res.X
+    comes from self.opt = filter_optimum(self.pop, ...), res.archive is
+    stored separately and never consulted) -- attaching an archive alone
+    changes nothing unless this function also reads from it, which is what
+    use_archive=True does. Truncation reuses NSGA-III's own
+    ReferenceDirectionSurvival (via SurvivalTruncation) rather than
+    QINSGA3's crowding-distance trim, so the archive stays true to NSGA-III's
+    own niching principle rather than importing QINSGA3's. Set
+    use_archive=True to test whether this symmetry changes the HV/GD/IGD/
+    Spacing verdict -- see sensitivity/compare_2opt_fairness.py's own
+    --use-archive flag for the comparison campaign.
     """
     n_runs = max(1, min(20, int(n_runs)))
 
@@ -147,10 +171,28 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
             np.random.seed(seed)
             _random.seed(seed)
 
+            # use_archive: reproduces QI-NSGA-III's own external non-dominated
+            # archive (accumulates every feasible non-dominated individual
+            # seen across the whole run, capped at 500, trimmed to
+            # effective_pop below) -- see run_nsga3's own use_archive
+            # docstring for the fairness-audit finding this tests. Truncation
+            # via NSGA-III's own ReferenceDirectionSurvival, a fresh instance
+            # per run so its ideal/nadir tracking is independent of the
+            # algorithm's own environmental-selection survival.
+            archive_survival = ReferenceDirectionSurvival(ref_dirs) if use_archive else None
+            archive = (
+                MultiObjectiveArchive(
+                    max_size=500,
+                    truncation=SurvivalTruncation(archive_survival, problem),
+                )
+                if use_archive else None
+            )
+
             algorithm = NSGA3(
                 pop_size  = effective_pop,
                 ref_dirs  = ref_dirs,
                 sampling  = FloatRandomSampling(),
+                archive   = archive,
                 crossover = SBX(prob=crossover_prob, eta=20),
                 # prob_var (per-gene rate), NOT prob (pymoo's per-INDIVIDUAL
                 # mutation gate, core/mutation.py -- Mutation.do() computes
@@ -182,7 +224,20 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
             )
             elapsed = time.time() - t_start
 
-            pareto_X = result.X
+            if use_archive and result.archive is not None and len(result.archive) > 0:
+                # Final trim to effective_pop, matching QINSGA3's own
+                # end-of-run _crowding_trim(archive, pop_size) step -- same
+                # ReferenceDirectionSurvival instance the archive used
+                # throughout the run, for a consistent niching reference.
+                arch_pop = result.archive
+                if len(arch_pop) > effective_pop:
+                    arch_pop = archive_survival.do(
+                        problem, arch_pop, n_survive=effective_pop,
+                    )
+                pareto_X = arch_pop.get("X")
+            else:
+                pareto_X = result.X
+
             if pareto_X is None or len(pareto_X) == 0:
                 print(f"[NSGA3] Run {run_idx + 1}: no feasible solutions — skipping.", flush=True)
                 continue
@@ -244,10 +299,11 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
 def run_nsga3_report(output_path=DEFAULT_REPORT_PATH, data_path=None,
                      pop_size=POP_SIZE, n_gen=N_GEN,
                      crossover_prob=CROSSOVER_PROB, mutation_prob=MUTATION_PROB,
-                     n_runs=1, repair_final_front: bool = True):
+                     n_runs=1, repair_final_front: bool = True,
+                     use_archive: bool = False):
     data = run_nsga3(
         data_path, pop_size, n_gen, crossover_prob, mutation_prob, n_runs,
-        repair_final_front=repair_final_front,
+        repair_final_front=repair_final_front, use_archive=use_archive,
     )
     return write_report(data, output_path)
 

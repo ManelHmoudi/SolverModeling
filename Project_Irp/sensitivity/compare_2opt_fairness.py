@@ -88,13 +88,14 @@ if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
 import numpy as np
-from pymoo.algorithms.moo.nsga3    import NSGA3
+from pymoo.algorithms.moo.nsga3    import NSGA3, ReferenceDirectionSurvival
 from pymoo.util.ref_dirs           import get_reference_directions
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm   import PM
 from pymoo.operators.sampling.rnd  import FloatRandomSampling
 from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
+from pymoo.util.archive            import MultiObjectiveArchive, SurvivalTruncation
 from scipy.stats import mannwhitneyu, wilcoxon
 
 from models.parametres            import load_instance
@@ -117,23 +118,41 @@ _CONFIGS = [
 ]
 
 
-def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed):
+def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
+                     use_archive: bool = False):
     """Local replication of Solvers/NSGA3/main.py::run_nsga3's search setup,
     returning (pareto_X, n_eval) -- run_nsga3 itself has no low-level
     equivalent that skips writing the shared chromosome cache file, so this
     mirrors its exact pymoo configuration instead (same pattern
     sensitivity/compare_route_repair_final.py already uses for QI-NSGA-III's
     low-level run_qinsga3 call). n_eval is pymoo's own evaluation counter
-    (result.algorithm.evaluator.n_eval), not a derived estimate."""
+    (result.algorithm.evaluator.n_eval), not a derived estimate.
+
+    use_archive: mirrors Solvers/NSGA3/main.py::run_nsga3's own use_archive
+    parameter -- see its docstring for the fairness-audit finding this
+    tests (QI-NSGA-III returns its front from an external archive spanning
+    the whole run, NSGA-III returns only its final generation's population
+    by default)."""
     np.random.seed(seed)
     _random.seed(seed)
 
     problem = IRPProblem(sets_, params_)
     n_genes = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
+
+    archive_survival = ReferenceDirectionSurvival(ref_dirs) if use_archive else None
+    archive = (
+        MultiObjectiveArchive(
+            max_size=500,
+            truncation=SurvivalTruncation(archive_survival, problem),
+        )
+        if use_archive else None
+    )
+
     algorithm = NSGA3(
         pop_size  = effective_pop,
         ref_dirs  = ref_dirs,
         sampling  = FloatRandomSampling(),
+        archive   = archive,
         crossover = SBX(prob=0.9, eta=20),
         # prob=1.0 disables pymoo's per-individual mutation gate, prob_var
         # sets the per-gene rate -- matches the fix in Solvers/NSGA3/
@@ -143,7 +162,15 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed):
     result = minimize(
         problem, algorithm, get_termination("n_gen", max_gen), seed=seed, verbose=False,
     )
-    pareto_X = result.X if result.X is not None else np.empty((0, n_genes))
+
+    if use_archive and result.archive is not None and len(result.archive) > 0:
+        arch_pop = result.archive
+        if len(arch_pop) > effective_pop:
+            arch_pop = archive_survival.do(problem, arch_pop, n_survive=effective_pop)
+        pareto_X = arch_pop.get("X")
+    else:
+        pareto_X = result.X if result.X is not None else np.empty((0, n_genes))
+
     return pareto_X, result.algorithm.evaluator.n_eval
 
 
@@ -174,7 +201,8 @@ def _stats(vals) -> dict:
 
 def run_comparison(
     instance: str, seeds: list[int], max_gen: int, pop_size: int,
-    qinsga3_gen: int | None = None, noise_scale: float = 0.02,
+    qinsga3_gen: int | None = None, noise_scale: float = 0.0,
+    eliminate_duplicates: bool = False, use_archive: bool = False,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
@@ -183,19 +211,31 @@ def run_comparison(
     effective_pop*max_gen). qinsga3_gen=max_gen//2 makes the two counts
     approximately equal (exactly equal up to the "+1" final-pass term).
 
-    noise_scale (default 0.02, run_qinsga3's own production default): the
-    measurement-noise magnitude added every time QuantumPopulation.measure()
-    converts theta to X (Solvers/QINSGA3/chromosome.py, sigma_j = noise_scale
-    * |sin(2*theta_j)| * (xu_j - xl_j)). A fairness audit found this adds
-    ~10-12% of each normalised objective's range as noise to F every
-    generation, breaking elitism (a survivor's cached F goes stale the moment
-    it is re-measured) and flipping feasibility on 40-90% of repeated
-    measurements of the same feasible theta in isolated trials -- an effect
-    NSGA-III's exact, noiseless X has no equivalent of. Existing project
-    ablations only ever swept this UPWARD (0.05/0.08/0.15, monotonically
-    worse); 0.0 (or a small nonzero value) has never been tested. Pass
-    --noise-scale 0.0 to test whether this, not the rotation-gate mechanism
-    itself, is driving QI-NSGA-III's gap."""
+    noise_scale (default 0.0, run_qinsga3's own current production default --
+    was 0.02 until a fairness audit found it added ~10-12% of each
+    normalised objective's range as noise to F every generation, breaking
+    elitism, with no measured benefit at the project's own 20/30-seed
+    gold-standard protocol; see Solvers/QINSGA3/README.md's parameter
+    table). Pass --noise-scale 0.02 to reproduce the old default for
+    comparison.
+
+    eliminate_duplicates (default False -- NOT run_qinsga3's production
+    default, ablation-only): rejects X-space duplicate offspring and
+    regenerates them, matching pymoo's NSGA-III eliminate_duplicates=True.
+    Tested at the project's own 30-seed protocol: no significant change on
+    HV/GD/IGD/Spacing -- see Solvers/QINSGA3/algorithm.py's run_qinsga3
+    docstring. Pass --eliminate-duplicates 1 to enable it for comparison.
+
+    use_archive (default False -- NOT NSGA-III's production default,
+    ablation-only until validated): reproduces QI-NSGA-III's own external
+    non-dominated archive (spans the whole run, capped at 500, trimmed to
+    effective_pop at the end) for NSGA-III too, via pymoo's own
+    MultiObjectiveArchive -- see Solvers/NSGA3/main.py's own use_archive
+    parameter docstring for the fairness-audit finding this tests: NSGA-III
+    normally reports only its final generation's population, so a good
+    solution found early and later lost to niching is gone for good, an
+    asymmetry QI-NSGA-III's archive doesn't have. Pass --use-archive 1 to
+    test whether this symmetry changes the verdict."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -209,13 +249,20 @@ def run_comparison(
     print("=" * 92)
     print(f"  Instance : {instance} clients | pop={effective_pop} | "
           f"gen(NSGA-III)={max_gen} | gen(QI-NSGA-III)={qinsga3_gen} | "
-          f"noise_scale(QI)={noise_scale}")
+          f"noise_scale(QI)={noise_scale} | eliminate_duplicates(QI)={eliminate_duplicates} | "
+          f"use_archive(NSGA-III)={use_archive}")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
-    if noise_scale != 0.02:
-        print("  NOTE: noise_scale != production default (0.02) -- measurement-noise "
+    if noise_scale != 0.0:
+        print("  NOTE: noise_scale != production default (0.0) -- measurement-noise "
               "ablation run, not a production-parameter run. See module docstring.")
+    if not eliminate_duplicates:
+        print("  NOTE: eliminate_duplicates disabled -- not the production default. "
+              "See module docstring.")
+    if use_archive:
+        print("  NOTE: use_archive enabled for NSGA-III -- not its production default. "
+              "See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -228,7 +275,8 @@ def run_comparison(
         print(f"\n>>> seed={seed}")
 
         t0 = time.time()
-        X_nsga3, nsga3_n_eval = _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed)
+        X_nsga3, nsga3_n_eval = _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
+                                                  use_archive=use_archive)
         t_nsga3 = time.time() - t0
         n_eval_nsga3.append(nsga3_n_eval)
         print(f"  NSGA-III    search done in {t_nsga3:.1f}s | front={len(X_nsga3)} | n_eval={nsga3_n_eval}")
@@ -238,6 +286,7 @@ def run_comparison(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=qinsga3_gen, seed=seed,
             repair_final_front=False, noise_scale=noise_scale,
+            eliminate_duplicates=eliminate_duplicates,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
@@ -368,12 +417,25 @@ if __name__ == "__main__":
                              "real evaluation budgets instead of matching max_gen -- see "
                              "the module docstring's evaluation-budget note. Default: "
                              "same as --gen (current behaviour, budgets differ ~2x).")
-    parser.add_argument("--noise-scale", type=float, default=0.02,
+    parser.add_argument("--noise-scale", type=float, default=0.0,
                         help="QI-NSGA-III's measurement-noise magnitude (run_qinsga3's "
-                             "own production default: 0.02). Pass 0.0 to disable it and "
-                             "test whether measurement noise, not the rotation-gate "
-                             "mechanism, drives QI-NSGA-III's HV/IGD gap -- see the "
-                             "module docstring's noise_scale note.")
+                             "own current production default: 0.0). Pass 0.02 to "
+                             "reproduce the old default -- see the module docstring's "
+                             "noise_scale note.")
+    parser.add_argument("--eliminate-duplicates", type=int, choices=[0, 1], default=0,
+                        help="QI-NSGA-III's X-space duplicate elimination, matching "
+                             "pymoo's NSGA-III eliminate_duplicates=True (NOT "
+                             "run_qinsga3's production default -- ablation-only). "
+                             "Pass 1 to enable it -- see the module docstring's "
+                             "eliminate_duplicates note.")
+    parser.add_argument("--use-archive", type=int, choices=[0, 1], default=0,
+                        help="Give NSGA-III an external non-dominated archive spanning "
+                             "the whole run, matching QI-NSGA-III's own archive "
+                             "(NOT NSGA-III's production default -- disabled by "
+                             "default). Pass 1 to test whether this symmetry changes "
+                             "the verdict -- see the module docstring's use_archive "
+                             "note.")
     args = parser.parse_args()
     run_comparison(args.instance, args.seeds, args.gen, args.pop,
-                    args.qinsga3_gen, args.noise_scale)
+                    args.qinsga3_gen, args.noise_scale,
+                    bool(args.eliminate_duplicates), bool(args.use_archive))

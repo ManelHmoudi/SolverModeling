@@ -58,6 +58,7 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from pymoo.algorithms.moo.nsga3 import ReferenceDirectionSurvival
 from pymoo.core.population import Population
+from scipy.spatial.distance import cdist
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
 
@@ -226,6 +227,133 @@ def _tournament_select_parents(G: np.ndarray, pop_size: int, rng: np.random.Gene
     coin       = rng.random(pop_size) < 0.5
 
     return np.where(prefer_a, a, np.where(prefer_b, b, np.where(coin, a, b)))
+
+
+def _generate_offspring_batch(
+    n: int,
+    X_rotated: np.ndarray,
+    G_parent: np.ndarray,
+    pop_size: int,
+    p_cross: float,
+    sbx_op,
+    pm_op,
+    problem,
+    xl: np.ndarray,
+    xu: np.ndarray,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Generate n fresh offspring X-vectors via CV-based tournament selection
+    + SBX + PM (the same per-pair crossover-probability masking the main
+    generation loop's SBX/PM block uses). Factored out so both the normal
+    per-generation batch (n=pop_size) and _eliminate_duplicates_refill's
+    retries (n=shortfall) share one code path.
+
+    n_pairs is capped at pop_size // 2 -- _tournament_select_parents only
+    ever returns pop_size winners (one full population's worth), so more
+    than pop_size // 2 pairs can't be drawn from a single call. This matters
+    when pop_size itself is odd (bumped up to an odd n_ref_dirs on a small
+    instance/pop combination, e.g. 165 Das-Dennis directions for 4
+    objectives) -- one individual is then left over each round, topped up
+    via a small recursive call rather than silently dropped.
+    """
+    n_pairs = min(-(-n // 2), pop_size // 2)  # ceil division, capped
+    winners = _tournament_select_parents(G_parent, pop_size, rng)
+    pairs   = winners[: n_pairs * 2].reshape(n_pairs, 2)
+    X_pairs = np.transpose(X_rotated[pairs], (1, 0, 2))  # (2, n_pairs, n_var)
+
+    if p_cross > 0.0:
+        Q     = sbx_op._do(problem, X_pairs, random_state=rng)
+        cross = rng.random(n_pairs) < p_cross
+        Q[:, ~cross] = X_pairs[:, ~cross]
+    else:
+        Q = X_pairs
+
+    batch          = np.empty((n_pairs * 2, X_rotated.shape[1]))
+    batch[0::2]    = Q[0]
+    batch[1::2]    = Q[1]
+    batch          = np.clip(pm_op._do(problem, batch, random_state=rng), xl, xu)
+
+    if len(batch) < n:
+        extra = _generate_offspring_batch(
+            n - len(batch), X_rotated, G_parent, pop_size, p_cross,
+            sbx_op, pm_op, problem, xl, xu, rng,
+        )
+        batch = np.vstack([batch, extra])
+    return batch[:n]
+
+
+def _eliminate_duplicates_refill(
+    X_offspring: np.ndarray,
+    X_parent: np.ndarray,
+    X_rotated: np.ndarray,
+    G_parent: np.ndarray,
+    pop_size: int,
+    p_cross: float,
+    sbx_op,
+    pm_op,
+    problem,
+    xl: np.ndarray,
+    xu: np.ndarray,
+    rng: np.random.Generator,
+    epsilon: float = 1e-16,
+    n_max_iterations: int = 100,
+) -> np.ndarray:
+    """Filter X-space duplicates out of a freshly generated offspring batch
+    and refill the shortfall with fresh candidates, retrying up to
+    n_max_iterations times -- matches pymoo's own NSGA-III default
+    (eliminate_duplicates=True, pymoo.core.duplicate.DefaultDuplicateElimination,
+    epsilon=1e-16 on pairwise Euclidean distance in X-space; pymoo.core.mating.
+    Mating.do()'s retry loop, n_max_iterations=100). A fairness audit found
+    QI-NSGA-III's hand-rolled offspring generation (SBX/PM called via _do()
+    directly, bypassing pymoo's own Mating wrapper -- see the module
+    docstring) had no equivalent check anywhere in the main generational
+    loop: only the separate long-term archive (_archive_update) filtered
+    duplicates. NSGA-III never evaluates an offspring identical to a parent
+    or to another offspring produced the same generation, retrying mating
+    for the shortfall instead; QI-NSGA-III previously could.
+
+    Checked immediately after crossover+mutation (the same point pymoo's own
+    Mating.do() checks at), before QuantumPopulation.measure()'s theta
+    round-trip, so this is the closest analogue to pymoo's raw X-space check.
+    """
+    n_needed   = len(X_offspring)
+    accepted   = np.empty((0, X_offspring.shape[1]))
+    candidates = X_offspring
+
+    for _ in range(n_max_iterations):
+        keep = np.ones(len(candidates), dtype=bool)
+
+        if len(candidates) > 1:
+            D = cdist(candidates, candidates)
+            D[np.triu_indices(len(candidates))] = np.inf
+            keep &= ~np.any(D <= epsilon, axis=1)
+
+        if keep.any():
+            idx = np.where(keep)[0]
+            not_dup_parent = ~np.any(cdist(candidates[idx], X_parent) <= epsilon, axis=1)
+            keep[idx] = not_dup_parent
+
+        if keep.any() and len(accepted) > 0:
+            idx = np.where(keep)[0]
+            not_dup_accepted = ~np.any(cdist(candidates[idx], accepted) <= epsilon, axis=1)
+            keep[idx] = not_dup_accepted
+
+        good     = candidates[keep]
+        accepted = np.vstack([accepted, good]) if len(accepted) else good
+
+        if len(accepted) >= n_needed:
+            return accepted[:n_needed]
+
+        candidates = _generate_offspring_batch(
+            n_needed - len(accepted), X_rotated, G_parent, pop_size, p_cross,
+            sbx_op, pm_op, problem, xl, xu, rng,
+        )
+
+    # n_max_iterations exhausted -- matches pymoo's Mating.do(): stop
+    # retrying and pad with whatever the last batch produced, duplicates
+    # included, rather than loop forever.
+    shortfall = n_needed - len(accepted)
+    return np.vstack([accepted, candidates[:shortfall]])
 
 
 def _compute_nadir(F: np.ndarray, ideal: np.ndarray) -> np.ndarray:
@@ -1127,6 +1255,7 @@ def run_qinsga3(
     use_chaotic_rotation: bool = False,
     use_route_repair: bool = False,
     repair_final_front: bool = True,
+    eliminate_duplicates: bool = False,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     callback          = None,
@@ -1251,6 +1380,17 @@ def run_qinsga3(
     calls them together, but do not combine them. Same Baldwinian
     consequence as use_route_repair: pareto_X is unchanged, only pareto_F/
     pareto_G are repaired.
+
+    eliminate_duplicates (default False -- NOT the production default,
+    ablation-only) matches pymoo's own NSGA-III default
+    (eliminate_duplicates=True): reject any offspring that exactly
+    duplicates (X-space, epsilon=1e-16) a parent or another offspring from
+    the same generation, and regenerate it, up to 100 retries -- see
+    _eliminate_duplicates_refill's docstring for the mechanism this
+    reproduces. Tested at the project's own 30-seed gold-standard protocol
+    (shared ideal/nadir, Mann-Whitney U): no significant change on any of
+    HV/GD/IGD/Spacing (all well within one seed-to-seed standard deviation).
+    Set eliminate_duplicates=True to enable it for ablation comparisons.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1430,31 +1570,23 @@ def run_qinsga3(
             X_rotated = qpop.measure()
 
             # --- Variation step: SBX + PM in X-SPACE (matches NSGA-III) -----
-            if p_cross > 0.0:
-                # CV-based tournament (matches pymoo's NSGA-III default
-                # mating selection, see _tournament_select_parents's
-                # docstring) -- winners paired consecutively into pop_size//2
-                # mating pairs, same shape the old pure-random permutation
-                # pairing produced.
-                winners = _tournament_select_parents(G_parent, pop_size, rng)
-                n_pairs = pop_size // 2
-                pairs   = winners[: n_pairs * 2].reshape(n_pairs, 2)
-                X_pairs = np.transpose(X_rotated[pairs], (1, 0, 2))  # (2, n_matings, n_var)
-                Q       = sbx_op._do(problem, X_pairs, random_state=rng)
-                # Per-pair crossover probability p_cross, applied explicitly:
-                # sbx_op is called via _do() directly (not pymoo's own
-                # Crossover.do() wrapper, core/crossover.py), so self.prob
-                # (set to p_cross at construction) is never consulted --
-                # _do() always produces crossed offspring for every pair.
-                # do()'s own semantics (compute Q for all pairs, then keep it
-                # only for pairs selected by rng.random(n) < prob, copying
-                # the parents through unchanged otherwise) are reproduced
-                # here since do() itself is bypassed.
-                cross            = rng.random(n_pairs) < p_cross
-                Q[:, ~cross]     = X_pairs[:, ~cross]
-                X_rotated[pairs[:, 0]] = Q[0]
-                X_rotated[pairs[:, 1]] = Q[1]
-            X_varied = np.clip(pm_op._do(problem, X_rotated, random_state=rng), xl, xu)
+            # CV-based tournament (matches pymoo's NSGA-III default mating
+            # selection, see _tournament_select_parents's docstring) + SBX +
+            # PM, factored into _generate_offspring_batch so retries below
+            # can reuse the exact same generation logic for a shortfall.
+            X_varied = _generate_offspring_batch(
+                pop_size, X_rotated, G_parent, pop_size, p_cross,
+                sbx_op, pm_op, problem, xl, xu, rng,
+            )
+
+            # --- Duplicate elimination (matches pymoo's NSGA-III default,
+            # eliminate_duplicates=True) -- see run_qinsga3's own
+            # eliminate_duplicates parameter docstring.
+            if eliminate_duplicates:
+                X_varied = _eliminate_duplicates_refill(
+                    X_varied, X_parent, X_rotated, G_parent, pop_size, p_cross,
+                    sbx_op, pm_op, problem, xl, xu, rng,
+                )
 
             theta_offspring = _encode_theta(X_varied, xl, xu)
             qpop.theta      = theta_offspring

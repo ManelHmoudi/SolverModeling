@@ -13,6 +13,7 @@ from Solvers.QINSGA3.algorithm import (
     _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
     _crowding_saturation_stats, _build_g_constraints,
     _evaluate_with_repair, _repair_pareto_front,
+    _tournament_select_parents, _generate_offspring_batch, _eliminate_duplicates_refill,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -708,3 +709,123 @@ def test_repair_pareto_front_matches_per_chromosome_evaluate_with_repair():
         assert np.allclose(F_arr[idx], expected_F)
         assert (G_arr[idx] == expected_G).all()
     assert np.array_equal(pareto_X, pareto_X_snapshot)   # Baldwinian: pareto_X untouched
+
+
+# ── _generate_offspring_batch / _eliminate_duplicates_refill ───────────────
+# Duplicate elimination matching pymoo's NSGA-III default (eliminate_
+# duplicates=True): a fairness audit found QI-NSGA-III's hand-rolled
+# offspring generation had no equivalent check anywhere in the main
+# generational loop -- see _eliminate_duplicates_refill's own docstring.
+
+def _dup_test_fixture():
+    """Real 3-client instance + real pymoo SBX/PM ops -- the same operators
+    run_qinsga3's own generation loop uses, at production eta/prob values."""
+    from models.parametres import load_instance
+    from Solvers.NSGA3.problem import IRPProblem
+    from pymoo.operators.crossover.sbx import SBX
+    from pymoo.operators.mutation.pm import PM
+
+    project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sets_, params_ = load_instance(os.path.join(project_dir, "data", "instance_3_clients.json"))
+    problem = IRPProblem(sets_, params_)
+    sbx_op  = SBX(prob=0.9, eta=20.0)
+    pm_op   = PM(prob_var=1.0 / problem.n_var, eta=20.0)
+    return problem, sbx_op, pm_op
+
+
+def test_generate_offspring_batch_returns_exactly_n_individuals_for_various_n():
+    problem, sbx_op, pm_op = _dup_test_fixture()
+    pop_size = 20
+    rng      = np.random.default_rng(0)
+    X_rotated = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    G_parent  = np.zeros((pop_size, 4))   # all feasible -> tournament is a coin flip
+
+    for n in (1, 2, 3, 7, pop_size):
+        batch = _generate_offspring_batch(
+            n, X_rotated, G_parent, pop_size, 0.9, sbx_op, pm_op, problem,
+            problem.xl, problem.xu, rng,
+        )
+        assert batch.shape == (n, problem.n_var)
+
+
+def test_generate_offspring_batch_handles_odd_pop_size_without_dropping_individual():
+    """Regression test: pop_size can be bumped to an odd n_ref_dirs count
+    (e.g. 165 Das-Dennis directions for 4 objectives) when the requested
+    pop_size is smaller. n_pairs*2 must never exceed the pop_size winners
+    _tournament_select_parents actually returns -- this used to raise
+    ValueError: cannot reshape array of size N into shape (n_pairs, 2)."""
+    problem, sbx_op, pm_op = _dup_test_fixture()
+    pop_size = 7   # odd
+    rng      = np.random.default_rng(0)
+    X_rotated = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    G_parent  = np.zeros((pop_size, 4))
+
+    batch = _generate_offspring_batch(
+        pop_size, X_rotated, G_parent, pop_size, 0.9, sbx_op, pm_op, problem,
+        problem.xl, problem.xu, rng,
+    )
+    assert batch.shape == (pop_size, problem.n_var)
+
+
+def test_eliminate_duplicates_refill_removes_self_duplicate_within_batch():
+    problem, sbx_op, pm_op = _dup_test_fixture()
+    pop_size = 10
+    rng      = np.random.default_rng(1)
+    X_parent  = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_rotated = X_parent.copy()
+    G_parent  = np.zeros((pop_size, 4))
+
+    X_offspring = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_offspring[1] = X_offspring[0]   # force an exact within-batch duplicate
+
+    result = _eliminate_duplicates_refill(
+        X_offspring, X_parent, X_rotated, G_parent, pop_size, 0.9,
+        sbx_op, pm_op, problem, problem.xl, problem.xu, rng,
+    )
+
+    assert result.shape == X_offspring.shape
+    D = np.linalg.norm(result[:, None, :] - result[None, :, :], axis=-1)
+    np.fill_diagonal(D, np.inf)
+    assert (D > 1e-16).all(), "duplicate survived elimination"
+
+
+def test_eliminate_duplicates_refill_removes_duplicate_against_parent():
+    problem, sbx_op, pm_op = _dup_test_fixture()
+    pop_size = 10
+    rng      = np.random.default_rng(2)
+    X_parent  = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_rotated = X_parent.copy()
+    G_parent  = np.zeros((pop_size, 4))
+
+    X_offspring    = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_offspring[3] = X_parent[5]   # force an exact duplicate of a parent
+
+    result = _eliminate_duplicates_refill(
+        X_offspring, X_parent, X_rotated, G_parent, pop_size, 0.9,
+        sbx_op, pm_op, problem, problem.xl, problem.xu, rng,
+    )
+
+    assert result.shape == X_offspring.shape
+    D = np.linalg.norm(result[:, None, :] - X_parent[None, :, :], axis=-1)
+    assert (D > 1e-16).all(), "offspring duplicating a parent survived elimination"
+
+
+def test_eliminate_duplicates_refill_no_duplicates_is_a_noop():
+    """When the batch already has no duplicates, the function must return
+    it unchanged (same values, not just same shape) -- no wasted retries."""
+    problem, sbx_op, pm_op = _dup_test_fixture()
+    pop_size = 10
+    rng      = np.random.default_rng(3)
+    X_parent  = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_rotated = X_parent.copy()
+    G_parent  = np.zeros((pop_size, 4))
+
+    X_offspring = rng.uniform(problem.xl, problem.xu, (pop_size, problem.n_var))
+    X_offspring_snapshot = X_offspring.copy()
+
+    result = _eliminate_duplicates_refill(
+        X_offspring, X_parent, X_rotated, G_parent, pop_size, 0.9,
+        sbx_op, pm_op, problem, problem.xl, problem.xu, rng,
+    )
+
+    assert np.array_equal(result, X_offspring_snapshot)
