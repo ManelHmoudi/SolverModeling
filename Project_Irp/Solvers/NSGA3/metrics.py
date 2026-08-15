@@ -4,6 +4,7 @@ import numpy as np
 from pymoo.indicators.hv  import HV
 from pymoo.indicators.igd import IGD
 from pymoo.indicators.gd  import GD
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.util.ref_dirs  import get_reference_directions
 
 # Denser grid than the optimizer's N_PARTITIONS=8 (165 dirs) — this gives 364 reference
@@ -24,6 +25,31 @@ def _reference_set(n_obj: int, n_partitions: int = _METRIC_N_PARTITIONS) -> np.n
     return get_reference_directions("das-dennis", n_obj, n_partitions=n_partitions)
 
 
+def build_empirical_reference_front(F_pool: np.ndarray) -> np.ndarray:
+    """Build PF_ref = ND(union of every solution across every algorithm/run
+    supplied), for use as the reference front in GD/IGD -- an empirical
+    approximation of the true Pareto front, built from every solution
+    actually produced, rather than a geometric abstraction.
+
+    Das-Dennis reference DIRECTIONS (see _reference_set) are vectors on the
+    normalised simplex, not necessarily feasible MPIRP solutions -- GD/IGD
+    computed against them partly measures proximity to that geometry rather
+    than to the real problem's Pareto front. This function instead follows
+    the standard workaround for real-world problems with no known analytical
+    front (unlike DTLZ/MaF's own igd_metric.py, which HAS one and uses it
+    directly): merge every feasible solution from every compared
+    configuration and every run, deduplicate, and keep only the
+    non-dominated survivors.
+
+    F_pool: stacked objective matrix, shape (total_solutions, n_obj), from
+    every run of every algorithm/config being compared in one campaign.
+    """
+    F_arr = np.asarray(F_pool, dtype=float)
+    F_unique = np.unique(F_arr, axis=0)
+    nd_idx = NonDominatedSorting().do(F_unique, only_non_dominated_front=True)
+    return F_unique[nd_idx]
+
+
 def _spacing(F_norm: np.ndarray) -> float:
     n = len(F_norm)
     if n < 2:
@@ -42,6 +68,7 @@ def compute_pareto_metrics(
     F: np.ndarray,
     global_ideal: np.ndarray | None = None,
     global_nadir: np.ndarray | None = None,
+    reference_front: np.ndarray | None = None,
 ) -> dict:
     """Compute HV, GD, IGD, Spacing for a Pareto front F.
 
@@ -52,6 +79,17 @@ def compute_pareto_metrics(
     the ideal-to-nadir volume dominated; see ref_point normalisation below).
     The ideal/nadir reported in the dict always reflect the local run range
     (for informational display in the report).
+
+    reference_front (default None): the point set GD/IGD measure distance
+    against. When None, falls back to a Das-Dennis reference-DIRECTION grid
+    (see _reference_set) -- a geometric abstraction, not necessarily
+    feasible MPIRP solutions, so GD/IGD partly measure proximity to that
+    grid's own geometry rather than to the real problem's Pareto front. Pass
+    build_empirical_reference_front(...)'s output here instead whenever a
+    pooled multi-run/multi-algorithm front is available (every fairness
+    campaign and production report build one) -- normalised with the SAME
+    global_ideal/global_nadir as F itself, so distances are measured in the
+    same normalised space.
     """
     if F is None or len(F) == 0:
         return {"HV": None, "GD": None, "IGD": None, "Spacing": None,
@@ -67,12 +105,18 @@ def compute_pareto_metrics(
         rng[rng < 1e-10] = 1.0
         F_norm = (F_arr - g_ideal) / rng
     else:
-        F_norm = (F_arr - local_ideal) / np.where(
+        g_ideal, rng = local_ideal, np.where(
             local_nadir - local_ideal > 1e-10, local_nadir - local_ideal, 1.0
         )
+        F_norm = (F_arr - g_ideal) / rng
 
-    n_obj   = F_norm.shape[1]
-    ref_set = _reference_set(n_obj, n_partitions=_METRIC_N_PARTITIONS)
+    n_obj = F_norm.shape[1]
+    if reference_front is not None and len(reference_front) > 0:
+        # Same normalisation as F_norm (same ideal/rng), so GD/IGD distances
+        # are measured in the same normalised space on both sides.
+        ref_set = (np.asarray(reference_front, dtype=float) - g_ideal) / rng
+    else:
+        ref_set = _reference_set(n_obj, n_partitions=_METRIC_N_PARTITIONS)
 
     # ref_point sits 10% beyond the nadir (standard HV margin), so the raw
     # pymoo HV is bounded by ref_point.prod() = 1.1**n_obj (~1.46 for 4

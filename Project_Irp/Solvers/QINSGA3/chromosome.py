@@ -27,6 +27,11 @@ import numpy as np
 
 _ROTATION_TYPES = ("tanh", "tanh_soft", "linear")
 
+# Floor on |sin(2*theta)| used by compensate_dx_dtheta (see rotate()) --
+# caps the maximum step-size compensation at 1/_DX_DTHETA_FLOOR = 10x,
+# instead of letting it diverge to infinity exactly at theta=0/pi/2.
+_DX_DTHETA_FLOOR = 0.1
+
 
 class QuantumPopulation:
     """Population of quantum chromosomes stored as angle matrix θ (pop_size, n_genes).
@@ -55,6 +60,7 @@ class QuantumPopulation:
         rng:           np.random.Generator | None = None,
         rotation_type: str = "tanh",
         noise_scale:   float = 0.0,
+        compensate_dx_dtheta: bool = False,
     ) -> None:
         if rotation_type not in _ROTATION_TYPES:
             raise ValueError(f"rotation_type must be one of {_ROTATION_TYPES}, got '{rotation_type}'")
@@ -65,6 +71,7 @@ class QuantumPopulation:
         self.rng           = rng if rng is not None else np.random.default_rng()
         self.rotation_type = rotation_type
         self.noise_scale   = noise_scale
+        self.compensate_dx_dtheta = compensate_dx_dtheta
 
         # Maximum superposition θ = π/4  [Han & Kim 2002, §II-A]
         # ±0.05 rad perturbation breaks symmetry so the first measurement
@@ -130,8 +137,28 @@ class QuantumPopulation:
             Δθ = α × diff / (π/2)
             Strictly proportional; step is zero when already at the guide.
             Literature baseline — slowest but most stable near convergence.
+
+        compensate_dx_dtheta (set at construction, default False --
+        ablation-only, not adopted): the θ→X measurement x = xl + cos²(θ)
+        (xu−xl) has dx/dθ = −(xu−xl)·sin(2θ), which vanishes at θ=0/π/2 and
+        peaks at θ=π/4 (see the module docstring) — a fixed angular step α
+        therefore produces a real X-space move that shrinks toward zero
+        exactly where individuals converge (near a variable's bound), while
+        NSGA-III's SBX operates directly and uniformly in X-space with no
+        such falloff. When enabled, α is scaled per-gene by
+        1/clip(|sin(2θ)|, _DX_DTHETA_FLOOR, 1.0) before the rotation formula
+        above is applied — 1x at θ=π/4 (identical to the uncompensated
+        rotation there), up to 10x (1/_DX_DTHETA_FLOOR) near θ=0/π/2 instead
+        of collapsing to ~0x. Floored rather than left unbounded so the step
+        cannot diverge exactly at the boundary. Tests whether this closes
+        part of the residual HV/IGD gap vs NSGA-III -- see
+        sensitivity/compare_2opt_fairness.py's own --compensate-dx-dtheta
+        flag for the comparison campaign.
         """
         diff = guides_theta - self.theta
+        if self.compensate_dx_dtheta:
+            sin2theta = np.abs(np.sin(2.0 * self.theta))
+            alpha = alpha / np.clip(sin2theta, _DX_DTHETA_FLOOR, 1.0)
         if self.rotation_type == "tanh":
             self.theta += alpha * np.tanh(diff / (np.pi / 8.0))
         elif self.rotation_type == "tanh_soft":

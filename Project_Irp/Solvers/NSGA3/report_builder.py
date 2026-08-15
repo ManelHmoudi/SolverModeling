@@ -8,7 +8,7 @@ import numpy as np
 
 from .decoder   import decode_chromosome, build_routes
 from .evaluator import compute_f1, compute_f2, compute_f3, compute_f4_detail
-from .metrics   import compute_pareto_metrics
+from .metrics   import compute_pareto_metrics, build_empirical_reference_front
 from .report    import compute_node_positions
 
 
@@ -38,7 +38,10 @@ def _build_delivery_rows(route_result, sets_, params_):
     return deliveries
 
 
-def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False):
+def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
+                      use_or_opt: bool = False, use_single_relocation: bool = False,
+                      use_two_opt: bool = True, use_inter_route_relocate: bool = False,
+                      use_route_swap: bool = False):
     """Evaluate Pareto chromosomes and return the run data dict.
 
     Called after a fresh solver run and on every report refresh
@@ -48,6 +51,29 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False):
     is unaffected, only the fitness/routes reported) before objectives
     are computed -- shared by both NSGA3 and QINSGA3's report pipelines so
     a repair_final_front flag means the same thing for either algorithm.
+
+    use_or_opt (default False, only meaningful when repair=True): forwarded
+    to _repair_route_result -- see its own use_or_opt docstring. Shared by
+    both algorithms' report pipelines for the same reason repair itself is,
+    so an Or-opt fairness comparison between NSGA-III and QI-NSGA-III (see
+    sensitivity/compare_2opt_fairness.py's own --use-or-opt flag) applies
+    identically to both sides.
+
+    use_single_relocation (default False, only meaningful when repair=True):
+    forwarded to _repair_route_result the same way -- see its own
+    use_single_relocation docstring.
+
+    use_two_opt (default True, only meaningful when repair=True): forwarded
+    to _repair_route_result the same way -- see its own use_two_opt
+    docstring.
+
+    use_inter_route_relocate (default False, only meaningful when
+    repair=True): forwarded to _repair_route_result the same way -- see
+    its own use_inter_route_relocate docstring.
+
+    use_route_swap (default False, only meaningful when repair=True):
+    forwarded to _repair_route_result the same way -- see its own
+    use_route_swap docstring.
     """
     solutions = []
     for i, chromosome in enumerate(pareto_X):
@@ -55,7 +81,11 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False):
         route_result = build_routes(quantities, sets_, params_, priorities)
         if repair:
             from Solvers.QINSGA3.repair import _repair_route_result
-            route_result = _repair_route_result(route_result, sets_, params_)
+            route_result = _repair_route_result(route_result, sets_, params_, use_or_opt=use_or_opt,
+                                                 use_single_relocation=use_single_relocation,
+                                                 use_two_opt=use_two_opt,
+                                                 use_inter_route_relocate=use_inter_route_relocate,
+                                                 use_route_swap=use_route_swap)
 
         f1         = compute_f1(route_result, sets_, params_)
         f2         = compute_f2(route_result, sets_, params_)
@@ -145,13 +175,17 @@ def _build_report_data(runs_data):
     ])
     g_ideal = all_F.min(axis=0)
     g_nadir = all_F.max(axis=0)
+    # PF_ref = ND(union of every solution across every run) -- empirical
+    # reference front for GD/IGD instead of a Das-Dennis reference-direction
+    # grid. See Solvers/NSGA3/metrics.py's build_empirical_reference_front.
+    pf_ref = build_empirical_reference_front(all_F)
 
     for r in runs_data:
         F_run = np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
                            s["objectives"]["f3"], s["objectives"]["f4"]]
                           for s in r["solutions"]])
         old_q = r["meta"]["quality"]
-        new_q = compute_pareto_metrics(F_run, g_ideal, g_nadir)
+        new_q = compute_pareto_metrics(F_run, g_ideal, g_nadir, reference_front=pf_ref)
         new_q["ideal"] = old_q.get("ideal")
         new_q["nadir"] = old_q.get("nadir")
         r["meta"]["quality"] = new_q

@@ -1,0 +1,253 @@
+============================================================================================
+  2-OPT FAIRNESS CAMPAIGN -- NSGA-III vs QI-NSGA-III, 4 configurations
+============================================================================================
+  Instance : 100 clients | pop=200 | gen(NSGA-III)=300 | gen(QI-NSGA-III)=300 | noise_scale(QI)=0.0 | eliminate_duplicates(QI)=False | use_archive(NSGA-III)=False | compensate_dx_dtheta(QI)=False | use_or_opt(both)=True | use_single_relocation(both)=False | use_two_opt(both)=False
+  NOTE: use_or_opt enabled for BOTH algorithms' 'avec 2-opt' configs -- not the production default. See module docstring.
+  NOTE: use_two_opt DISABLED for BOTH algorithms' 'avec 2-opt' configs -- isolates use_or_opt/use_single_relocation as the only neighbourhood searched, not the production default. See module docstring.
+  Seeds    : [42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123, 1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351]
+============================================================================================
+
+>>> seed=42
+  NSGA-III    search done in 463.4s | front=20 | n_eval=60000
+  QI-NSGA-III search done in 210.5s | front=87 | n_eval=120200
+    NSGA-III sans 2-opt      front=20  decode+repair=0.13s
+    NSGA-III avec 2-opt      front=15  decode+repair=3.39s
+    QI-NSGA-III sans 2-opt   front=87  decode+repair=0.57s
+    QI-NSGA-III avec 2-opt   front=50  decode+repair=11.91s
+
+>>> seed=137
+  NSGA-III    search done in 375.1s | front=16 | n_eval=60000
+  QI-NSGA-III search done in 208.8s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=16  decode+repair=0.11s
+    NSGA-III avec 2-opt      front=14  decode+repair=2.98s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.27s
+    QI-NSGA-III avec 2-opt   front=76  decode+repair=31.40s
+
+>>> seed=271
+  NSGA-III    search done in 378.5s | front=25 | n_eval=60000
+  QI-NSGA-III search done in 209.0s | front=181 | n_eval=120200
+    NSGA-III sans 2-opt      front=25  decode+repair=0.17s
+    NSGA-III avec 2-opt      front=21  decode+repair=4.21s
+    QI-NSGA-III sans 2-opt   front=181  decode+repair=1.17s
+    QI-NSGA-III avec 2-opt   front=92  decode+repair=26.40s
+
+>>> seed=491
+  NSGA-III    search done in 377.5s | front=20 | n_eval=60000
+  QI-NSGA-III search done in 209.2s | front=134 | n_eval=120200
+    NSGA-III sans 2-opt      front=20  decode+repair=0.14s
+    NSGA-III avec 2-opt      front=20  decode+repair=2.86s
+    QI-NSGA-III sans 2-opt   front=134  decode+repair=0.97s
+    QI-NSGA-III avec 2-opt   front=79  decode+repair=21.40s
+
+>>> seed=613
+  NSGA-III    search done in 382.5s | front=19 | n_eval=60000
+  QI-NSGA-III search done in 209.8s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=19  decode+repair=0.13s
+    NSGA-III avec 2-opt      front=16  decode+repair=3.01s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.24s
+    QI-NSGA-III avec 2-opt   front=140  decode+repair=25.94s
+
+>>> seed=733
+  NSGA-III    search done in 383.8s | front=24 | n_eval=60000
+  QI-NSGA-III search done in 208.2s | front=70 | n_eval=120200
+    NSGA-III sans 2-opt      front=24  decode+repair=0.18s
+    NSGA-III avec 2-opt      front=24  decode+repair=3.81s
+    QI-NSGA-III sans 2-opt   front=70  decode+repair=0.42s
+    QI-NSGA-III avec 2-opt   front=48  decode+repair=8.92s
+
+>>> seed=857
+  NSGA-III    search done in 380.0s | front=13 | n_eval=60000
+  QI-NSGA-III search done in 209.7s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=13  decode+repair=0.09s
+    NSGA-III avec 2-opt      front=10  decode+repair=1.95s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.26s
+    QI-NSGA-III avec 2-opt   front=55  decode+repair=29.23s
+
+>>> seed=977
+  NSGA-III    search done in 378.6s | front=18 | n_eval=60000
+  QI-NSGA-III search done in 208.0s | front=179 | n_eval=120200
+    NSGA-III sans 2-opt      front=18  decode+repair=0.12s
+    NSGA-III avec 2-opt      front=15  decode+repair=3.52s
+    QI-NSGA-III sans 2-opt   front=179  decode+repair=1.22s
+    QI-NSGA-III avec 2-opt   front=124  decode+repair=24.37s
+
+>>> seed=1009
+  NSGA-III    search done in 381.8s | front=24 | n_eval=60000
+  QI-NSGA-III search done in 208.2s | front=83 | n_eval=120200
+    NSGA-III sans 2-opt      front=24  decode+repair=0.19s
+    NSGA-III avec 2-opt      front=23  decode+repair=4.26s
+    QI-NSGA-III sans 2-opt   front=83  decode+repair=0.51s
+    QI-NSGA-III avec 2-opt   front=37  decode+repair=12.17s
+
+>>> seed=1123
+  NSGA-III    search done in 380.7s | front=9 | n_eval=60000
+  QI-NSGA-III search done in 208.7s | front=80 | n_eval=120200
+    NSGA-III sans 2-opt      front=9  decode+repair=0.07s
+    NSGA-III avec 2-opt      front=8  decode+repair=1.89s
+    QI-NSGA-III sans 2-opt   front=80  decode+repair=0.53s
+    QI-NSGA-III avec 2-opt   front=26  decode+repair=10.34s
+
+>>> seed=1249
+  NSGA-III    search done in 379.6s | front=17 | n_eval=60000
+  QI-NSGA-III search done in 210.6s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=17  decode+repair=0.12s
+    NSGA-III avec 2-opt      front=16  decode+repair=2.72s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.23s
+    QI-NSGA-III avec 2-opt   front=79  decode+repair=29.11s
+
+>>> seed=1373
+  NSGA-III    search done in 377.9s | front=16 | n_eval=60000
+  QI-NSGA-III search done in 209.5s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=16  decode+repair=0.11s
+    NSGA-III avec 2-opt      front=16  decode+repair=2.41s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.30s
+    QI-NSGA-III avec 2-opt   front=123  decode+repair=26.91s
+
+>>> seed=1499
+  NSGA-III    search done in 380.1s | front=15 | n_eval=60000
+  QI-NSGA-III search done in 210.8s | front=163 | n_eval=120200
+    NSGA-III sans 2-opt      front=15  decode+repair=0.11s
+    NSGA-III avec 2-opt      front=10  decode+repair=2.44s
+    QI-NSGA-III sans 2-opt   front=163  decode+repair=1.06s
+    QI-NSGA-III avec 2-opt   front=105  decode+repair=24.65s
+
+>>> seed=1609
+  NSGA-III    search done in 379.0s | front=21 | n_eval=60000
+  QI-NSGA-III search done in 209.8s | front=136 | n_eval=120200
+    NSGA-III sans 2-opt      front=21  decode+repair=0.14s
+    NSGA-III avec 2-opt      front=19  decode+repair=3.61s
+    QI-NSGA-III sans 2-opt   front=136  decode+repair=0.90s
+    QI-NSGA-III avec 2-opt   front=37  decode+repair=17.29s
+
+>>> seed=1733
+  NSGA-III    search done in 384.9s | front=26 | n_eval=60000
+  QI-NSGA-III search done in 210.5s | front=185 | n_eval=120200
+    NSGA-III sans 2-opt      front=26  decode+repair=0.19s
+    NSGA-III avec 2-opt      front=19  decode+repair=5.24s
+    QI-NSGA-III sans 2-opt   front=185  decode+repair=1.11s
+    QI-NSGA-III avec 2-opt   front=82  decode+repair=28.77s
+
+>>> seed=1871
+  NSGA-III    search done in 384.1s | front=19 | n_eval=60000
+  QI-NSGA-III search done in 210.2s | front=144 | n_eval=120200
+    NSGA-III sans 2-opt      front=19  decode+repair=0.13s
+    NSGA-III avec 2-opt      front=19  decode+repair=3.61s
+    QI-NSGA-III sans 2-opt   front=144  decode+repair=0.94s
+    QI-NSGA-III avec 2-opt   front=108  decode+repair=17.07s
+
+>>> seed=1997
+  NSGA-III    search done in 384.9s | front=18 | n_eval=60000
+  QI-NSGA-III search done in 209.6s | front=134 | n_eval=120200
+    NSGA-III sans 2-opt      front=18  decode+repair=0.13s
+    NSGA-III avec 2-opt      front=13  decode+repair=3.11s
+    QI-NSGA-III sans 2-opt   front=134  decode+repair=0.83s
+    QI-NSGA-III avec 2-opt   front=57  decode+repair=19.57s
+
+>>> seed=2113
+  NSGA-III    search done in 383.2s | front=14 | n_eval=60000
+  QI-NSGA-III search done in 210.4s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=14  decode+repair=0.10s
+    NSGA-III avec 2-opt      front=6  decode+repair=2.32s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.24s
+    QI-NSGA-III avec 2-opt   front=139  decode+repair=27.97s
+
+>>> seed=2237
+  NSGA-III    search done in 386.1s | front=23 | n_eval=60000
+  QI-NSGA-III search done in 209.2s | front=200 | n_eval=120200
+    NSGA-III sans 2-opt      front=23  decode+repair=0.16s
+    NSGA-III avec 2-opt      front=22  decode+repair=3.51s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.26s
+    QI-NSGA-III avec 2-opt   front=97  decode+repair=30.10s
+
+>>> seed=2351
+  NSGA-III    search done in 383.2s | front=14 | n_eval=60000
+  QI-NSGA-III search done in 208.9s | front=127 | n_eval=120200
+    NSGA-III sans 2-opt      front=14  decode+repair=0.10s
+    NSGA-III avec 2-opt      front=10  decode+repair=2.17s
+    QI-NSGA-III sans 2-opt   front=127  decode+repair=0.77s
+    QI-NSGA-III avec 2-opt   front=82  decode+repair=17.50s
+
+Ideal global partage : [15829.0419   884.8795    71.72    4550.8767]
+Nadir global partage  : [20571.9836  1086.1498    88.6567  4663.8904]
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage entre les 4 configurations)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III sans 2-opt      mean=0.440617  std=0.179889
+    NSGA-III avec 2-opt      mean=0.439230  std=0.175656
+    QI-NSGA-III sans 2-opt   mean=0.379399  std=0.075363
+    QI-NSGA-III avec 2-opt   mean=0.366399  std=0.086280
+
+  GD (v)
+    NSGA-III sans 2-opt      mean=0.219065  std=0.123392
+    NSGA-III avec 2-opt      mean=0.219376  std=0.125059
+    QI-NSGA-III sans 2-opt   mean=0.184375  std=0.074374
+    QI-NSGA-III avec 2-opt   mean=0.194854  std=0.080066
+
+  IGD (v)
+    NSGA-III sans 2-opt      mean=0.394624  std=0.075409
+    NSGA-III avec 2-opt      mean=0.403159  std=0.078349
+    QI-NSGA-III sans 2-opt   mean=0.423005  std=0.041548
+    QI-NSGA-III avec 2-opt   mean=0.430281  std=0.040339
+
+  Spacing (v)
+    NSGA-III sans 2-opt      mean=0.048008  std=0.032737
+    NSGA-III avec 2-opt      mean=0.049109  std=0.033431
+    QI-NSGA-III sans 2-opt   mean=0.013628  std=0.005195
+    QI-NSGA-III avec 2-opt   mean=0.018255  std=0.007638
+
+--------------------------------------------------------------------------------------------
+  Effet 2-opt (Wilcoxon apparie -- meme front initial, meme seed)
+--------------------------------------------------------------------------------------------
+
+  NSGA-III
+    HV       W=104.0  p=0.985435  -> non significatif
+    GD       W=96.0  p=0.756166  -> non significatif
+    IGD      W=53.0  p=0.053169  -> non significatif
+    Spacing  W=102.0  p=0.927279  -> non significatif
+
+  QI-NSGA-III
+    HV       W=50.0  p=0.039989  -> significatif (p<0.05)
+    GD       W=57.0  p=0.075851  -> non significatif
+    IGD      W=33.0  p=0.005581  -> significatif (p<0.05)
+    Spacing  W=21.0  p=0.000851  -> significatif (p<0.05)
+
+--------------------------------------------------------------------------------------------
+  Budget d'evaluations reel (max_gen egal ne veut PAS dire n_eval egal)
+--------------------------------------------------------------------------------------------
+    NSGA-III     n_eval  mean=60000  std=0
+    QI-NSGA-III  n_eval  mean=120200  std=0
+    ratio QI-NSGA-III / NSGA-III : 2.00x
+    -> la section "Effet moteur quantique" ci-dessous compare deux
+       moteurs a budget d'evaluations DIFFERENT (voir note dans le
+       docstring du module) -- lire les p-values de cette section
+       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.
+
+--------------------------------------------------------------------------------------------
+  Effet moteur quantique (Mann-Whitney U -- fronts independants)
+--------------------------------------------------------------------------------------------
+
+  Sans 2-opt des deux cotes (ecart brut)
+    HV       U=226.0  p=0.490334  -> non significatif
+    GD       U=226.0  p=0.490334  -> non significatif
+    IGD      U=107.0  p=0.012345  -> significatif (p<0.05)
+    Spacing  U=382.0  p=0.000001  -> significatif (p<0.05)
+
+  Avec 2-opt des deux cotes (ecart equitable)
+    HV       U=254.0  p=0.147847  -> non significatif
+    GD       U=215.0  p=0.694891  -> non significatif
+    IGD      U=96.0  p=0.005115  -> significatif (p<0.05)
+    Spacing  U=348.0  p=0.000066  -> significatif (p<0.05)
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par configuration (recherche + decodage/repair)
+--------------------------------------------------------------------------------------------
+    NSGA-III sans 2-opt      mean=385.4s
+    NSGA-III avec 2-opt      mean=388.4s
+    QI-NSGA-III sans 2-opt   mean=210.5s
+    QI-NSGA-III avec 2-opt   mean=231.5s
+
+============================================================================================
+

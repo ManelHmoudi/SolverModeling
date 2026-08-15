@@ -128,11 +128,31 @@ def _build_g_constraints(route_result: dict, sets_: dict, params_: dict) -> list
     return G
 
 
-def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict) -> tuple[np.ndarray, np.ndarray]:
+def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
+                           use_or_opt: bool = False,
+                           use_single_relocation: bool = False,
+                           use_two_opt: bool = True,
+                           use_inter_route_relocate: bool = False,
+                           use_route_swap: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Remedy G: decode + repair (2-opt, Baldwinian -- see repair.py) +
     evaluate, replacing IRPProblem._evaluate for QINSGA3 only, when
     use_route_repair=True. See
     docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+
+    use_or_opt (default False): forwarded to _repair_route_result -- see
+    its own use_or_opt docstring.
+
+    use_single_relocation (default False): forwarded to
+    _repair_route_result -- see its own use_single_relocation docstring.
+
+    use_two_opt (default True): forwarded to _repair_route_result -- see
+    its own use_two_opt docstring.
+
+    use_inter_route_relocate (default False): forwarded to
+    _repair_route_result -- see its own use_inter_route_relocate docstring.
+
+    use_route_swap (default False): forwarded to _repair_route_result --
+    see its own use_route_swap docstring.
     """
     from Solvers.NSGA3.decoder import decode_chromosome, build_routes
     from Solvers.NSGA3.evaluator import compute_f1, compute_f2, compute_f3, compute_f4
@@ -140,7 +160,11 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict) -> tuple[np
 
     quantities, priorities = decode_chromosome(x, sets_)
     route_result = build_routes(quantities, sets_, params_, priorities)
-    route_result = _repair_route_result(route_result, sets_, params_)
+    route_result = _repair_route_result(route_result, sets_, params_, use_or_opt=use_or_opt,
+                                         use_single_relocation=use_single_relocation,
+                                         use_two_opt=use_two_opt,
+                                         use_inter_route_relocate=use_inter_route_relocate,
+                                         use_route_swap=use_route_swap)
 
     F = np.array([
         compute_f1(route_result, sets_, params_),
@@ -160,6 +184,11 @@ def _worker_eval_repaired(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def _repair_pareto_front(
     pareto_X: np.ndarray, sets_: dict, params_: dict,
+    use_or_opt: bool = False,
+    use_single_relocation: bool = False,
+    use_two_opt: bool = True,
+    use_inter_route_relocate: bool = False,
+    use_route_swap: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Post-processing variant of remedy G, for run_qinsga3's
     repair_final_front parameter: repairs each front chromosome's decoded
@@ -172,11 +201,33 @@ def _repair_pareto_front(
     G-list chain use_route_repair's worker path already uses) for each
     chromosome. Baldwinian: pareto_X itself is never modified, only the
     returned F/G arrays.
+
+    use_or_opt (default False): forwarded to _evaluate_with_repair -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result use_or_opt docstring.
+
+    use_single_relocation (default False): forwarded to
+    _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
+    _repair_route_result use_single_relocation docstring.
+
+    use_two_opt (default True): forwarded to _evaluate_with_repair -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result use_two_opt docstring.
+
+    use_inter_route_relocate (default False): forwarded to
+    _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
+    _repair_route_result use_inter_route_relocate docstring.
+
+    use_route_swap (default False): forwarded to _evaluate_with_repair --
+    see Solvers/QINSGA3/repair.py's _repair_route_result use_route_swap
+    docstring.
     """
     F_list = []
     G_list = []
     for x in pareto_X:
-        F, G = _evaluate_with_repair(x, sets_, params_)
+        F, G = _evaluate_with_repair(x, sets_, params_, use_or_opt=use_or_opt,
+                                      use_single_relocation=use_single_relocation,
+                                      use_two_opt=use_two_opt,
+                                      use_inter_route_relocate=use_inter_route_relocate,
+                                      use_route_swap=use_route_swap)
         F_list.append(F)
         G_list.append(G)
     return np.array(F_list), np.array(G_list)
@@ -1258,6 +1309,12 @@ def run_qinsga3(
     eliminate_duplicates: bool = False,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
+    compensate_dx_dtheta: bool = False,
+    use_or_opt:       bool  = False,
+    use_single_relocation: bool = False,
+    use_two_opt:      bool  = True,
+    use_inter_route_relocate: bool = False,
+    use_route_swap:   bool  = False,
     callback          = None,
     crowding_saturation_log: list | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1391,6 +1448,49 @@ def run_qinsga3(
     (shared ideal/nadir, Mann-Whitney U): no significant change on any of
     HV/GD/IGD/Spacing (all well within one seed-to-seed standard deviation).
     Set eliminate_duplicates=True to enable it for ablation comparisons.
+
+    compensate_dx_dtheta (default False -- ablation-only): scales the
+    quantum rotation gate's step size to counteract the non-uniform
+    dx/dθ mapping of the θ→X measurement -- see
+    QuantumPopulation.rotate()'s own compensate_dx_dtheta docstring
+    (Solvers/QINSGA3/chromosome.py) for the exact mechanism and the
+    fairness-audit hypothesis it tests (that this non-uniformity, not
+    yet compensated anywhere in the codebase, may explain part of
+    QI-NSGA-III's residual HV/IGD gap vs NSGA-III).
+
+    use_or_opt (default False -- ablation-only, applies only when
+    repair_final_front=True): forwarded to _repair_pareto_front ->
+    _evaluate_with_repair -> Solvers/QINSGA3/repair.py's
+    _repair_route_result, widening the final-front local search from pure
+    2-opt (sequencing only) to also relocating 2-/3-client segments
+    elsewhere in the same route -- see _repair_route_result's own
+    use_or_opt docstring for the full rationale (the MPIRP's decision
+    space is much richer than sequencing alone) and the mathematical
+    non-worse guarantee vs 2-opt-only.
+
+    use_single_relocation (default False -- ablation-only, applies only
+    when repair_final_front=True, independent of use_or_opt): forwarded
+    the same way, widening the final-front local search to also relocate
+    a SINGLE client -- see _repair_route_result's own
+    use_single_relocation docstring.
+
+    use_two_opt (default True -- production behaviour unchanged, applies
+    only when repair_final_front=True): forwarded the same way, letting
+    the 2-opt scan be disabled entirely to isolate use_or_opt /
+    use_single_relocation as the ONLY final-front neighbourhood searched
+    -- see _repair_route_result's own use_two_opt docstring.
+
+    use_inter_route_relocate (default False -- ablation-only, applies only
+    when repair_final_front=True): forwarded the same way, running the
+    Niveau-2 inter-route relocate pass (moving a client to a DIFFERENT
+    truck's route, not just reordering within one route) before the
+    intra-route neighbourhood -- see _repair_route_result's own
+    use_inter_route_relocate docstring.
+
+    use_route_swap (default False -- ablation-only, applies only when
+    repair_final_front=True): forwarded the same way, running the
+    Niveau-2 route-swap pass (exchanging two clients between different
+    routes) -- see _repair_route_result's own use_route_swap docstring.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1416,9 +1516,17 @@ def run_qinsga3(
         "(the per-generation dispatch below silently applies only the "
         "first True flag, in that priority order, if more than one is set)"
     )
+    assert not (compensate_dx_dtheta and (use_rqpso_rotation or use_pso_rotation or use_chaotic_rotation)), (
+        "compensate_dx_dtheta only applies to the default rotation path "
+        "(QuantumPopulation.rotate(), tanh/tanh_soft/linear) -- "
+        "use_rqpso_rotation/use_pso_rotation/use_chaotic_rotation bypass it "
+        "entirely via their own dedicated functions, so combining them would "
+        "silently do nothing"
+    )
 
     qpop     = QuantumPopulation(pop_size, n_genes, xl, xu, rng=rng, rotation_type=rotation_type,
-                                  noise_scale=noise_scale)
+                                  noise_scale=noise_scale,
+                                  compensate_dx_dtheta=compensate_dx_dtheta)
     sorter   = NonDominatedSorting()
     survival = ReferenceDirectionSurvival(ref_dirs)
     sbx_op   = SBX(prob=p_cross, eta=eta_cross)
@@ -1690,7 +1798,11 @@ def run_qinsga3(
         )
 
     if repair_final_front:
-        pareto_F, pareto_G = _repair_pareto_front(pareto_X, sets_, params_)
+        pareto_F, pareto_G = _repair_pareto_front(pareto_X, sets_, params_, use_or_opt=use_or_opt,
+                                                   use_single_relocation=use_single_relocation,
+                                                   use_two_opt=use_two_opt,
+                                                   use_inter_route_relocate=use_inter_route_relocate,
+                                                   use_route_swap=use_route_swap)
         # Repair optimises f1 only, per individual -- it can newly dominate
         # another front member (confirmed on a real front: 40/40
         # non-dominated before repair, only 26/40 after). Re-filter to

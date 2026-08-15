@@ -96,10 +96,10 @@ from pymoo.operators.sampling.rnd  import FloatRandomSampling
 from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
 from pymoo.util.archive            import MultiObjectiveArchive, SurvivalTruncation
-from scipy.stats import mannwhitneyu, wilcoxon
+from scipy.stats import levene, mannwhitneyu, wilcoxon
 
 from models.parametres            import load_instance
-from Solvers.NSGA3.metrics        import compute_pareto_metrics
+from Solvers.NSGA3.metrics        import compute_pareto_metrics, build_empirical_reference_front
 from Solvers.NSGA3.problem        import IRPProblem
 from Solvers.NSGA3.report_builder import _evaluate_pareto
 from Solvers.QINSGA3.algorithm    import run_qinsga3
@@ -183,12 +183,23 @@ def _qinsga3_n_eval(effective_pop: int, max_gen: int) -> int:
     return effective_pop * (2 * max_gen + 1)
 
 
-def _config_F(pareto_X, sets_, params_, repair: bool) -> np.ndarray:
-    """Decode (and optionally 2-opt-repair) a chromosome array via the
-    shared _evaluate_pareto, returning its (f1,f2,f3,f4) objective matrix."""
+def _config_F(pareto_X, sets_, params_, repair: bool, use_or_opt: bool = False,
+              use_single_relocation: bool = False, use_two_opt: bool = True,
+              use_inter_route_relocate: bool = False, use_route_swap: bool = False) -> np.ndarray:
+    """Decode (and optionally 2-opt-repair, optionally Or-opt-widened) a
+    chromosome array via the shared _evaluate_pareto, returning its
+    (f1,f2,f3,f4) objective matrix. use_or_opt/use_single_relocation/
+    use_two_opt/use_inter_route_relocate/use_route_swap only have an effect
+    when repair=True (see _evaluate_pareto's own docstrings) -- applied
+    identically to both algorithms' "avec 2-opt" configs by the caller, for
+    a fair vs-not comparison matching how the 2-opt-vs-not comparison
+    itself works."""
     if pareto_X is None or len(pareto_X) == 0:
         return np.empty((0, N_OBJ))
-    result = _evaluate_pareto(pareto_X, sets_, params_, {}, repair=repair)
+    result = _evaluate_pareto(pareto_X, sets_, params_, {}, repair=repair, use_or_opt=use_or_opt,
+                               use_single_relocation=use_single_relocation, use_two_opt=use_two_opt,
+                               use_inter_route_relocate=use_inter_route_relocate,
+                               use_route_swap=use_route_swap)
     return np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
                        s["objectives"]["f3"], s["objectives"]["f4"]]
                       for s in result["solutions"]])
@@ -203,6 +214,9 @@ def run_comparison(
     instance: str, seeds: list[int], max_gen: int, pop_size: int,
     qinsga3_gen: int | None = None, noise_scale: float = 0.0,
     eliminate_duplicates: bool = False, use_archive: bool = False,
+    compensate_dx_dtheta: bool = False, use_or_opt: bool = False,
+    use_single_relocation: bool = False, use_two_opt: bool = True,
+    use_inter_route_relocate: bool = False, use_route_swap: bool = False,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
@@ -235,7 +249,65 @@ def run_comparison(
     normally reports only its final generation's population, so a good
     solution found early and later lost to niching is gone for good, an
     asymmetry QI-NSGA-III's archive doesn't have. Pass --use-archive 1 to
-    test whether this symmetry changes the verdict."""
+    test whether this symmetry changes the verdict.
+
+    compensate_dx_dtheta (default False -- ablation-only): scales
+    QI-NSGA-III's quantum rotation step to counteract the non-uniform
+    dx/dtheta mapping of its theta->X measurement (vanishes near theta=0/
+    pi/2, where individuals actually converge) -- see
+    Solvers/QINSGA3/chromosome.py's QuantumPopulation.rotate() docstring
+    for the exact mechanism and the hypothesis this tests: that this
+    uncompensated non-uniformity, not NSGA-III's SBX (which moves uniformly
+    in X-space), may explain part of QI-NSGA-III's residual HV/IGD gap.
+    Pass --compensate-dx-dtheta 1 to enable it for comparison.
+
+    use_or_opt (default False -- ablation-only): widens the "avec 2-opt"
+    configs' local search, for BOTH algorithms symmetrically, from pure
+    2-opt (sequencing only) to also relocating 2-/3-client segments
+    elsewhere in the same route -- see Solvers/QINSGA3/repair.py's
+    _repair_route_result use_or_opt docstring for the full rationale (the
+    MPIRP's decision space -- vehicle assignment, quantities, periods,
+    frigo compatibility, stock levels -- is much richer than sequencing
+    alone; Or-opt is the first, smallest step toward a richer
+    neighbourhood). Applied identically to NSGA-III and QI-NSGA-III's
+    "avec 2-opt" configs, matching how 2-opt itself was made fair. Pass
+    --use-or-opt 1 to enable it for comparison.
+
+    use_single_relocation (default False -- ablation-only, independent of
+    use_or_opt): widens the "avec 2-opt" configs' local search, for BOTH
+    algorithms symmetrically, to also relocate a SINGLE client -- the
+    third lever from the advisor's Niveau-1 plan (2-opt; Or-opt;
+    single-client relocation), tested in isolation against plain 2-opt
+    rather than stacked with use_or_opt -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result
+    use_single_relocation docstring. Pass --use-single-relocation 1 to
+    enable it for comparison.
+
+    use_two_opt (default True -- production behaviour unchanged): when
+    False, disables the 2-opt scan entirely in the "avec 2-opt" configs,
+    isolating use_or_opt/use_single_relocation as the ONLY neighbourhood
+    searched -- answers "does Or-opt/relocation help on its own" rather
+    than "does adding it to 2-opt help" -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result use_two_opt
+    docstring. Pass --use-two-opt 0 together with --use-or-opt 1 (or
+    --use-single-relocation 1) to test a neighbourhood in isolation.
+
+    use_inter_route_relocate (default False -- ablation-only): widens the
+    "avec 2-opt" configs' local search, for BOTH algorithms symmetrically,
+    to also relocate a single client to a DIFFERENT truck's route within
+    the same period -- the advisor's Niveau-2 "relocate d'un client vers
+    un autre vehicule" move, a fundamentally different lever from the
+    Niveau-1 moves (touches truck assignment, not just visit order) -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result
+    use_inter_route_relocate docstring. Pass --use-inter-route-relocate 1
+    to enable it for comparison.
+
+    use_route_swap (default False -- ablation-only): widens the "avec
+    2-opt" configs' local search, for BOTH algorithms symmetrically, to
+    also exchange two clients between different routes within the same
+    period -- the advisor's Niveau-2 "swap entre deux tournees" move --
+    see Solvers/QINSGA3/repair.py's _repair_route_result use_route_swap
+    docstring. Pass --use-route-swap 1 to enable it for comparison."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -250,19 +322,41 @@ def run_comparison(
     print(f"  Instance : {instance} clients | pop={effective_pop} | "
           f"gen(NSGA-III)={max_gen} | gen(QI-NSGA-III)={qinsga3_gen} | "
           f"noise_scale(QI)={noise_scale} | eliminate_duplicates(QI)={eliminate_duplicates} | "
-          f"use_archive(NSGA-III)={use_archive}")
+          f"use_archive(NSGA-III)={use_archive} | compensate_dx_dtheta(QI)={compensate_dx_dtheta} | "
+          f"use_or_opt(both)={use_or_opt} | use_single_relocation(both)={use_single_relocation} | "
+          f"use_two_opt(both)={use_two_opt} | use_inter_route_relocate(both)={use_inter_route_relocate} | "
+          f"use_route_swap(both)={use_route_swap}")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
     if noise_scale != 0.0:
         print("  NOTE: noise_scale != production default (0.0) -- measurement-noise "
               "ablation run, not a production-parameter run. See module docstring.")
-    if not eliminate_duplicates:
-        print("  NOTE: eliminate_duplicates disabled -- not the production default. "
+    if eliminate_duplicates:
+        print("  NOTE: eliminate_duplicates enabled -- not the production default. "
               "See module docstring.")
     if use_archive:
         print("  NOTE: use_archive enabled for NSGA-III -- not its production default. "
               "See module docstring.")
+    if compensate_dx_dtheta:
+        print("  NOTE: compensate_dx_dtheta enabled for QI-NSGA-III -- not the "
+              "production default. See module docstring.")
+    if use_or_opt:
+        print("  NOTE: use_or_opt enabled for BOTH algorithms' 'avec 2-opt' configs -- "
+              "not the production default. See module docstring.")
+    if use_single_relocation:
+        print("  NOTE: use_single_relocation enabled for BOTH algorithms' 'avec 2-opt' "
+              "configs -- not the production default. See module docstring.")
+    if not use_two_opt:
+        print("  NOTE: use_two_opt DISABLED for BOTH algorithms' 'avec 2-opt' configs -- "
+              "isolates use_or_opt/use_single_relocation as the only neighbourhood "
+              "searched, not the production default. See module docstring.")
+    if use_inter_route_relocate:
+        print("  NOTE: use_inter_route_relocate enabled for BOTH algorithms' 'avec 2-opt' "
+              "configs -- not the production default. See module docstring.")
+    if use_route_swap:
+        print("  NOTE: use_route_swap enabled for BOTH algorithms' 'avec 2-opt' configs -- "
+              "not the production default. See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -287,6 +381,7 @@ def run_comparison(
             pop_size=effective_pop, max_gen=qinsga3_gen, seed=seed,
             repair_final_front=False, noise_scale=noise_scale,
             eliminate_duplicates=eliminate_duplicates,
+            compensate_dx_dtheta=compensate_dx_dtheta,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
@@ -301,7 +396,10 @@ def run_comparison(
             ("QI-NSGA-III avec 2-opt", X_qinsga3, t_qinsga3, True),
         ):
             t0 = time.time()
-            F = _config_F(X, sets_, params_, repair=repair)
+            F = _config_F(X, sets_, params_, repair=repair, use_or_opt=use_or_opt,
+                          use_single_relocation=use_single_relocation, use_two_opt=use_two_opt,
+                          use_inter_route_relocate=use_inter_route_relocate,
+                          use_route_swap=use_route_swap)
             t_repair = time.time() - t0
             F_by_config[label].append(F)
             elapsed_by_config[label].append(base_elapsed + t_repair)
@@ -313,12 +411,21 @@ def run_comparison(
     print(f"\nIdeal global partage : {g_ideal}")
     print(f"Nadir global partage  : {g_nadir}")
 
+    # PF_ref = ND(union of every solution, every config, every seed) -- an
+    # empirical approximation of the true Pareto front, used for GD/IGD
+    # instead of a Das-Dennis reference-direction grid (which is geometry,
+    # not necessarily feasible MPIRP solutions). See
+    # Solvers/NSGA3/metrics.py's build_empirical_reference_front docstring.
+    pf_ref = build_empirical_reference_front(all_F)
+    print(f"Front de reference empirique (PF_ref) : {len(pf_ref)} solutions non dominees "
+          f"(sur {len(all_F)} au total, {len(np.unique(all_F, axis=0))} apres deduplication)")
+
     values: dict[str, dict[str, list]] = {c: {ind: [] for ind in _INDICATORS} for c in _CONFIGS}
     for label, runs in F_by_config.items():
         for F in runs:
             if len(F) == 0:
                 continue
-            q = compute_pareto_metrics(F, g_ideal, g_nadir)
+            q = compute_pareto_metrics(F, g_ideal, g_nadir, reference_front=pf_ref)
             for ind in _INDICATORS:
                 values[label][ind].append(q[ind])
 
@@ -393,6 +500,30 @@ def run_comparison(
             print(f"    {ind:<8} U={u:.1f}  p={p:.6f}  -> {sig}")
 
     print(f"\n{'-'*92}")
+    print("  Test de dispersion (Brown-Forsythe -- egalite de variance/stabilite)")
+    print(f"{'-'*92}")
+    print("  Un ecart-type plus petit NE prouve PAS, a lui seul, une stabilite")
+    print("  statistiquement differente -- il faut un test dedie a la dispersion,")
+    print("  pas seulement comparer deux std bruts. Brown-Forsythe = test de Levene")
+    print("  centre sur la MEDIANE (pas la moyenne), robuste si les distributions")
+    print("  ne sont pas normales -- H0 : les deux groupes ont la meme variance.")
+    for title, lbl_a, lbl_b in (
+        ("Sans 2-opt des deux cotes",      "NSGA-III sans 2-opt", "QI-NSGA-III sans 2-opt"),
+        ("Avec 2-opt des deux cotes (comparaison equitable)", "NSGA-III avec 2-opt", "QI-NSGA-III avec 2-opt"),
+    ):
+        print(f"\n  {title}")
+        for ind in _INDICATORS:
+            a, b = values[lbl_a][ind], values[lbl_b][ind]
+            if len(a) < 2 or len(b) < 2:
+                print(f"    {ind:<8} : pas assez de runs valides pour un test")
+                continue
+            stat, p = levene(a, b, center="median")
+            std_a, std_b = float(np.std(a)), float(np.std(b))
+            sig = "significatif (p<0.05)" if p < 0.05 else "non significatif"
+            print(f"    {ind:<8} W={stat:.4f}  p={p:.6f}  -> {sig}  "
+                  f"(std NSGA-III={std_a:.6f}, std QI-NSGA-III={std_b:.6f})")
+
+    print(f"\n{'-'*92}")
     print("  Temps moyen par configuration (recherche + decodage/repair)")
     print(f"{'-'*92}")
     for label in _CONFIGS:
@@ -435,7 +566,49 @@ if __name__ == "__main__":
                              "default). Pass 1 to test whether this symmetry changes "
                              "the verdict -- see the module docstring's use_archive "
                              "note.")
+    parser.add_argument("--compensate-dx-dtheta", type=int, choices=[0, 1], default=0,
+                        help="Scale QI-NSGA-III's quantum rotation step to counteract "
+                             "the non-uniform dx/dtheta mapping of its theta->X "
+                             "measurement (NOT the production default). Pass 1 to test "
+                             "whether this closes part of the residual HV/IGD gap -- "
+                             "see the module docstring's compensate_dx_dtheta note.")
+    parser.add_argument("--use-or-opt", type=int, choices=[0, 1], default=0,
+                        help="Widen the 'avec 2-opt' configs' local search, for BOTH "
+                             "algorithms symmetrically, to also relocate 2-/3-client "
+                             "segments within the same route (NOT the production "
+                             "default). Pass 1 to test whether this helps either "
+                             "algorithm -- see the module docstring's use_or_opt note.")
+    parser.add_argument("--use-single-relocation", type=int, choices=[0, 1], default=0,
+                        help="Widen the 'avec 2-opt' configs' local search, for BOTH "
+                             "algorithms symmetrically, to also relocate a SINGLE "
+                             "client within the same route (NOT the production "
+                             "default, independent of --use-or-opt). Pass 1 to test "
+                             "whether this helps either algorithm -- see the module "
+                             "docstring's use_single_relocation note.")
+    parser.add_argument("--use-two-opt", type=int, choices=[0, 1], default=1,
+                        help="Whether the 'avec 2-opt' configs include the 2-opt scan "
+                             "(production default: 1). Pass 0 together with "
+                             "--use-or-opt 1 or --use-single-relocation 1 to test that "
+                             "neighbourhood in ISOLATION, without 2-opt riding along -- "
+                             "see the module docstring's use_two_opt note.")
+    parser.add_argument("--use-inter-route-relocate", type=int, choices=[0, 1], default=0,
+                        help="Widen the 'avec 2-opt' configs' local search, for BOTH "
+                             "algorithms symmetrically, to also relocate a client to a "
+                             "DIFFERENT truck's route within the same period (NOT the "
+                             "production default) -- the advisor's Niveau-2 move. Pass 1 "
+                             "to test whether this helps either algorithm -- see the "
+                             "module docstring's use_inter_route_relocate note.")
+    parser.add_argument("--use-route-swap", type=int, choices=[0, 1], default=0,
+                        help="Widen the 'avec 2-opt' configs' local search, for BOTH "
+                             "algorithms symmetrically, to also exchange two clients "
+                             "between different routes within the same period (NOT the "
+                             "production default) -- the advisor's Niveau-2 swap move. "
+                             "Pass 1 to test whether this helps either algorithm -- see "
+                             "the module docstring's use_route_swap note.")
     args = parser.parse_args()
     run_comparison(args.instance, args.seeds, args.gen, args.pop,
                     args.qinsga3_gen, args.noise_scale,
-                    bool(args.eliminate_duplicates), bool(args.use_archive))
+                    bool(args.eliminate_duplicates), bool(args.use_archive),
+                    bool(args.compensate_dx_dtheta), bool(args.use_or_opt),
+                    bool(args.use_single_relocation), bool(args.use_two_opt),
+                    bool(args.use_inter_route_relocate), bool(args.use_route_swap))
