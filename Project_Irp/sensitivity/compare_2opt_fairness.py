@@ -96,7 +96,7 @@ from pymoo.operators.sampling.rnd  import FloatRandomSampling
 from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
 from pymoo.util.archive            import MultiObjectiveArchive, SurvivalTruncation
-from scipy.stats import levene, mannwhitneyu, wilcoxon
+from scipy.stats import levene, mannwhitneyu, rankdata, wilcoxon
 
 from models.parametres            import load_instance
 from Solvers.NSGA3.metrics        import compute_pareto_metrics, build_empirical_reference_front
@@ -208,6 +208,88 @@ def _config_F(pareto_X, sets_, params_, repair: bool, use_or_opt: bool = False,
 def _stats(vals) -> dict:
     a = np.array(vals, dtype=float)
     return {"mean": float(a.mean()), "std": float(a.std())}
+
+
+def _wilcoxon_rank_biserial(a, b) -> float:
+    """Matched-pairs rank-biserial correlation for a paired Wilcoxon test --
+    r = (W+ - W-) / (W+ + W-), where W+/W- are the summed ranks of the
+    positive/negative paired differences (ties at exactly 0 excluded, same
+    convention scipy.stats.wilcoxon uses by default). r in [-1, 1]: positive
+    means a tends to exceed b (rank-weighted), 0 means no consistent
+    direction, negative means b tends to exceed a. This is the effect-size
+    companion to the Wilcoxon p-value -- p says whether the paired
+    difference is distinguishable from chance, r says how one-sided it is.
+    """
+    diffs = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    nonzero = diffs[diffs != 0]
+    if len(nonzero) == 0:
+        return 0.0
+    ranks = rankdata(np.abs(nonzero))
+    w_pos = ranks[nonzero > 0].sum()
+    w_neg = ranks[nonzero < 0].sum()
+    total = w_pos + w_neg
+    return float((w_pos - w_neg) / total) if total > 0 else 0.0
+
+
+def _vargha_delaney_a12(u_stat: float, n1: int, n2: int) -> float:
+    """Vargha-Delaney A12 effect size from a Mann-Whitney U statistic (U for
+    sample 1, scipy's default convention: mannwhitneyu(a, b) returns U_a).
+
+    A12 = U_a / (n1*n2) is the probability that a randomly drawn value from
+    group 1 exceeds a randomly drawn value from group 2 (ties count as a
+    half-win) -- Vargha & Delaney (2000)'s common-language effect size.
+    A12=0.5 means no difference; A12>0.5 means group 1 tends to be larger;
+    A12<0.5 means group 1 tends to be smaller. Unlike the raw p-value, this
+    is interpretable regardless of sample size (a p<0.05 with A12=0.51 is a
+    real but practically tiny effect; the reverse can also happen at small n).
+    """
+    return float(u_stat) / (n1 * n2)
+
+
+def _bootstrap_median_diff_ci(a, b, n_boot: int = 10000, ci: float = 0.95,
+                               seed: int = 42) -> tuple[float, float, float]:
+    """Bootstrap CI for the median of the PAIRED differences (a[i]-b[i]) --
+    resamples the vector of paired differences with replacement n_boot
+    times, takes the median each time, and reports the empirical
+    (1-ci)/2 / (1+ci)/2 percentiles. Complements the Wilcoxon p-value with a
+    magnitude estimate that doesn't assume any particular distribution
+    shape. Returns (median_diff, ci_lo, ci_hi).
+    """
+    diffs = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    rng = np.random.default_rng(seed)
+    n = len(diffs)
+    boot_medians = np.empty(n_boot)
+    for i in range(n_boot):
+        sample = diffs[rng.integers(0, n, size=n)]
+        boot_medians[i] = np.median(sample)
+    lo, hi = np.percentile(boot_medians, [(1 - ci) / 2 * 100, (1 + ci) / 2 * 100])
+    return float(np.median(diffs)), float(lo), float(hi)
+
+
+def _holm_bonferroni(pvalues: dict, alpha: float = 0.05) -> dict:
+    """Holm-Bonferroni step-down correction for multiple comparisons --
+    controls the family-wise error rate across the len(pvalues) tests
+    (here: HV/GD/IGD/Spacing tested together), unlike treating each
+    indicator's p<0.05 as independently conclusive.
+
+    Sorted ascending p_(1)<=...<=p_(m): reject H_(i) iff p_(i) <= alpha/(m-i+1)
+    for every j<=i (step-down: stop rejecting at the first failure, every
+    remaining larger p-value is then also treated as non-significant
+    regardless of its own value, per the standard Holm procedure).
+
+    Returns {name: (p, threshold, significant_after_correction)}.
+    """
+    items = sorted(pvalues.items(), key=lambda kv: kv[1])
+    m = len(items)
+    results = {}
+    still_rejecting = True
+    for i, (name, p) in enumerate(items):
+        threshold = alpha / (m - i)
+        significant = still_rejecting and p <= threshold
+        if not significant:
+            still_rejecting = False
+        results[name] = (p, threshold, significant)
+    return results
 
 
 def run_comparison(
@@ -416,18 +498,50 @@ def run_comparison(
     # instead of a Das-Dennis reference-direction grid (which is geometry,
     # not necessarily feasible MPIRP solutions). See
     # Solvers/NSGA3/metrics.py's build_empirical_reference_front docstring.
+    # Printed here for display only (overall pool size) -- the metrics below
+    # use a LEAVE-ONE-RUN-OUT variant, never this exact shared front, so a
+    # run is never scored against a reference that includes its own
+    # solutions (which would let it trivially score a zero self-distance).
     pf_ref = build_empirical_reference_front(all_F)
-    print(f"Front de reference empirique (PF_ref) : {len(pf_ref)} solutions non dominees "
-          f"(sur {len(all_F)} au total, {len(np.unique(all_F, axis=0))} apres deduplication)")
+    print(f"Front de reference empirique (PF_ref, tous runs confondus) : {len(pf_ref)} solutions "
+          f"non dominees (sur {len(all_F)} au total, {len(np.unique(all_F, axis=0))} apres "
+          f"deduplication) -- affichage seul ; chaque run est evalue contre PF_ref^(-r), "
+          f"reconstruit sans ses propres solutions (leave-one-run-out).")
+
+    # Flatten to (label, algo, run_index, F) so each run's own contribution
+    # to all_F can be excluded when building ITS reference front. algo is
+    # label with the " sans 2-opt"/" avec 2-opt" suffix stripped -- "NSGA-III
+    # sans 2-opt" and "NSGA-III avec 2-opt" for the SAME seed are Baldwinian
+    # siblings decoded from the exact same chromosome population (only the
+    # post-decode 2-opt repair differs, see this module's own top-of-file
+    # docstring), so excluding only the exact (label, run_idx) pair leaves a
+    # near-identical, usually-dominating twin of "this run" in its own
+    # reference front -- self-leakage in substance even though the array
+    # objects differ. Excluding by (algo, run_idx) instead removes every
+    # repair-variant sibling of the same search together, while still
+    # keeping the OTHER algorithm's same-seed runs in the pool (those come
+    # from a genuinely independent search, not a repair variant of this one).
+    _flat_runs = [
+        (label, label.replace(" sans 2-opt", "").replace(" avec 2-opt", ""), i, F)
+        for label, runs in F_by_config.items()
+        for i, F in enumerate(runs)
+        if len(F) > 0
+    ]
 
     values: dict[str, dict[str, list]] = {c: {ind: [] for ind in _INDICATORS} for c in _CONFIGS}
-    for label, runs in F_by_config.items():
-        for F in runs:
-            if len(F) == 0:
-                continue
-            q = compute_pareto_metrics(F, g_ideal, g_nadir, reference_front=pf_ref)
-            for ind in _INDICATORS:
-                values[label][ind].append(q[ind])
+    for label, algo, run_idx, F in _flat_runs:
+        # PF_ref^(-r) = ND(union of every OTHER search's solutions) --
+        # excludes every repair-variant of THIS run's own search, so none of
+        # its own (or its 2-opt-sibling's) solutions can define the
+        # reference points it is then measured against.
+        other_F = [
+            F2 for label2, algo2, i2, F2 in _flat_runs
+            if not (algo2 == algo and i2 == run_idx)
+        ]
+        pf_ref_minus_r = build_empirical_reference_front(np.vstack(other_F))
+        q = compute_pareto_metrics(F, g_ideal, g_nadir, reference_front=pf_ref_minus_r)
+        for ind in _INDICATORS:
+            values[label][ind].append(q[ind])
 
     print(f"\n{'-'*92}")
     print("  RESULTATS (ideal/nadir global partage entre les 4 configurations)")
@@ -483,7 +597,49 @@ def run_comparison(
         print("       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.")
 
     print(f"\n{'-'*92}")
-    print("  Effet moteur quantique (Mann-Whitney U -- fronts independants)")
+    print("  Effet moteur quantique -- Wilcoxon signed-rank (PRIMAIRE, seeds appariees)")
+    print(f"{'-'*92}")
+    print("  Les seeds sont communes aux deux algorithmes (seed r pour NSGA-III et seed r pour")
+    print("  QI-NSGA-III) -- les donnees sont structurellement appariees, donc Wilcoxon exploite")
+    print("  mieux le protocole que Mann-Whitney (qui reste ci-dessous comme verification de")
+    print("  robustesse). Chaque indicateur est aussi accompagne d'une taille d'effet (le p ne dit")
+    print("  QUE si l'ecart est distinguable du hasard, pas s'il est important en pratique) :")
+    print("  correlation biserielle de rang r (Wilcoxon), IC bootstrap 95% de la mediane des")
+    print("  differences appariees. Une correction de Holm (controle de l'erreur familiale sur les")
+    print("  4 indicateurs testes ensemble) est appliquee a la fin de chaque bloc.")
+    for title, lbl_a, lbl_b in (
+        ("Sans 2-opt des deux cotes (ecart brut)",      "NSGA-III sans 2-opt", "QI-NSGA-III sans 2-opt"),
+        ("Avec 2-opt des deux cotes (ecart equitable)", "NSGA-III avec 2-opt", "QI-NSGA-III avec 2-opt"),
+    ):
+        print(f"\n  {title}")
+        wilcoxon_p = {}
+        for ind in _INDICATORS:
+            a, b = values[lbl_a][ind], values[lbl_b][ind]
+            if len(a) < 2 or len(b) < 2 or len(a) != len(b):
+                print(f"    {ind:<8} : pas assez de runs valides/apparies pour un test")
+                continue
+            try:
+                stat, p = wilcoxon(a, b)
+            except ValueError:
+                print(f"    {ind:<8} : difference nulle sur tous les seeds -- test non applicable")
+                continue
+            wilcoxon_p[ind] = p
+            r = _wilcoxon_rank_biserial(a, b)
+            med_diff, ci_lo, ci_hi = _bootstrap_median_diff_ci(a, b)
+            sig = "significatif (p<0.05)" if p < 0.05 else "non significatif"
+            print(f"    {ind:<8} W={stat:.1f}  p={p:.6f}  -> {sig}  |  r_biserial={r:+.3f}  "
+                  f"|  mediane(NSGA-QI)={med_diff:+.4f}  IC95%=[{ci_lo:+.4f}, {ci_hi:+.4f}]")
+
+        if len(wilcoxon_p) == len(_INDICATORS):
+            print(f"    Correction de Holm (alpha=0.05, {len(wilcoxon_p)} indicateurs testes ensemble) :")
+            holm = _holm_bonferroni(wilcoxon_p)
+            for ind, (p, threshold, sig) in sorted(holm.items(), key=lambda kv: kv[1][0]):
+                sig_str = "significatif apres correction" if sig else "NON significatif apres correction"
+                flip = "" if (sig == (wilcoxon_p[ind] < 0.05)) else "  <-- CHANGE DE VERDICT vs p brut"
+                print(f"      {ind:<8} p={p:.6f}  seuil_ajuste={threshold:.5f}  -> {sig_str}{flip}")
+
+    print(f"\n{'-'*92}")
+    print("  Effet moteur quantique (Mann-Whitney U -- verification de robustesse)")
     print(f"{'-'*92}")
     for title, lbl_a, lbl_b in (
         ("Sans 2-opt des deux cotes (ecart brut)",      "NSGA-III sans 2-opt", "QI-NSGA-III sans 2-opt"),
@@ -496,8 +652,9 @@ def run_comparison(
                 print(f"    {ind:<8} : pas assez de runs valides pour un test")
                 continue
             u, p = mannwhitneyu(a, b, alternative="two-sided")
+            a12 = _vargha_delaney_a12(u, len(a), len(b))
             sig = "significatif (p<0.05)" if p < 0.05 else "non significatif"
-            print(f"    {ind:<8} U={u:.1f}  p={p:.6f}  -> {sig}")
+            print(f"    {ind:<8} U={u:.1f}  p={p:.6f}  -> {sig}  |  A12={a12:.3f}")
 
     print(f"\n{'-'*92}")
     print("  Test de dispersion (Brown-Forsythe -- egalite de variance/stabilite)")

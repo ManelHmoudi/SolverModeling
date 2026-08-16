@@ -171,6 +171,38 @@ test (see git history for the full before/after numbers):
   section for the full numbers; still significantly worse than NSGA-III on
   the same instance, the gap is narrowed, not closed.
 
+- **Redundant parent re-evaluation, and the DTLZ/MaF benchmark's archive
+  asymmetry** (both fixed together, since finding the first led directly to
+  the second). The per-generation loop re-measured and re-evaluated the
+  parent population from scratch every generation, even though — with
+  `noise_scale=0.0` — it is exactly the theta `survival.do()` already
+  selected last generation, whose F/G were already known. This meant
+  QI-NSGA-III's real evaluation budget was ~2x NSGA-III's at equal
+  generation counts, not because the quantum-rotation design needs it, but
+  because the implementation discarded and recomputed already-known values.
+  Fixed by caching F/G from `survival.do()`'s own result instead of
+  re-running `_eval_batch` (invalidated after generation 0 and after
+  archive migration, both of which change theta post-cache) — cuts the real
+  ratio to ~1.1x at equal generations. Same fix ported to the DTLZ/MaF
+  benchmark's own separate generational loop
+  (`Validation/Benchmarking/algorithms/qinsga3/core.py`), which duplicates
+  (not shares) `algorithm.py`'s loop structure. That benchmark harness was
+  also found to give QI-NSGA-III an external non-dominated archive (via
+  `_crowding_trim`, always on) with **no NSGA-III equivalent** — NSGA-III's
+  own benchmark runner only ever returned its very last generation's
+  population (pymoo's default `filter_optimum`). Fixed by giving NSGA-III's
+  benchmark runner the same archive mechanism already used (and validated)
+  on the IRP side — `pymoo.util.archive.MultiObjectiveArchive` with
+  `SurvivalTruncation(ReferenceDirectionSurvival(ref_dirs), problem)`,
+  `max_size=500`, trimmed to `pop_size` at the end. Regenerating the full
+  30-run DTLZ1-7/MaF1-7 (M=3/M=4) suite with this fix moved the headline
+  win-rate from QI-NSGA-III winning 17/25 (68%) problem×M combinations to
+  15/25 (60%) — DTLZ7 (M=3) and MaF7 (M=3) both flip to NSGA-III once it
+  has access to its own archive. The archive itself is a deliberate,
+  validated design choice on both sides now (not removed from QI-NSGA-III,
+  not something to "fix away") — the bug was the *asymmetry*, not the
+  archive's existence.
+
 A real, smaller quality gap versus `Solvers/NSGA3/` remains on the
 100-client instance after all three changes. Two further re-tuning attempts were
 tested and **not adopted** because they failed to improve on that gap once

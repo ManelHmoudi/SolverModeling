@@ -1,0 +1,3519 @@
+=== DTLZ nsga3 M3 ===
+
+==================================================
+Problem: DTLZ1  (30 runs, 3 objectives)
+==================================================
+  n_var=7, n_obj=3, n_gen=326
+  [DTLZ1] Run 01/30  seed=42
+  [DTLZ1] Run 01 done - front size: 92
+  [DTLZ1] Run 02/30  seed=137
+  [DTLZ1] Run 02 done - front size: 92
+  [DTLZ1] Run 03/30  seed=271
+  [DTLZ1] Run 03 done - front size: 92
+  [DTLZ1] Run 04/30  seed=491
+  [DTLZ1] Run 04 done - front size: 92
+  [DTLZ1] Run 05/30  seed=613
+  [DTLZ1] Run 05 done - front size: 92
+  [DTLZ1] Run 06/30  seed=733
+  [DTLZ1] Run 06 done - front size: 92
+  [DTLZ1] Run 07/30  seed=857
+  [DTLZ1] Run 07 done - front size: 92
+  [DTLZ1] Run 08/30  seed=977
+  [DTLZ1] Run 08 done - front size: 92
+  [DTLZ1] Run 09/30  seed=1009
+  [DTLZ1] Run 09 done - front size: 92
+  [DTLZ1] Run 10/30  seed=1123
+  [DTLZ1] Run 10 done - front size: 92
+  [DTLZ1] Run 11/30  seed=1249
+  [DTLZ1] Run 11 done - front size: 92
+  [DTLZ1] Run 12/30  seed=1373
+  [DTLZ1] Run 12 done - front size: 92
+  [DTLZ1] Run 13/30  seed=1499
+  [DTLZ1] Run 13 done - front size: 92
+  [DTLZ1] Run 14/30  seed=1609
+  [DTLZ1] Run 14 done - front size: 92
+  [DTLZ1] Run 15/30  seed=1733
+  [DTLZ1] Run 15 done - front size: 92
+  [DTLZ1] Run 16/30  seed=1871
+  [DTLZ1] Run 16 done - front size: 92
+  [DTLZ1] Run 17/30  seed=1997
+  [DTLZ1] Run 17 done - front size: 92
+  [DTLZ1] Run 18/30  seed=2113
+  [DTLZ1] Run 18 done - front size: 92
+  [DTLZ1] Run 19/30  seed=2237
+  [DTLZ1] Run 19 done - front size: 92
+  [DTLZ1] Run 20/30  seed=2351
+  [DTLZ1] Run 20 done - front size: 92
+  [DTLZ1] Run 21/30  seed=2467
+  [DTLZ1] Run 21 done - front size: 92
+  [DTLZ1] Run 22/30  seed=2593
+  [DTLZ1] Run 22 done - front size: 92
+  [DTLZ1] Run 23/30  seed=2711
+  [DTLZ1] Run 23 done - front size: 92
+  [DTLZ1] Run 24/30  seed=2837
+  [DTLZ1] Run 24 done - front size: 92
+  [DTLZ1] Run 25/30  seed=2953
+  [DTLZ1] Run 25 done - front size: 92
+  [DTLZ1] Run 26/30  seed=3079
+  [DTLZ1] Run 26 done - front size: 92
+  [DTLZ1] Run 27/30  seed=3191
+  [DTLZ1] Run 27 done - front size: 92
+  [DTLZ1] Run 28/30  seed=3313
+  [DTLZ1] Run 28 done - front size: 92
+  [DTLZ1] Run 29/30  seed=3433
+  [DTLZ1] Run 29 done - front size: 92
+  [DTLZ1] Run 30/30  seed=3557
+  [DTLZ1] Run 30 done - front size: 92
+  DTLZ1: 30 runs completed in 116.1s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ1_M3.csv
+
+==================================================
+Problem: DTLZ2  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ2] Run 01/30  seed=42
+  [DTLZ2] Run 01 done - front size: 92
+  [DTLZ2] Run 02/30  seed=137
+  [DTLZ2] Run 02 done - front size: 92
+  [DTLZ2] Run 03/30  seed=271
+  [DTLZ2] Run 03 done - front size: 92
+  [DTLZ2] Run 04/30  seed=491
+  [DTLZ2] Run 04 done - front size: 92
+  [DTLZ2] Run 05/30  seed=613
+  [DTLZ2] Run 05 done - front size: 92
+  [DTLZ2] Run 06/30  seed=733
+  [DTLZ2] Run 06 done - front size: 92
+  [DTLZ2] Run 07/30  seed=857
+  [DTLZ2] Run 07 done - front size: 92
+  [DTLZ2] Run 08/30  seed=977
+  [DTLZ2] Run 08 done - front size: 92
+  [DTLZ2] Run 09/30  seed=1009
+  [DTLZ2] Run 09 done - front size: 92
+  [DTLZ2] Run 10/30  seed=1123
+  [DTLZ2] Run 10 done - front size: 92
+  [DTLZ2] Run 11/30  seed=1249
+  [DTLZ2] Run 11 done - front size: 92
+  [DTLZ2] Run 12/30  seed=1373
+  [DTLZ2] Run 12 done - front size: 92
+  [DTLZ2] Run 13/30  seed=1499
+  [DTLZ2] Run 13 done - front size: 92
+  [DTLZ2] Run 14/30  seed=1609
+  [DTLZ2] Run 14 done - front size: 92
+  [DTLZ2] Run 15/30  seed=1733
+  [DTLZ2] Run 15 done - front size: 92
+  [DTLZ2] Run 16/30  seed=1871
+  [DTLZ2] Run 16 done - front size: 92
+  [DTLZ2] Run 17/30  seed=1997
+  [DTLZ2] Run 17 done - front size: 92
+  [DTLZ2] Run 18/30  seed=2113
+  [DTLZ2] Run 18 done - front size: 92
+  [DTLZ2] Run 19/30  seed=2237
+  [DTLZ2] Run 19 done - front size: 92
+  [DTLZ2] Run 20/30  seed=2351
+  [DTLZ2] Run 20 done - front size: 92
+  [DTLZ2] Run 21/30  seed=2467
+  [DTLZ2] Run 21 done - front size: 92
+  [DTLZ2] Run 22/30  seed=2593
+  [DTLZ2] Run 22 done - front size: 92
+  [DTLZ2] Run 23/30  seed=2711
+  [DTLZ2] Run 23 done - front size: 92
+  [DTLZ2] Run 24/30  seed=2837
+  [DTLZ2] Run 24 done - front size: 92
+  [DTLZ2] Run 25/30  seed=2953
+  [DTLZ2] Run 25 done - front size: 92
+  [DTLZ2] Run 26/30  seed=3079
+  [DTLZ2] Run 26 done - front size: 92
+  [DTLZ2] Run 27/30  seed=3191
+  [DTLZ2] Run 27 done - front size: 92
+  [DTLZ2] Run 28/30  seed=3313
+  [DTLZ2] Run 28 done - front size: 92
+  [DTLZ2] Run 29/30  seed=3433
+  [DTLZ2] Run 29 done - front size: 92
+  [DTLZ2] Run 30/30  seed=3557
+  [DTLZ2] Run 30 done - front size: 92
+  DTLZ2: 30 runs completed in 119.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ2_M3.csv
+
+==================================================
+Problem: DTLZ3  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ3] Run 01/30  seed=42
+  [DTLZ3] Run 01 done - front size: 92
+  [DTLZ3] Run 02/30  seed=137
+  [DTLZ3] Run 02 done - front size: 92
+  [DTLZ3] Run 03/30  seed=271
+  [DTLZ3] Run 03 done - front size: 92
+  [DTLZ3] Run 04/30  seed=491
+  [DTLZ3] Run 04 done - front size: 92
+  [DTLZ3] Run 05/30  seed=613
+  [DTLZ3] Run 05 done - front size: 92
+  [DTLZ3] Run 06/30  seed=733
+  [DTLZ3] Run 06 done - front size: 92
+  [DTLZ3] Run 07/30  seed=857
+  [DTLZ3] Run 07 done - front size: 92
+  [DTLZ3] Run 08/30  seed=977
+  [DTLZ3] Run 08 done - front size: 92
+  [DTLZ3] Run 09/30  seed=1009
+  [DTLZ3] Run 09 done - front size: 92
+  [DTLZ3] Run 10/30  seed=1123
+  [DTLZ3] Run 10 done - front size: 92
+  [DTLZ3] Run 11/30  seed=1249
+  [DTLZ3] Run 11 done - front size: 92
+  [DTLZ3] Run 12/30  seed=1373
+  [DTLZ3] Run 12 done - front size: 92
+  [DTLZ3] Run 13/30  seed=1499
+  [DTLZ3] Run 13 done - front size: 92
+  [DTLZ3] Run 14/30  seed=1609
+  [DTLZ3] Run 14 done - front size: 92
+  [DTLZ3] Run 15/30  seed=1733
+  [DTLZ3] Run 15 done - front size: 92
+  [DTLZ3] Run 16/30  seed=1871
+  [DTLZ3] Run 16 done - front size: 92
+  [DTLZ3] Run 17/30  seed=1997
+  [DTLZ3] Run 17 done - front size: 92
+  [DTLZ3] Run 18/30  seed=2113
+  [DTLZ3] Run 18 done - front size: 92
+  [DTLZ3] Run 19/30  seed=2237
+  [DTLZ3] Run 19 done - front size: 92
+  [DTLZ3] Run 20/30  seed=2351
+  [DTLZ3] Run 20 done - front size: 92
+  [DTLZ3] Run 21/30  seed=2467
+  [DTLZ3] Run 21 done - front size: 92
+  [DTLZ3] Run 22/30  seed=2593
+  [DTLZ3] Run 22 done - front size: 92
+  [DTLZ3] Run 23/30  seed=2711
+  [DTLZ3] Run 23 done - front size: 92
+  [DTLZ3] Run 24/30  seed=2837
+  [DTLZ3] Run 24 done - front size: 92
+  [DTLZ3] Run 25/30  seed=2953
+  [DTLZ3] Run 25 done - front size: 92
+  [DTLZ3] Run 26/30  seed=3079
+  [DTLZ3] Run 26 done - front size: 92
+  [DTLZ3] Run 27/30  seed=3191
+  [DTLZ3] Run 27 done - front size: 92
+  [DTLZ3] Run 28/30  seed=3313
+  [DTLZ3] Run 28 done - front size: 92
+  [DTLZ3] Run 29/30  seed=3433
+  [DTLZ3] Run 29 done - front size: 92
+  [DTLZ3] Run 30/30  seed=3557
+  [DTLZ3] Run 30 done - front size: 92
+  DTLZ3: 30 runs completed in 101.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ3_M3.csv
+
+==================================================
+Problem: DTLZ4  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ4] Run 01/30  seed=42
+  [DTLZ4] Run 01 done - front size: 92
+  [DTLZ4] Run 02/30  seed=137
+  [DTLZ4] Run 02 done - front size: 92
+  [DTLZ4] Run 03/30  seed=271
+  [DTLZ4] Run 03 done - front size: 92
+  [DTLZ4] Run 04/30  seed=491
+  [DTLZ4] Run 04 done - front size: 92
+  [DTLZ4] Run 05/30  seed=613
+  [DTLZ4] Run 05 done - front size: 92
+  [DTLZ4] Run 06/30  seed=733
+  [DTLZ4] Run 06 done - front size: 92
+  [DTLZ4] Run 07/30  seed=857
+  [DTLZ4] Run 07 done - front size: 92
+  [DTLZ4] Run 08/30  seed=977
+  [DTLZ4] Run 08 done - front size: 92
+  [DTLZ4] Run 09/30  seed=1009
+  [DTLZ4] Run 09 done - front size: 92
+  [DTLZ4] Run 10/30  seed=1123
+  [DTLZ4] Run 10 done - front size: 92
+  [DTLZ4] Run 11/30  seed=1249
+  [DTLZ4] Run 11 done - front size: 92
+  [DTLZ4] Run 12/30  seed=1373
+  [DTLZ4] Run 12 done - front size: 92
+  [DTLZ4] Run 13/30  seed=1499
+  [DTLZ4] Run 13 done - front size: 92
+  [DTLZ4] Run 14/30  seed=1609
+  [DTLZ4] Run 14 done - front size: 92
+  [DTLZ4] Run 15/30  seed=1733
+  [DTLZ4] Run 15 done - front size: 92
+  [DTLZ4] Run 16/30  seed=1871
+  [DTLZ4] Run 16 done - front size: 92
+  [DTLZ4] Run 17/30  seed=1997
+  [DTLZ4] Run 17 done - front size: 92
+  [DTLZ4] Run 18/30  seed=2113
+  [DTLZ4] Run 18 done - front size: 92
+  [DTLZ4] Run 19/30  seed=2237
+  [DTLZ4] Run 19 done - front size: 92
+  [DTLZ4] Run 20/30  seed=2351
+  [DTLZ4] Run 20 done - front size: 92
+  [DTLZ4] Run 21/30  seed=2467
+  [DTLZ4] Run 21 done - front size: 92
+  [DTLZ4] Run 22/30  seed=2593
+  [DTLZ4] Run 22 done - front size: 92
+  [DTLZ4] Run 23/30  seed=2711
+  [DTLZ4] Run 23 done - front size: 92
+  [DTLZ4] Run 24/30  seed=2837
+  [DTLZ4] Run 24 done - front size: 92
+  [DTLZ4] Run 25/30  seed=2953
+  [DTLZ4] Run 25 done - front size: 92
+  [DTLZ4] Run 26/30  seed=3079
+  [DTLZ4] Run 26 done - front size: 92
+  [DTLZ4] Run 27/30  seed=3191
+  [DTLZ4] Run 27 done - front size: 92
+  [DTLZ4] Run 28/30  seed=3313
+  [DTLZ4] Run 28 done - front size: 92
+  [DTLZ4] Run 29/30  seed=3433
+  [DTLZ4] Run 29 done - front size: 92
+  [DTLZ4] Run 30/30  seed=3557
+  [DTLZ4] Run 30 done - front size: 92
+  DTLZ4: 30 runs completed in 116.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ4_M3.csv
+
+==================================================
+Problem: DTLZ5  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ5] Run 01/30  seed=42
+  [DTLZ5] Run 01 done - front size: 92
+  [DTLZ5] Run 02/30  seed=137
+  [DTLZ5] Run 02 done - front size: 92
+  [DTLZ5] Run 03/30  seed=271
+  [DTLZ5] Run 03 done - front size: 92
+  [DTLZ5] Run 04/30  seed=491
+  [DTLZ5] Run 04 done - front size: 92
+  [DTLZ5] Run 05/30  seed=613
+  [DTLZ5] Run 05 done - front size: 92
+  [DTLZ5] Run 06/30  seed=733
+  [DTLZ5] Run 06 done - front size: 92
+  [DTLZ5] Run 07/30  seed=857
+  [DTLZ5] Run 07 done - front size: 92
+  [DTLZ5] Run 08/30  seed=977
+  [DTLZ5] Run 08 done - front size: 92
+  [DTLZ5] Run 09/30  seed=1009
+  [DTLZ5] Run 09 done - front size: 92
+  [DTLZ5] Run 10/30  seed=1123
+  [DTLZ5] Run 10 done - front size: 92
+  [DTLZ5] Run 11/30  seed=1249
+  [DTLZ5] Run 11 done - front size: 92
+  [DTLZ5] Run 12/30  seed=1373
+  [DTLZ5] Run 12 done - front size: 92
+  [DTLZ5] Run 13/30  seed=1499
+  [DTLZ5] Run 13 done - front size: 92
+  [DTLZ5] Run 14/30  seed=1609
+  [DTLZ5] Run 14 done - front size: 92
+  [DTLZ5] Run 15/30  seed=1733
+  [DTLZ5] Run 15 done - front size: 92
+  [DTLZ5] Run 16/30  seed=1871
+  [DTLZ5] Run 16 done - front size: 92
+  [DTLZ5] Run 17/30  seed=1997
+  [DTLZ5] Run 17 done - front size: 92
+  [DTLZ5] Run 18/30  seed=2113
+  [DTLZ5] Run 18 done - front size: 92
+  [DTLZ5] Run 19/30  seed=2237
+  [DTLZ5] Run 19 done - front size: 92
+  [DTLZ5] Run 20/30  seed=2351
+  [DTLZ5] Run 20 done - front size: 92
+  [DTLZ5] Run 21/30  seed=2467
+  [DTLZ5] Run 21 done - front size: 92
+  [DTLZ5] Run 22/30  seed=2593
+  [DTLZ5] Run 22 done - front size: 92
+  [DTLZ5] Run 23/30  seed=2711
+  [DTLZ5] Run 23 done - front size: 92
+  [DTLZ5] Run 24/30  seed=2837
+  [DTLZ5] Run 24 done - front size: 92
+  [DTLZ5] Run 25/30  seed=2953
+  [DTLZ5] Run 25 done - front size: 92
+  [DTLZ5] Run 26/30  seed=3079
+  [DTLZ5] Run 26 done - front size: 92
+  [DTLZ5] Run 27/30  seed=3191
+  [DTLZ5] Run 27 done - front size: 92
+  [DTLZ5] Run 28/30  seed=3313
+  [DTLZ5] Run 28 done - front size: 92
+  [DTLZ5] Run 29/30  seed=3433
+  [DTLZ5] Run 29 done - front size: 92
+  [DTLZ5] Run 30/30  seed=3557
+  [DTLZ5] Run 30 done - front size: 92
+  DTLZ5: 30 runs completed in 113.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ5_M3.csv
+
+==================================================
+Problem: DTLZ6  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ6] Run 01/30  seed=42
+  [DTLZ6] Run 01 done - front size: 92
+  [DTLZ6] Run 02/30  seed=137
+  [DTLZ6] Run 02 done - front size: 92
+  [DTLZ6] Run 03/30  seed=271
+  [DTLZ6] Run 03 done - front size: 92
+  [DTLZ6] Run 04/30  seed=491
+  [DTLZ6] Run 04 done - front size: 92
+  [DTLZ6] Run 05/30  seed=613
+  [DTLZ6] Run 05 done - front size: 92
+  [DTLZ6] Run 06/30  seed=733
+  [DTLZ6] Run 06 done - front size: 92
+  [DTLZ6] Run 07/30  seed=857
+  [DTLZ6] Run 07 done - front size: 92
+  [DTLZ6] Run 08/30  seed=977
+  [DTLZ6] Run 08 done - front size: 92
+  [DTLZ6] Run 09/30  seed=1009
+  [DTLZ6] Run 09 done - front size: 92
+  [DTLZ6] Run 10/30  seed=1123
+  [DTLZ6] Run 10 done - front size: 92
+  [DTLZ6] Run 11/30  seed=1249
+  [DTLZ6] Run 11 done - front size: 92
+  [DTLZ6] Run 12/30  seed=1373
+  [DTLZ6] Run 12 done - front size: 92
+  [DTLZ6] Run 13/30  seed=1499
+  [DTLZ6] Run 13 done - front size: 92
+  [DTLZ6] Run 14/30  seed=1609
+  [DTLZ6] Run 14 done - front size: 92
+  [DTLZ6] Run 15/30  seed=1733
+  [DTLZ6] Run 15 done - front size: 92
+  [DTLZ6] Run 16/30  seed=1871
+  [DTLZ6] Run 16 done - front size: 92
+  [DTLZ6] Run 17/30  seed=1997
+  [DTLZ6] Run 17 done - front size: 92
+  [DTLZ6] Run 18/30  seed=2113
+  [DTLZ6] Run 18 done - front size: 92
+  [DTLZ6] Run 19/30  seed=2237
+  [DTLZ6] Run 19 done - front size: 92
+  [DTLZ6] Run 20/30  seed=2351
+  [DTLZ6] Run 20 done - front size: 92
+  [DTLZ6] Run 21/30  seed=2467
+  [DTLZ6] Run 21 done - front size: 92
+  [DTLZ6] Run 22/30  seed=2593
+  [DTLZ6] Run 22 done - front size: 92
+  [DTLZ6] Run 23/30  seed=2711
+  [DTLZ6] Run 23 done - front size: 92
+  [DTLZ6] Run 24/30  seed=2837
+  [DTLZ6] Run 24 done - front size: 92
+  [DTLZ6] Run 25/30  seed=2953
+  [DTLZ6] Run 25 done - front size: 92
+  [DTLZ6] Run 26/30  seed=3079
+  [DTLZ6] Run 26 done - front size: 92
+  [DTLZ6] Run 27/30  seed=3191
+  [DTLZ6] Run 27 done - front size: 92
+  [DTLZ6] Run 28/30  seed=3313
+  [DTLZ6] Run 28 done - front size: 92
+  [DTLZ6] Run 29/30  seed=3433
+  [DTLZ6] Run 29 done - front size: 92
+  [DTLZ6] Run 30/30  seed=3557
+  [DTLZ6] Run 30 done - front size: 92
+  DTLZ6: 30 runs completed in 101.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ6_M3.csv
+
+==================================================
+Problem: DTLZ7  (30 runs, 3 objectives)
+==================================================
+  n_var=22, n_obj=3, n_gen=326
+  [DTLZ7] Run 01/30  seed=42
+  [DTLZ7] Run 01 done - front size: 92
+  [DTLZ7] Run 02/30  seed=137
+  [DTLZ7] Run 02 done - front size: 92
+  [DTLZ7] Run 03/30  seed=271
+  [DTLZ7] Run 03 done - front size: 92
+  [DTLZ7] Run 04/30  seed=491
+  [DTLZ7] Run 04 done - front size: 92
+  [DTLZ7] Run 05/30  seed=613
+  [DTLZ7] Run 05 done - front size: 92
+  [DTLZ7] Run 06/30  seed=733
+  [DTLZ7] Run 06 done - front size: 92
+  [DTLZ7] Run 07/30  seed=857
+  [DTLZ7] Run 07 done - front size: 92
+  [DTLZ7] Run 08/30  seed=977
+  [DTLZ7] Run 08 done - front size: 92
+  [DTLZ7] Run 09/30  seed=1009
+  [DTLZ7] Run 09 done - front size: 92
+  [DTLZ7] Run 10/30  seed=1123
+  [DTLZ7] Run 10 done - front size: 92
+  [DTLZ7] Run 11/30  seed=1249
+  [DTLZ7] Run 11 done - front size: 92
+  [DTLZ7] Run 12/30  seed=1373
+  [DTLZ7] Run 12 done - front size: 92
+  [DTLZ7] Run 13/30  seed=1499
+  [DTLZ7] Run 13 done - front size: 92
+  [DTLZ7] Run 14/30  seed=1609
+  [DTLZ7] Run 14 done - front size: 92
+  [DTLZ7] Run 15/30  seed=1733
+  [DTLZ7] Run 15 done - front size: 92
+  [DTLZ7] Run 16/30  seed=1871
+  [DTLZ7] Run 16 done - front size: 92
+  [DTLZ7] Run 17/30  seed=1997
+  [DTLZ7] Run 17 done - front size: 92
+  [DTLZ7] Run 18/30  seed=2113
+  [DTLZ7] Run 18 done - front size: 92
+  [DTLZ7] Run 19/30  seed=2237
+  [DTLZ7] Run 19 done - front size: 92
+  [DTLZ7] Run 20/30  seed=2351
+  [DTLZ7] Run 20 done - front size: 92
+  [DTLZ7] Run 21/30  seed=2467
+  [DTLZ7] Run 21 done - front size: 92
+  [DTLZ7] Run 22/30  seed=2593
+  [DTLZ7] Run 22 done - front size: 92
+  [DTLZ7] Run 23/30  seed=2711
+  [DTLZ7] Run 23 done - front size: 92
+  [DTLZ7] Run 24/30  seed=2837
+  [DTLZ7] Run 24 done - front size: 92
+  [DTLZ7] Run 25/30  seed=2953
+  [DTLZ7] Run 25 done - front size: 92
+  [DTLZ7] Run 26/30  seed=3079
+  [DTLZ7] Run 26 done - front size: 92
+  [DTLZ7] Run 27/30  seed=3191
+  [DTLZ7] Run 27 done - front size: 92
+  [DTLZ7] Run 28/30  seed=3313
+  [DTLZ7] Run 28 done - front size: 92
+  [DTLZ7] Run 29/30  seed=3433
+  [DTLZ7] Run 29 done - front size: 92
+  [DTLZ7] Run 30/30  seed=3557
+  [DTLZ7] Run 30 done - front size: 92
+  DTLZ7: 30 runs completed in 117.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ7_M3.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\summary_M3.csv
+
+---------------------------------------------------------------------------
+  NSGA-III on DTLZ1-7 (3 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+DTLZ1          0.020511     0.292087     0.644853     0.228309     0.215670
+DTLZ2          0.054284     0.054436     0.054481     0.054419     0.000053
+DTLZ3          2.004412     6.271715    15.453168     7.853389     3.844292
+DTLZ4          0.054251     0.054422     0.541896     0.151846     0.194912
+DTLZ5          0.010891     0.016629     0.021592     0.016078     0.002662
+DTLZ6          0.462675     0.718467     1.067291     0.712699     0.136121
+DTLZ7          0.074989     0.082302     0.367873     0.093234     0.051369
+---------------------------------------------------------------------------
+
+=== DTLZ nsga3 M4 ===
+
+==================================================
+Problem: DTLZ1  (30 runs, 4 objectives)
+==================================================
+  n_var=8, n_obj=4, n_gen=250
+  [DTLZ1] Run 01/30  seed=42
+  [DTLZ1] Run 01 done - front size: 120
+  [DTLZ1] Run 02/30  seed=137
+  [DTLZ1] Run 02 done - front size: 120
+  [DTLZ1] Run 03/30  seed=271
+  [DTLZ1] Run 03 done - front size: 120
+  [DTLZ1] Run 04/30  seed=491
+  [DTLZ1] Run 04 done - front size: 120
+  [DTLZ1] Run 05/30  seed=613
+  [DTLZ1] Run 05 done - front size: 100
+  [DTLZ1] Run 06/30  seed=733
+  [DTLZ1] Run 06 done - front size: 120
+  [DTLZ1] Run 07/30  seed=857
+  [DTLZ1] Run 07 done - front size: 120
+  [DTLZ1] Run 08/30  seed=977
+  [DTLZ1] Run 08 done - front size: 120
+  [DTLZ1] Run 09/30  seed=1009
+  [DTLZ1] Run 09 done - front size: 120
+  [DTLZ1] Run 10/30  seed=1123
+  [DTLZ1] Run 10 done - front size: 120
+  [DTLZ1] Run 11/30  seed=1249
+  [DTLZ1] Run 11 done - front size: 120
+  [DTLZ1] Run 12/30  seed=1373
+  [DTLZ1] Run 12 done - front size: 120
+  [DTLZ1] Run 13/30  seed=1499
+  [DTLZ1] Run 13 done - front size: 120
+  [DTLZ1] Run 14/30  seed=1609
+  [DTLZ1] Run 14 done - front size: 120
+  [DTLZ1] Run 15/30  seed=1733
+  [DTLZ1] Run 15 done - front size: 120
+  [DTLZ1] Run 16/30  seed=1871
+  [DTLZ1] Run 16 done - front size: 120
+  [DTLZ1] Run 17/30  seed=1997
+  [DTLZ1] Run 17 done - front size: 120
+  [DTLZ1] Run 18/30  seed=2113
+  [DTLZ1] Run 18 done - front size: 100
+  [DTLZ1] Run 19/30  seed=2237
+  [DTLZ1] Run 19 done - front size: 100
+  [DTLZ1] Run 20/30  seed=2351
+  [DTLZ1] Run 20 done - front size: 120
+  [DTLZ1] Run 21/30  seed=2467
+  [DTLZ1] Run 21 done - front size: 120
+  [DTLZ1] Run 22/30  seed=2593
+  [DTLZ1] Run 22 done - front size: 120
+  [DTLZ1] Run 23/30  seed=2711
+  [DTLZ1] Run 23 done - front size: 120
+  [DTLZ1] Run 24/30  seed=2837
+  [DTLZ1] Run 24 done - front size: 100
+  [DTLZ1] Run 25/30  seed=2953
+  [DTLZ1] Run 25 done - front size: 120
+  [DTLZ1] Run 26/30  seed=3079
+  [DTLZ1] Run 26 done - front size: 120
+  [DTLZ1] Run 27/30  seed=3191
+  [DTLZ1] Run 27 done - front size: 120
+  [DTLZ1] Run 28/30  seed=3313
+  [DTLZ1] Run 28 done - front size: 120
+  [DTLZ1] Run 29/30  seed=3433
+  [DTLZ1] Run 29 done - front size: 120
+  [DTLZ1] Run 30/30  seed=3557
+  [DTLZ1] Run 30 done - front size: 120
+  DTLZ1: 30 runs completed in 118.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ1_M4.csv
+
+==================================================
+Problem: DTLZ2  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ2] Run 01/30  seed=42
+  [DTLZ2] Run 01 done - front size: 100
+  [DTLZ2] Run 02/30  seed=137
+  [DTLZ2] Run 02 done - front size: 100
+  [DTLZ2] Run 03/30  seed=271
+  [DTLZ2] Run 03 done - front size: 120
+  [DTLZ2] Run 04/30  seed=491
+  [DTLZ2] Run 04 done - front size: 120
+  [DTLZ2] Run 05/30  seed=613
+  [DTLZ2] Run 05 done - front size: 100
+  [DTLZ2] Run 06/30  seed=733
+  [DTLZ2] Run 06 done - front size: 100
+  [DTLZ2] Run 07/30  seed=857
+  [DTLZ2] Run 07 done - front size: 120
+  [DTLZ2] Run 08/30  seed=977
+  [DTLZ2] Run 08 done - front size: 120
+  [DTLZ2] Run 09/30  seed=1009
+  [DTLZ2] Run 09 done - front size: 100
+  [DTLZ2] Run 10/30  seed=1123
+  [DTLZ2] Run 10 done - front size: 120
+  [DTLZ2] Run 11/30  seed=1249
+  [DTLZ2] Run 11 done - front size: 120
+  [DTLZ2] Run 12/30  seed=1373
+  [DTLZ2] Run 12 done - front size: 100
+  [DTLZ2] Run 13/30  seed=1499
+  [DTLZ2] Run 13 done - front size: 120
+  [DTLZ2] Run 14/30  seed=1609
+  [DTLZ2] Run 14 done - front size: 120
+  [DTLZ2] Run 15/30  seed=1733
+  [DTLZ2] Run 15 done - front size: 120
+  [DTLZ2] Run 16/30  seed=1871
+  [DTLZ2] Run 16 done - front size: 120
+  [DTLZ2] Run 17/30  seed=1997
+  [DTLZ2] Run 17 done - front size: 100
+  [DTLZ2] Run 18/30  seed=2113
+  [DTLZ2] Run 18 done - front size: 120
+  [DTLZ2] Run 19/30  seed=2237
+  [DTLZ2] Run 19 done - front size: 120
+  [DTLZ2] Run 20/30  seed=2351
+  [DTLZ2] Run 20 done - front size: 100
+  [DTLZ2] Run 21/30  seed=2467
+  [DTLZ2] Run 21 done - front size: 120
+  [DTLZ2] Run 22/30  seed=2593
+  [DTLZ2] Run 22 done - front size: 100
+  [DTLZ2] Run 23/30  seed=2711
+  [DTLZ2] Run 23 done - front size: 120
+  [DTLZ2] Run 24/30  seed=2837
+  [DTLZ2] Run 24 done - front size: 120
+  [DTLZ2] Run 25/30  seed=2953
+  [DTLZ2] Run 25 done - front size: 120
+  [DTLZ2] Run 26/30  seed=3079
+  [DTLZ2] Run 26 done - front size: 120
+  [DTLZ2] Run 27/30  seed=3191
+  [DTLZ2] Run 27 done - front size: 100
+  [DTLZ2] Run 28/30  seed=3313
+  [DTLZ2] Run 28 done - front size: 120
+  [DTLZ2] Run 29/30  seed=3433
+  [DTLZ2] Run 29 done - front size: 120
+  [DTLZ2] Run 30/30  seed=3557
+  [DTLZ2] Run 30 done - front size: 120
+  DTLZ2: 30 runs completed in 129.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ2_M4.csv
+
+==================================================
+Problem: DTLZ3  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ3] Run 01/30  seed=42
+  [DTLZ3] Run 01 done - front size: 120
+  [DTLZ3] Run 02/30  seed=137
+  [DTLZ3] Run 02 done - front size: 120
+  [DTLZ3] Run 03/30  seed=271
+  [DTLZ3] Run 03 done - front size: 120
+  [DTLZ3] Run 04/30  seed=491
+  [DTLZ3] Run 04 done - front size: 120
+  [DTLZ3] Run 05/30  seed=613
+  [DTLZ3] Run 05 done - front size: 100
+  [DTLZ3] Run 06/30  seed=733
+  [DTLZ3] Run 06 done - front size: 120
+  [DTLZ3] Run 07/30  seed=857
+  [DTLZ3] Run 07 done - front size: 120
+  [DTLZ3] Run 08/30  seed=977
+  [DTLZ3] Run 08 done - front size: 120
+  [DTLZ3] Run 09/30  seed=1009
+  [DTLZ3] Run 09 done - front size: 120
+  [DTLZ3] Run 10/30  seed=1123
+  [DTLZ3] Run 10 done - front size: 120
+  [DTLZ3] Run 11/30  seed=1249
+  [DTLZ3] Run 11 done - front size: 120
+  [DTLZ3] Run 12/30  seed=1373
+  [DTLZ3] Run 12 done - front size: 100
+  [DTLZ3] Run 13/30  seed=1499
+  [DTLZ3] Run 13 done - front size: 120
+  [DTLZ3] Run 14/30  seed=1609
+  [DTLZ3] Run 14 done - front size: 120
+  [DTLZ3] Run 15/30  seed=1733
+  [DTLZ3] Run 15 done - front size: 120
+  [DTLZ3] Run 16/30  seed=1871
+  [DTLZ3] Run 16 done - front size: 100
+  [DTLZ3] Run 17/30  seed=1997
+  [DTLZ3] Run 17 done - front size: 100
+  [DTLZ3] Run 18/30  seed=2113
+  [DTLZ3] Run 18 done - front size: 120
+  [DTLZ3] Run 19/30  seed=2237
+  [DTLZ3] Run 19 done - front size: 120
+  [DTLZ3] Run 20/30  seed=2351
+  [DTLZ3] Run 20 done - front size: 120
+  [DTLZ3] Run 21/30  seed=2467
+  [DTLZ3] Run 21 done - front size: 120
+  [DTLZ3] Run 22/30  seed=2593
+  [DTLZ3] Run 22 done - front size: 120
+  [DTLZ3] Run 23/30  seed=2711
+  [DTLZ3] Run 23 done - front size: 120
+  [DTLZ3] Run 24/30  seed=2837
+  [DTLZ3] Run 24 done - front size: 120
+  [DTLZ3] Run 25/30  seed=2953
+  [DTLZ3] Run 25 done - front size: 120
+  [DTLZ3] Run 26/30  seed=3079
+  [DTLZ3] Run 26 done - front size: 120
+  [DTLZ3] Run 27/30  seed=3191
+  [DTLZ3] Run 27 done - front size: 120
+  [DTLZ3] Run 28/30  seed=3313
+  [DTLZ3] Run 28 done - front size: 120
+  [DTLZ3] Run 29/30  seed=3433
+  [DTLZ3] Run 29 done - front size: 120
+  [DTLZ3] Run 30/30  seed=3557
+  [DTLZ3] Run 30 done - front size: 120
+  DTLZ3: 30 runs completed in 105.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ3_M4.csv
+
+==================================================
+Problem: DTLZ4  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ4] Run 01/30  seed=42
+  [DTLZ4] Run 01 done - front size: 100
+  [DTLZ4] Run 02/30  seed=137
+  [DTLZ4] Run 02 done - front size: 120
+  [DTLZ4] Run 03/30  seed=271
+  [DTLZ4] Run 03 done - front size: 120
+  [DTLZ4] Run 04/30  seed=491
+  [DTLZ4] Run 04 done - front size: 120
+  [DTLZ4] Run 05/30  seed=613
+  [DTLZ4] Run 05 done - front size: 120
+  [DTLZ4] Run 06/30  seed=733
+  [DTLZ4] Run 06 done - front size: 120
+  [DTLZ4] Run 07/30  seed=857
+  [DTLZ4] Run 07 done - front size: 120
+  [DTLZ4] Run 08/30  seed=977
+  [DTLZ4] Run 08 done - front size: 120
+  [DTLZ4] Run 09/30  seed=1009
+  [DTLZ4] Run 09 done - front size: 100
+  [DTLZ4] Run 10/30  seed=1123
+  [DTLZ4] Run 10 done - front size: 120
+  [DTLZ4] Run 11/30  seed=1249
+  [DTLZ4] Run 11 done - front size: 120
+  [DTLZ4] Run 12/30  seed=1373
+  [DTLZ4] Run 12 done - front size: 120
+  [DTLZ4] Run 13/30  seed=1499
+  [DTLZ4] Run 13 done - front size: 100
+  [DTLZ4] Run 14/30  seed=1609
+  [DTLZ4] Run 14 done - front size: 120
+  [DTLZ4] Run 15/30  seed=1733
+  [DTLZ4] Run 15 done - front size: 120
+  [DTLZ4] Run 16/30  seed=1871
+  [DTLZ4] Run 16 done - front size: 100
+  [DTLZ4] Run 17/30  seed=1997
+  [DTLZ4] Run 17 done - front size: 120
+  [DTLZ4] Run 18/30  seed=2113
+  [DTLZ4] Run 18 done - front size: 120
+  [DTLZ4] Run 19/30  seed=2237
+  [DTLZ4] Run 19 done - front size: 120
+  [DTLZ4] Run 20/30  seed=2351
+  [DTLZ4] Run 20 done - front size: 120
+  [DTLZ4] Run 21/30  seed=2467
+  [DTLZ4] Run 21 done - front size: 120
+  [DTLZ4] Run 22/30  seed=2593
+  [DTLZ4] Run 22 done - front size: 120
+  [DTLZ4] Run 23/30  seed=2711
+  [DTLZ4] Run 23 done - front size: 100
+  [DTLZ4] Run 24/30  seed=2837
+  [DTLZ4] Run 24 done - front size: 120
+  [DTLZ4] Run 25/30  seed=2953
+  [DTLZ4] Run 25 done - front size: 120
+  [DTLZ4] Run 26/30  seed=3079
+  [DTLZ4] Run 26 done - front size: 120
+  [DTLZ4] Run 27/30  seed=3191
+  [DTLZ4] Run 27 done - front size: 120
+  [DTLZ4] Run 28/30  seed=3313
+  [DTLZ4] Run 28 done - front size: 120
+  [DTLZ4] Run 29/30  seed=3433
+  [DTLZ4] Run 29 done - front size: 120
+  [DTLZ4] Run 30/30  seed=3557
+  [DTLZ4] Run 30 done - front size: 100
+  DTLZ4: 30 runs completed in 129.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ4_M4.csv
+
+==================================================
+Problem: DTLZ5  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ5 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ6  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ6 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ7  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ7 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\summary_M4.csv
+
+---------------------------------------------------------------------------
+  NSGA-III on DTLZ1-7 (4 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+DTLZ1          0.041204     0.264080     0.776712     0.214962     0.185331
+DTLZ2          0.120972     0.124211     0.135494     0.126584     0.005507
+DTLZ3          0.191694     5.139371    14.394622     5.789915     3.541623
+DTLZ4          0.121296     0.122231     0.749351     0.145236     0.112262
+---------------------------------------------------------------------------
+
+=== DTLZ qinsga3 M3 ===
+
+==================================================
+Problem: DTLZ1  (30 runs, 3 objectives)
+==================================================
+  n_var=7, n_obj=3, n_gen=326
+  [DTLZ1] Run 01/30  seed=42
+  [DTLZ1] Run 01 done - front size: 92
+  [DTLZ1] Run 02/30  seed=137
+  [DTLZ1] Run 02 done - front size: 92
+  [DTLZ1] Run 03/30  seed=271
+  [DTLZ1] Run 03 done - front size: 92
+  [DTLZ1] Run 04/30  seed=491
+  [DTLZ1] Run 04 done - front size: 92
+  [DTLZ1] Run 05/30  seed=613
+  [DTLZ1] Run 05 done - front size: 92
+  [DTLZ1] Run 06/30  seed=733
+  [DTLZ1] Run 06 done - front size: 92
+  [DTLZ1] Run 07/30  seed=857
+  [DTLZ1] Run 07 done - front size: 92
+  [DTLZ1] Run 08/30  seed=977
+  [DTLZ1] Run 08 done - front size: 92
+  [DTLZ1] Run 09/30  seed=1009
+  [DTLZ1] Run 09 done - front size: 92
+  [DTLZ1] Run 10/30  seed=1123
+  [DTLZ1] Run 10 done - front size: 92
+  [DTLZ1] Run 11/30  seed=1249
+  [DTLZ1] Run 11 done - front size: 92
+  [DTLZ1] Run 12/30  seed=1373
+  [DTLZ1] Run 12 done - front size: 92
+  [DTLZ1] Run 13/30  seed=1499
+  [DTLZ1] Run 13 done - front size: 92
+  [DTLZ1] Run 14/30  seed=1609
+  [DTLZ1] Run 14 done - front size: 92
+  [DTLZ1] Run 15/30  seed=1733
+  [DTLZ1] Run 15 done - front size: 92
+  [DTLZ1] Run 16/30  seed=1871
+  [DTLZ1] Run 16 done - front size: 92
+  [DTLZ1] Run 17/30  seed=1997
+  [DTLZ1] Run 17 done - front size: 92
+  [DTLZ1] Run 18/30  seed=2113
+  [DTLZ1] Run 18 done - front size: 92
+  [DTLZ1] Run 19/30  seed=2237
+  [DTLZ1] Run 19 done - front size: 92
+  [DTLZ1] Run 20/30  seed=2351
+  [DTLZ1] Run 20 done - front size: 92
+  [DTLZ1] Run 21/30  seed=2467
+  [DTLZ1] Run 21 done - front size: 92
+  [DTLZ1] Run 22/30  seed=2593
+  [DTLZ1] Run 22 done - front size: 92
+  [DTLZ1] Run 23/30  seed=2711
+  [DTLZ1] Run 23 done - front size: 92
+  [DTLZ1] Run 24/30  seed=2837
+  [DTLZ1] Run 24 done - front size: 92
+  [DTLZ1] Run 25/30  seed=2953
+  [DTLZ1] Run 25 done - front size: 92
+  [DTLZ1] Run 26/30  seed=3079
+  [DTLZ1] Run 26 done - front size: 92
+  [DTLZ1] Run 27/30  seed=3191
+  [DTLZ1] Run 27 done - front size: 92
+  [DTLZ1] Run 28/30  seed=3313
+  [DTLZ1] Run 28 done - front size: 92
+  [DTLZ1] Run 29/30  seed=3433
+  [DTLZ1] Run 29 done - front size: 92
+  [DTLZ1] Run 30/30  seed=3557
+  [DTLZ1] Run 30 done - front size: 92
+  DTLZ1: 30 runs completed in 164.6s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ1_M3.csv
+
+==================================================
+Problem: DTLZ2  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ2] Run 01/30  seed=42
+  [DTLZ2] Run 01 done - front size: 92
+  [DTLZ2] Run 02/30  seed=137
+  [DTLZ2] Run 02 done - front size: 92
+  [DTLZ2] Run 03/30  seed=271
+  [DTLZ2] Run 03 done - front size: 92
+  [DTLZ2] Run 04/30  seed=491
+  [DTLZ2] Run 04 done - front size: 92
+  [DTLZ2] Run 05/30  seed=613
+  [DTLZ2] Run 05 done - front size: 92
+  [DTLZ2] Run 06/30  seed=733
+  [DTLZ2] Run 06 done - front size: 92
+  [DTLZ2] Run 07/30  seed=857
+  [DTLZ2] Run 07 done - front size: 92
+  [DTLZ2] Run 08/30  seed=977
+  [DTLZ2] Run 08 done - front size: 92
+  [DTLZ2] Run 09/30  seed=1009
+  [DTLZ2] Run 09 done - front size: 92
+  [DTLZ2] Run 10/30  seed=1123
+  [DTLZ2] Run 10 done - front size: 92
+  [DTLZ2] Run 11/30  seed=1249
+  [DTLZ2] Run 11 done - front size: 92
+  [DTLZ2] Run 12/30  seed=1373
+  [DTLZ2] Run 12 done - front size: 92
+  [DTLZ2] Run 13/30  seed=1499
+  [DTLZ2] Run 13 done - front size: 92
+  [DTLZ2] Run 14/30  seed=1609
+  [DTLZ2] Run 14 done - front size: 92
+  [DTLZ2] Run 15/30  seed=1733
+  [DTLZ2] Run 15 done - front size: 92
+  [DTLZ2] Run 16/30  seed=1871
+  [DTLZ2] Run 16 done - front size: 92
+  [DTLZ2] Run 17/30  seed=1997
+  [DTLZ2] Run 17 done - front size: 92
+  [DTLZ2] Run 18/30  seed=2113
+  [DTLZ2] Run 18 done - front size: 92
+  [DTLZ2] Run 19/30  seed=2237
+  [DTLZ2] Run 19 done - front size: 92
+  [DTLZ2] Run 20/30  seed=2351
+  [DTLZ2] Run 20 done - front size: 92
+  [DTLZ2] Run 21/30  seed=2467
+  [DTLZ2] Run 21 done - front size: 92
+  [DTLZ2] Run 22/30  seed=2593
+  [DTLZ2] Run 22 done - front size: 92
+  [DTLZ2] Run 23/30  seed=2711
+  [DTLZ2] Run 23 done - front size: 92
+  [DTLZ2] Run 24/30  seed=2837
+  [DTLZ2] Run 24 done - front size: 92
+  [DTLZ2] Run 25/30  seed=2953
+  [DTLZ2] Run 25 done - front size: 92
+  [DTLZ2] Run 26/30  seed=3079
+  [DTLZ2] Run 26 done - front size: 92
+  [DTLZ2] Run 27/30  seed=3191
+  [DTLZ2] Run 27 done - front size: 92
+  [DTLZ2] Run 28/30  seed=3313
+  [DTLZ2] Run 28 done - front size: 92
+  [DTLZ2] Run 29/30  seed=3433
+  [DTLZ2] Run 29 done - front size: 92
+  [DTLZ2] Run 30/30  seed=3557
+  [DTLZ2] Run 30 done - front size: 92
+  DTLZ2: 30 runs completed in 218.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ2_M3.csv
+
+==================================================
+Problem: DTLZ3  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ3] Run 01/30  seed=42
+  [DTLZ3] Run 01 done - front size: 92
+  [DTLZ3] Run 02/30  seed=137
+  [DTLZ3] Run 02 done - front size: 92
+  [DTLZ3] Run 03/30  seed=271
+  [DTLZ3] Run 03 done - front size: 92
+  [DTLZ3] Run 04/30  seed=491
+  [DTLZ3] Run 04 done - front size: 92
+  [DTLZ3] Run 05/30  seed=613
+  [DTLZ3] Run 05 done - front size: 92
+  [DTLZ3] Run 06/30  seed=733
+  [DTLZ3] Run 06 done - front size: 92
+  [DTLZ3] Run 07/30  seed=857
+  [DTLZ3] Run 07 done - front size: 92
+  [DTLZ3] Run 08/30  seed=977
+  [DTLZ3] Run 08 done - front size: 92
+  [DTLZ3] Run 09/30  seed=1009
+  [DTLZ3] Run 09 done - front size: 92
+  [DTLZ3] Run 10/30  seed=1123
+  [DTLZ3] Run 10 done - front size: 92
+  [DTLZ3] Run 11/30  seed=1249
+  [DTLZ3] Run 11 done - front size: 92
+  [DTLZ3] Run 12/30  seed=1373
+  [DTLZ3] Run 12 done - front size: 92
+  [DTLZ3] Run 13/30  seed=1499
+  [DTLZ3] Run 13 done - front size: 92
+  [DTLZ3] Run 14/30  seed=1609
+  [DTLZ3] Run 14 done - front size: 92
+  [DTLZ3] Run 15/30  seed=1733
+  [DTLZ3] Run 15 done - front size: 92
+  [DTLZ3] Run 16/30  seed=1871
+  [DTLZ3] Run 16 done - front size: 92
+  [DTLZ3] Run 17/30  seed=1997
+  [DTLZ3] Run 17 done - front size: 92
+  [DTLZ3] Run 18/30  seed=2113
+  [DTLZ3] Run 18 done - front size: 92
+  [DTLZ3] Run 19/30  seed=2237
+  [DTLZ3] Run 19 done - front size: 92
+  [DTLZ3] Run 20/30  seed=2351
+  [DTLZ3] Run 20 done - front size: 92
+  [DTLZ3] Run 21/30  seed=2467
+  [DTLZ3] Run 21 done - front size: 92
+  [DTLZ3] Run 22/30  seed=2593
+  [DTLZ3] Run 22 done - front size: 92
+  [DTLZ3] Run 23/30  seed=2711
+  [DTLZ3] Run 23 done - front size: 92
+  [DTLZ3] Run 24/30  seed=2837
+  [DTLZ3] Run 24 done - front size: 92
+  [DTLZ3] Run 25/30  seed=2953
+  [DTLZ3] Run 25 done - front size: 92
+  [DTLZ3] Run 26/30  seed=3079
+  [DTLZ3] Run 26 done - front size: 92
+  [DTLZ3] Run 27/30  seed=3191
+  [DTLZ3] Run 27 done - front size: 92
+  [DTLZ3] Run 28/30  seed=3313
+  [DTLZ3] Run 28 done - front size: 92
+  [DTLZ3] Run 29/30  seed=3433
+  [DTLZ3] Run 29 done - front size: 92
+  [DTLZ3] Run 30/30  seed=3557
+  [DTLZ3] Run 30 done - front size: 92
+  DTLZ3: 30 runs completed in 112.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ3_M3.csv
+
+==================================================
+Problem: DTLZ4  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ4] Run 01/30  seed=42
+  [DTLZ4] Run 01 done - front size: 92
+  [DTLZ4] Run 02/30  seed=137
+  [DTLZ4] Run 02 done - front size: 92
+  [DTLZ4] Run 03/30  seed=271
+  [DTLZ4] Run 03 done - front size: 92
+  [DTLZ4] Run 04/30  seed=491
+  [DTLZ4] Run 04 done - front size: 92
+  [DTLZ4] Run 05/30  seed=613
+  [DTLZ4] Run 05 done - front size: 92
+  [DTLZ4] Run 06/30  seed=733
+  [DTLZ4] Run 06 done - front size: 92
+  [DTLZ4] Run 07/30  seed=857
+  [DTLZ4] Run 07 done - front size: 92
+  [DTLZ4] Run 08/30  seed=977
+  [DTLZ4] Run 08 done - front size: 92
+  [DTLZ4] Run 09/30  seed=1009
+  [DTLZ4] Run 09 done - front size: 92
+  [DTLZ4] Run 10/30  seed=1123
+  [DTLZ4] Run 10 done - front size: 92
+  [DTLZ4] Run 11/30  seed=1249
+  [DTLZ4] Run 11 done - front size: 92
+  [DTLZ4] Run 12/30  seed=1373
+  [DTLZ4] Run 12 done - front size: 92
+  [DTLZ4] Run 13/30  seed=1499
+  [DTLZ4] Run 13 done - front size: 92
+  [DTLZ4] Run 14/30  seed=1609
+  [DTLZ4] Run 14 done - front size: 92
+  [DTLZ4] Run 15/30  seed=1733
+  [DTLZ4] Run 15 done - front size: 92
+  [DTLZ4] Run 16/30  seed=1871
+  [DTLZ4] Run 16 done - front size: 92
+  [DTLZ4] Run 17/30  seed=1997
+  [DTLZ4] Run 17 done - front size: 92
+  [DTLZ4] Run 18/30  seed=2113
+  [DTLZ4] Run 18 done - front size: 92
+  [DTLZ4] Run 19/30  seed=2237
+  [DTLZ4] Run 19 done - front size: 92
+  [DTLZ4] Run 20/30  seed=2351
+  [DTLZ4] Run 20 done - front size: 92
+  [DTLZ4] Run 21/30  seed=2467
+  [DTLZ4] Run 21 done - front size: 92
+  [DTLZ4] Run 22/30  seed=2593
+  [DTLZ4] Run 22 done - front size: 92
+  [DTLZ4] Run 23/30  seed=2711
+  [DTLZ4] Run 23 done - front size: 92
+  [DTLZ4] Run 24/30  seed=2837
+  [DTLZ4] Run 24 done - front size: 92
+  [DTLZ4] Run 25/30  seed=2953
+  [DTLZ4] Run 25 done - front size: 92
+  [DTLZ4] Run 26/30  seed=3079
+  [DTLZ4] Run 26 done - front size: 92
+  [DTLZ4] Run 27/30  seed=3191
+  [DTLZ4] Run 27 done - front size: 92
+  [DTLZ4] Run 28/30  seed=3313
+  [DTLZ4] Run 28 done - front size: 92
+  [DTLZ4] Run 29/30  seed=3433
+  [DTLZ4] Run 29 done - front size: 92
+  [DTLZ4] Run 30/30  seed=3557
+  [DTLZ4] Run 30 done - front size: 92
+  DTLZ4: 30 runs completed in 218.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ4_M3.csv
+
+==================================================
+Problem: DTLZ5  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ5] Run 01/30  seed=42
+  [DTLZ5] Run 01 done - front size: 92
+  [DTLZ5] Run 02/30  seed=137
+  [DTLZ5] Run 02 done - front size: 92
+  [DTLZ5] Run 03/30  seed=271
+  [DTLZ5] Run 03 done - front size: 92
+  [DTLZ5] Run 04/30  seed=491
+  [DTLZ5] Run 04 done - front size: 92
+  [DTLZ5] Run 05/30  seed=613
+  [DTLZ5] Run 05 done - front size: 92
+  [DTLZ5] Run 06/30  seed=733
+  [DTLZ5] Run 06 done - front size: 92
+  [DTLZ5] Run 07/30  seed=857
+  [DTLZ5] Run 07 done - front size: 92
+  [DTLZ5] Run 08/30  seed=977
+  [DTLZ5] Run 08 done - front size: 92
+  [DTLZ5] Run 09/30  seed=1009
+  [DTLZ5] Run 09 done - front size: 92
+  [DTLZ5] Run 10/30  seed=1123
+  [DTLZ5] Run 10 done - front size: 92
+  [DTLZ5] Run 11/30  seed=1249
+  [DTLZ5] Run 11 done - front size: 92
+  [DTLZ5] Run 12/30  seed=1373
+  [DTLZ5] Run 12 done - front size: 92
+  [DTLZ5] Run 13/30  seed=1499
+  [DTLZ5] Run 13 done - front size: 92
+  [DTLZ5] Run 14/30  seed=1609
+  [DTLZ5] Run 14 done - front size: 92
+  [DTLZ5] Run 15/30  seed=1733
+  [DTLZ5] Run 15 done - front size: 92
+  [DTLZ5] Run 16/30  seed=1871
+  [DTLZ5] Run 16 done - front size: 92
+  [DTLZ5] Run 17/30  seed=1997
+  [DTLZ5] Run 17 done - front size: 92
+  [DTLZ5] Run 18/30  seed=2113
+  [DTLZ5] Run 18 done - front size: 92
+  [DTLZ5] Run 19/30  seed=2237
+  [DTLZ5] Run 19 done - front size: 92
+  [DTLZ5] Run 20/30  seed=2351
+  [DTLZ5] Run 20 done - front size: 92
+  [DTLZ5] Run 21/30  seed=2467
+  [DTLZ5] Run 21 done - front size: 92
+  [DTLZ5] Run 22/30  seed=2593
+  [DTLZ5] Run 22 done - front size: 92
+  [DTLZ5] Run 23/30  seed=2711
+  [DTLZ5] Run 23 done - front size: 92
+  [DTLZ5] Run 24/30  seed=2837
+  [DTLZ5] Run 24 done - front size: 92
+  [DTLZ5] Run 25/30  seed=2953
+  [DTLZ5] Run 25 done - front size: 92
+  [DTLZ5] Run 26/30  seed=3079
+  [DTLZ5] Run 26 done - front size: 92
+  [DTLZ5] Run 27/30  seed=3191
+  [DTLZ5] Run 27 done - front size: 92
+  [DTLZ5] Run 28/30  seed=3313
+  [DTLZ5] Run 28 done - front size: 92
+  [DTLZ5] Run 29/30  seed=3433
+  [DTLZ5] Run 29 done - front size: 92
+  [DTLZ5] Run 30/30  seed=3557
+  [DTLZ5] Run 30 done - front size: 92
+  DTLZ5: 30 runs completed in 178.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ5_M3.csv
+
+==================================================
+Problem: DTLZ6  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [DTLZ6] Run 01/30  seed=42
+  [DTLZ6] Run 01 done - front size: 92
+  [DTLZ6] Run 02/30  seed=137
+  [DTLZ6] Run 02 done - front size: 92
+  [DTLZ6] Run 03/30  seed=271
+  [DTLZ6] Run 03 done - front size: 92
+  [DTLZ6] Run 04/30  seed=491
+  [DTLZ6] Run 04 done - front size: 92
+  [DTLZ6] Run 05/30  seed=613
+  [DTLZ6] Run 05 done - front size: 92
+  [DTLZ6] Run 06/30  seed=733
+  [DTLZ6] Run 06 done - front size: 92
+  [DTLZ6] Run 07/30  seed=857
+  [DTLZ6] Run 07 done - front size: 92
+  [DTLZ6] Run 08/30  seed=977
+  [DTLZ6] Run 08 done - front size: 92
+  [DTLZ6] Run 09/30  seed=1009
+  [DTLZ6] Run 09 done - front size: 92
+  [DTLZ6] Run 10/30  seed=1123
+  [DTLZ6] Run 10 done - front size: 92
+  [DTLZ6] Run 11/30  seed=1249
+  [DTLZ6] Run 11 done - front size: 92
+  [DTLZ6] Run 12/30  seed=1373
+  [DTLZ6] Run 12 done - front size: 92
+  [DTLZ6] Run 13/30  seed=1499
+  [DTLZ6] Run 13 done - front size: 92
+  [DTLZ6] Run 14/30  seed=1609
+  [DTLZ6] Run 14 done - front size: 92
+  [DTLZ6] Run 15/30  seed=1733
+  [DTLZ6] Run 15 done - front size: 92
+  [DTLZ6] Run 16/30  seed=1871
+  [DTLZ6] Run 16 done - front size: 92
+  [DTLZ6] Run 17/30  seed=1997
+  [DTLZ6] Run 17 done - front size: 92
+  [DTLZ6] Run 18/30  seed=2113
+  [DTLZ6] Run 18 done - front size: 92
+  [DTLZ6] Run 19/30  seed=2237
+  [DTLZ6] Run 19 done - front size: 92
+  [DTLZ6] Run 20/30  seed=2351
+  [DTLZ6] Run 20 done - front size: 92
+  [DTLZ6] Run 21/30  seed=2467
+  [DTLZ6] Run 21 done - front size: 92
+  [DTLZ6] Run 22/30  seed=2593
+  [DTLZ6] Run 22 done - front size: 92
+  [DTLZ6] Run 23/30  seed=2711
+  [DTLZ6] Run 23 done - front size: 92
+  [DTLZ6] Run 24/30  seed=2837
+  [DTLZ6] Run 24 done - front size: 92
+  [DTLZ6] Run 25/30  seed=2953
+  [DTLZ6] Run 25 done - front size: 92
+  [DTLZ6] Run 26/30  seed=3079
+  [DTLZ6] Run 26 done - front size: 92
+  [DTLZ6] Run 27/30  seed=3191
+  [DTLZ6] Run 27 done - front size: 92
+  [DTLZ6] Run 28/30  seed=3313
+  [DTLZ6] Run 28 done - front size: 92
+  [DTLZ6] Run 29/30  seed=3433
+  [DTLZ6] Run 29 done - front size: 92
+  [DTLZ6] Run 30/30  seed=3557
+  [DTLZ6] Run 30 done - front size: 92
+  DTLZ6: 30 runs completed in 131.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ6_M3.csv
+
+==================================================
+Problem: DTLZ7  (30 runs, 3 objectives)
+==================================================
+  n_var=22, n_obj=3, n_gen=326
+  [DTLZ7] Run 01/30  seed=42
+  [DTLZ7] Run 01 done - front size: 92
+  [DTLZ7] Run 02/30  seed=137
+  [DTLZ7] Run 02 done - front size: 92
+  [DTLZ7] Run 03/30  seed=271
+  [DTLZ7] Run 03 done - front size: 92
+  [DTLZ7] Run 04/30  seed=491
+  [DTLZ7] Run 04 done - front size: 92
+  [DTLZ7] Run 05/30  seed=613
+  [DTLZ7] Run 05 done - front size: 92
+  [DTLZ7] Run 06/30  seed=733
+  [DTLZ7] Run 06 done - front size: 92
+  [DTLZ7] Run 07/30  seed=857
+  [DTLZ7] Run 07 done - front size: 92
+  [DTLZ7] Run 08/30  seed=977
+  [DTLZ7] Run 08 done - front size: 92
+  [DTLZ7] Run 09/30  seed=1009
+  [DTLZ7] Run 09 done - front size: 92
+  [DTLZ7] Run 10/30  seed=1123
+  [DTLZ7] Run 10 done - front size: 92
+  [DTLZ7] Run 11/30  seed=1249
+  [DTLZ7] Run 11 done - front size: 92
+  [DTLZ7] Run 12/30  seed=1373
+  [DTLZ7] Run 12 done - front size: 92
+  [DTLZ7] Run 13/30  seed=1499
+  [DTLZ7] Run 13 done - front size: 92
+  [DTLZ7] Run 14/30  seed=1609
+  [DTLZ7] Run 14 done - front size: 92
+  [DTLZ7] Run 15/30  seed=1733
+  [DTLZ7] Run 15 done - front size: 92
+  [DTLZ7] Run 16/30  seed=1871
+  [DTLZ7] Run 16 done - front size: 92
+  [DTLZ7] Run 17/30  seed=1997
+  [DTLZ7] Run 17 done - front size: 92
+  [DTLZ7] Run 18/30  seed=2113
+  [DTLZ7] Run 18 done - front size: 92
+  [DTLZ7] Run 19/30  seed=2237
+  [DTLZ7] Run 19 done - front size: 92
+  [DTLZ7] Run 20/30  seed=2351
+  [DTLZ7] Run 20 done - front size: 92
+  [DTLZ7] Run 21/30  seed=2467
+  [DTLZ7] Run 21 done - front size: 92
+  [DTLZ7] Run 22/30  seed=2593
+  [DTLZ7] Run 22 done - front size: 92
+  [DTLZ7] Run 23/30  seed=2711
+  [DTLZ7] Run 23 done - front size: 92
+  [DTLZ7] Run 24/30  seed=2837
+  [DTLZ7] Run 24 done - front size: 92
+  [DTLZ7] Run 25/30  seed=2953
+  [DTLZ7] Run 25 done - front size: 92
+  [DTLZ7] Run 26/30  seed=3079
+  [DTLZ7] Run 26 done - front size: 92
+  [DTLZ7] Run 27/30  seed=3191
+  [DTLZ7] Run 27 done - front size: 92
+  [DTLZ7] Run 28/30  seed=3313
+  [DTLZ7] Run 28 done - front size: 92
+  [DTLZ7] Run 29/30  seed=3433
+  [DTLZ7] Run 29 done - front size: 92
+  [DTLZ7] Run 30/30  seed=3557
+  [DTLZ7] Run 30 done - front size: 92
+  DTLZ7: 30 runs completed in 165.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ7_M3.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\summary_M3.csv
+
+---------------------------------------------------------------------------
+  QINSGA3 on DTLZ1-7 (3 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+DTLZ1          0.027533     0.032347     0.060678     0.035624     0.009070
+DTLZ2          0.065895     0.071677     0.081608     0.072326     0.004049
+DTLZ3          0.072882     0.122813     1.068804     0.181430     0.188917
+DTLZ4          0.065729     0.072636     0.082466     0.073323     0.004551
+DTLZ5          0.007557     0.008997     0.013561     0.009401     0.001268
+DTLZ6          1.564528     1.840963     2.171592     1.841740     0.125525
+DTLZ7          0.092715     0.105321     0.125244     0.107515     0.007799
+---------------------------------------------------------------------------
+
+=== DTLZ qinsga3 M4 ===
+
+==================================================
+Problem: DTLZ1  (30 runs, 4 objectives)
+==================================================
+  n_var=8, n_obj=4, n_gen=250
+  [DTLZ1] Run 01/30  seed=42
+  [DTLZ1] Run 01 done - front size: 120
+  [DTLZ1] Run 02/30  seed=137
+  [DTLZ1] Run 02 done - front size: 120
+  [DTLZ1] Run 03/30  seed=271
+  [DTLZ1] Run 03 done - front size: 120
+  [DTLZ1] Run 04/30  seed=491
+  [DTLZ1] Run 04 done - front size: 120
+  [DTLZ1] Run 05/30  seed=613
+  [DTLZ1] Run 05 done - front size: 120
+  [DTLZ1] Run 06/30  seed=733
+  [DTLZ1] Run 06 done - front size: 120
+  [DTLZ1] Run 07/30  seed=857
+  [DTLZ1] Run 07 done - front size: 120
+  [DTLZ1] Run 08/30  seed=977
+  [DTLZ1] Run 08 done - front size: 120
+  [DTLZ1] Run 09/30  seed=1009
+  [DTLZ1] Run 09 done - front size: 120
+  [DTLZ1] Run 10/30  seed=1123
+  [DTLZ1] Run 10 done - front size: 120
+  [DTLZ1] Run 11/30  seed=1249
+  [DTLZ1] Run 11 done - front size: 120
+  [DTLZ1] Run 12/30  seed=1373
+  [DTLZ1] Run 12 done - front size: 120
+  [DTLZ1] Run 13/30  seed=1499
+  [DTLZ1] Run 13 done - front size: 120
+  [DTLZ1] Run 14/30  seed=1609
+  [DTLZ1] Run 14 done - front size: 120
+  [DTLZ1] Run 15/30  seed=1733
+  [DTLZ1] Run 15 done - front size: 120
+  [DTLZ1] Run 16/30  seed=1871
+  [DTLZ1] Run 16 done - front size: 120
+  [DTLZ1] Run 17/30  seed=1997
+  [DTLZ1] Run 17 done - front size: 120
+  [DTLZ1] Run 18/30  seed=2113
+  [DTLZ1] Run 18 done - front size: 120
+  [DTLZ1] Run 19/30  seed=2237
+  [DTLZ1] Run 19 done - front size: 120
+  [DTLZ1] Run 20/30  seed=2351
+  [DTLZ1] Run 20 done - front size: 120
+  [DTLZ1] Run 21/30  seed=2467
+  [DTLZ1] Run 21 done - front size: 120
+  [DTLZ1] Run 22/30  seed=2593
+  [DTLZ1] Run 22 done - front size: 120
+  [DTLZ1] Run 23/30  seed=2711
+  [DTLZ1] Run 23 done - front size: 120
+  [DTLZ1] Run 24/30  seed=2837
+  [DTLZ1] Run 24 done - front size: 120
+  [DTLZ1] Run 25/30  seed=2953
+  [DTLZ1] Run 25 done - front size: 120
+  [DTLZ1] Run 26/30  seed=3079
+  [DTLZ1] Run 26 done - front size: 120
+  [DTLZ1] Run 27/30  seed=3191
+  [DTLZ1] Run 27 done - front size: 120
+  [DTLZ1] Run 28/30  seed=3313
+  [DTLZ1] Run 28 done - front size: 120
+  [DTLZ1] Run 29/30  seed=3433
+  [DTLZ1] Run 29 done - front size: 120
+  [DTLZ1] Run 30/30  seed=3557
+  [DTLZ1] Run 30 done - front size: 120
+  DTLZ1: 30 runs completed in 184.0s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ1_M4.csv
+
+==================================================
+Problem: DTLZ2  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ2] Run 01/30  seed=42
+  [DTLZ2] Run 01 done - front size: 120
+  [DTLZ2] Run 02/30  seed=137
+  [DTLZ2] Run 02 done - front size: 120
+  [DTLZ2] Run 03/30  seed=271
+  [DTLZ2] Run 03 done - front size: 120
+  [DTLZ2] Run 04/30  seed=491
+  [DTLZ2] Run 04 done - front size: 120
+  [DTLZ2] Run 05/30  seed=613
+  [DTLZ2] Run 05 done - front size: 120
+  [DTLZ2] Run 06/30  seed=733
+  [DTLZ2] Run 06 done - front size: 120
+  [DTLZ2] Run 07/30  seed=857
+  [DTLZ2] Run 07 done - front size: 120
+  [DTLZ2] Run 08/30  seed=977
+  [DTLZ2] Run 08 done - front size: 120
+  [DTLZ2] Run 09/30  seed=1009
+  [DTLZ2] Run 09 done - front size: 120
+  [DTLZ2] Run 10/30  seed=1123
+  [DTLZ2] Run 10 done - front size: 120
+  [DTLZ2] Run 11/30  seed=1249
+  [DTLZ2] Run 11 done - front size: 120
+  [DTLZ2] Run 12/30  seed=1373
+  [DTLZ2] Run 12 done - front size: 120
+  [DTLZ2] Run 13/30  seed=1499
+  [DTLZ2] Run 13 done - front size: 120
+  [DTLZ2] Run 14/30  seed=1609
+  [DTLZ2] Run 14 done - front size: 120
+  [DTLZ2] Run 15/30  seed=1733
+  [DTLZ2] Run 15 done - front size: 120
+  [DTLZ2] Run 16/30  seed=1871
+  [DTLZ2] Run 16 done - front size: 120
+  [DTLZ2] Run 17/30  seed=1997
+  [DTLZ2] Run 17 done - front size: 120
+  [DTLZ2] Run 18/30  seed=2113
+  [DTLZ2] Run 18 done - front size: 120
+  [DTLZ2] Run 19/30  seed=2237
+  [DTLZ2] Run 19 done - front size: 120
+  [DTLZ2] Run 20/30  seed=2351
+  [DTLZ2] Run 20 done - front size: 120
+  [DTLZ2] Run 21/30  seed=2467
+  [DTLZ2] Run 21 done - front size: 120
+  [DTLZ2] Run 22/30  seed=2593
+  [DTLZ2] Run 22 done - front size: 120
+  [DTLZ2] Run 23/30  seed=2711
+  [DTLZ2] Run 23 done - front size: 120
+  [DTLZ2] Run 24/30  seed=2837
+  [DTLZ2] Run 24 done - front size: 120
+  [DTLZ2] Run 25/30  seed=2953
+  [DTLZ2] Run 25 done - front size: 120
+  [DTLZ2] Run 26/30  seed=3079
+  [DTLZ2] Run 26 done - front size: 120
+  [DTLZ2] Run 27/30  seed=3191
+  [DTLZ2] Run 27 done - front size: 120
+  [DTLZ2] Run 28/30  seed=3313
+  [DTLZ2] Run 28 done - front size: 120
+  [DTLZ2] Run 29/30  seed=3433
+  [DTLZ2] Run 29 done - front size: 120
+  [DTLZ2] Run 30/30  seed=3557
+  [DTLZ2] Run 30 done - front size: 120
+  DTLZ2: 30 runs completed in 246.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ2_M4.csv
+
+==================================================
+Problem: DTLZ3  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ3] Run 01/30  seed=42
+  [DTLZ3] Run 01 done - front size: 120
+  [DTLZ3] Run 02/30  seed=137
+  [DTLZ3] Run 02 done - front size: 120
+  [DTLZ3] Run 03/30  seed=271
+  [DTLZ3] Run 03 done - front size: 120
+  [DTLZ3] Run 04/30  seed=491
+  [DTLZ3] Run 04 done - front size: 120
+  [DTLZ3] Run 05/30  seed=613
+  [DTLZ3] Run 05 done - front size: 120
+  [DTLZ3] Run 06/30  seed=733
+  [DTLZ3] Run 06 done - front size: 120
+  [DTLZ3] Run 07/30  seed=857
+  [DTLZ3] Run 07 done - front size: 120
+  [DTLZ3] Run 08/30  seed=977
+  [DTLZ3] Run 08 done - front size: 120
+  [DTLZ3] Run 09/30  seed=1009
+  [DTLZ3] Run 09 done - front size: 120
+  [DTLZ3] Run 10/30  seed=1123
+  [DTLZ3] Run 10 done - front size: 120
+  [DTLZ3] Run 11/30  seed=1249
+  [DTLZ3] Run 11 done - front size: 120
+  [DTLZ3] Run 12/30  seed=1373
+  [DTLZ3] Run 12 done - front size: 120
+  [DTLZ3] Run 13/30  seed=1499
+  [DTLZ3] Run 13 done - front size: 120
+  [DTLZ3] Run 14/30  seed=1609
+  [DTLZ3] Run 14 done - front size: 120
+  [DTLZ3] Run 15/30  seed=1733
+  [DTLZ3] Run 15 done - front size: 120
+  [DTLZ3] Run 16/30  seed=1871
+  [DTLZ3] Run 16 done - front size: 120
+  [DTLZ3] Run 17/30  seed=1997
+  [DTLZ3] Run 17 done - front size: 120
+  [DTLZ3] Run 18/30  seed=2113
+  [DTLZ3] Run 18 done - front size: 120
+  [DTLZ3] Run 19/30  seed=2237
+  [DTLZ3] Run 19 done - front size: 120
+  [DTLZ3] Run 20/30  seed=2351
+  [DTLZ3] Run 20 done - front size: 120
+  [DTLZ3] Run 21/30  seed=2467
+  [DTLZ3] Run 21 done - front size: 120
+  [DTLZ3] Run 22/30  seed=2593
+  [DTLZ3] Run 22 done - front size: 120
+  [DTLZ3] Run 23/30  seed=2711
+  [DTLZ3] Run 23 done - front size: 120
+  [DTLZ3] Run 24/30  seed=2837
+  [DTLZ3] Run 24 done - front size: 120
+  [DTLZ3] Run 25/30  seed=2953
+  [DTLZ3] Run 25 done - front size: 120
+  [DTLZ3] Run 26/30  seed=3079
+  [DTLZ3] Run 26 done - front size: 120
+  [DTLZ3] Run 27/30  seed=3191
+  [DTLZ3] Run 27 done - front size: 120
+  [DTLZ3] Run 28/30  seed=3313
+  [DTLZ3] Run 28 done - front size: 120
+  [DTLZ3] Run 29/30  seed=3433
+  [DTLZ3] Run 29 done - front size: 120
+  [DTLZ3] Run 30/30  seed=3557
+  [DTLZ3] Run 30 done - front size: 120
+  DTLZ3: 30 runs completed in 136.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ3_M4.csv
+
+==================================================
+Problem: DTLZ4  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ4] Run 01/30  seed=42
+  [DTLZ4] Run 01 done - front size: 120
+  [DTLZ4] Run 02/30  seed=137
+  [DTLZ4] Run 02 done - front size: 120
+  [DTLZ4] Run 03/30  seed=271
+  [DTLZ4] Run 03 done - front size: 120
+  [DTLZ4] Run 04/30  seed=491
+  [DTLZ4] Run 04 done - front size: 120
+  [DTLZ4] Run 05/30  seed=613
+  [DTLZ4] Run 05 done - front size: 120
+  [DTLZ4] Run 06/30  seed=733
+  [DTLZ4] Run 06 done - front size: 120
+  [DTLZ4] Run 07/30  seed=857
+  [DTLZ4] Run 07 done - front size: 120
+  [DTLZ4] Run 08/30  seed=977
+  [DTLZ4] Run 08 done - front size: 120
+  [DTLZ4] Run 09/30  seed=1009
+  [DTLZ4] Run 09 done - front size: 120
+  [DTLZ4] Run 10/30  seed=1123
+  [DTLZ4] Run 10 done - front size: 120
+  [DTLZ4] Run 11/30  seed=1249
+  [DTLZ4] Run 11 done - front size: 120
+  [DTLZ4] Run 12/30  seed=1373
+  [DTLZ4] Run 12 done - front size: 120
+  [DTLZ4] Run 13/30  seed=1499
+  [DTLZ4] Run 13 done - front size: 120
+  [DTLZ4] Run 14/30  seed=1609
+  [DTLZ4] Run 14 done - front size: 120
+  [DTLZ4] Run 15/30  seed=1733
+  [DTLZ4] Run 15 done - front size: 120
+  [DTLZ4] Run 16/30  seed=1871
+  [DTLZ4] Run 16 done - front size: 120
+  [DTLZ4] Run 17/30  seed=1997
+  [DTLZ4] Run 17 done - front size: 120
+  [DTLZ4] Run 18/30  seed=2113
+  [DTLZ4] Run 18 done - front size: 120
+  [DTLZ4] Run 19/30  seed=2237
+  [DTLZ4] Run 19 done - front size: 120
+  [DTLZ4] Run 20/30  seed=2351
+  [DTLZ4] Run 20 done - front size: 120
+  [DTLZ4] Run 21/30  seed=2467
+  [DTLZ4] Run 21 done - front size: 120
+  [DTLZ4] Run 22/30  seed=2593
+  [DTLZ4] Run 22 done - front size: 120
+  [DTLZ4] Run 23/30  seed=2711
+  [DTLZ4] Run 23 done - front size: 120
+  [DTLZ4] Run 24/30  seed=2837
+  [DTLZ4] Run 24 done - front size: 120
+  [DTLZ4] Run 25/30  seed=2953
+  [DTLZ4] Run 25 done - front size: 120
+  [DTLZ4] Run 26/30  seed=3079
+  [DTLZ4] Run 26 done - front size: 120
+  [DTLZ4] Run 27/30  seed=3191
+  [DTLZ4] Run 27 done - front size: 120
+  [DTLZ4] Run 28/30  seed=3313
+  [DTLZ4] Run 28 done - front size: 120
+  [DTLZ4] Run 29/30  seed=3433
+  [DTLZ4] Run 29 done - front size: 120
+  [DTLZ4] Run 30/30  seed=3557
+  [DTLZ4] Run 30 done - front size: 120
+  DTLZ4: 30 runs completed in 241.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\igd_DTLZ4_M4.csv
+
+==================================================
+Problem: DTLZ5  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ5 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ6  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ6 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ7  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ7 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\qinsga3\summary_M4.csv
+
+---------------------------------------------------------------------------
+  QINSGA3 on DTLZ1-7 (4 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+DTLZ1          0.055618     0.067584     0.095714     0.069680     0.008502
+DTLZ2          0.136593     0.147211     0.154437     0.147147     0.004781
+DTLZ3          0.192736     0.261414     1.393011     0.322345     0.217214
+DTLZ4          0.147725     0.156125     0.167251     0.156704     0.004975
+---------------------------------------------------------------------------
+
+=== MaF nsga3 M3 ===
+
+==================================================
+Problem: MaF1  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF1] Run 01/30  seed=42
+  [MaF1] Run 01 done - front size: 92
+  [MaF1] Run 02/30  seed=137
+  [MaF1] Run 02 done - front size: 92
+  [MaF1] Run 03/30  seed=271
+  [MaF1] Run 03 done - front size: 92
+  [MaF1] Run 04/30  seed=491
+  [MaF1] Run 04 done - front size: 92
+  [MaF1] Run 05/30  seed=613
+  [MaF1] Run 05 done - front size: 92
+  [MaF1] Run 06/30  seed=733
+  [MaF1] Run 06 done - front size: 92
+  [MaF1] Run 07/30  seed=857
+  [MaF1] Run 07 done - front size: 92
+  [MaF1] Run 08/30  seed=977
+  [MaF1] Run 08 done - front size: 92
+  [MaF1] Run 09/30  seed=1009
+  [MaF1] Run 09 done - front size: 92
+  [MaF1] Run 10/30  seed=1123
+  [MaF1] Run 10 done - front size: 92
+  [MaF1] Run 11/30  seed=1249
+  [MaF1] Run 11 done - front size: 92
+  [MaF1] Run 12/30  seed=1373
+  [MaF1] Run 12 done - front size: 92
+  [MaF1] Run 13/30  seed=1499
+  [MaF1] Run 13 done - front size: 92
+  [MaF1] Run 14/30  seed=1609
+  [MaF1] Run 14 done - front size: 92
+  [MaF1] Run 15/30  seed=1733
+  [MaF1] Run 15 done - front size: 92
+  [MaF1] Run 16/30  seed=1871
+  [MaF1] Run 16 done - front size: 92
+  [MaF1] Run 17/30  seed=1997
+  [MaF1] Run 17 done - front size: 92
+  [MaF1] Run 18/30  seed=2113
+  [MaF1] Run 18 done - front size: 92
+  [MaF1] Run 19/30  seed=2237
+  [MaF1] Run 19 done - front size: 92
+  [MaF1] Run 20/30  seed=2351
+  [MaF1] Run 20 done - front size: 92
+  [MaF1] Run 21/30  seed=2467
+  [MaF1] Run 21 done - front size: 92
+  [MaF1] Run 22/30  seed=2593
+  [MaF1] Run 22 done - front size: 92
+  [MaF1] Run 23/30  seed=2711
+  [MaF1] Run 23 done - front size: 92
+  [MaF1] Run 24/30  seed=2837
+  [MaF1] Run 24 done - front size: 92
+  [MaF1] Run 25/30  seed=2953
+  [MaF1] Run 25 done - front size: 92
+  [MaF1] Run 26/30  seed=3079
+  [MaF1] Run 26 done - front size: 92
+  [MaF1] Run 27/30  seed=3191
+  [MaF1] Run 27 done - front size: 92
+  [MaF1] Run 28/30  seed=3313
+  [MaF1] Run 28 done - front size: 92
+  [MaF1] Run 29/30  seed=3433
+  [MaF1] Run 29 done - front size: 92
+  [MaF1] Run 30/30  seed=3557
+  [MaF1] Run 30 done - front size: 92
+  MaF1: 30 runs completed in 121.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF1_M3.csv
+
+==================================================
+Problem: MaF2  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF2] Run 01/30  seed=42
+  [MaF2] Run 01 done - front size: 92
+  [MaF2] Run 02/30  seed=137
+  [MaF2] Run 02 done - front size: 92
+  [MaF2] Run 03/30  seed=271
+  [MaF2] Run 03 done - front size: 92
+  [MaF2] Run 04/30  seed=491
+  [MaF2] Run 04 done - front size: 92
+  [MaF2] Run 05/30  seed=613
+  [MaF2] Run 05 done - front size: 92
+  [MaF2] Run 06/30  seed=733
+  [MaF2] Run 06 done - front size: 92
+  [MaF2] Run 07/30  seed=857
+  [MaF2] Run 07 done - front size: 92
+  [MaF2] Run 08/30  seed=977
+  [MaF2] Run 08 done - front size: 92
+  [MaF2] Run 09/30  seed=1009
+  [MaF2] Run 09 done - front size: 92
+  [MaF2] Run 10/30  seed=1123
+  [MaF2] Run 10 done - front size: 92
+  [MaF2] Run 11/30  seed=1249
+  [MaF2] Run 11 done - front size: 92
+  [MaF2] Run 12/30  seed=1373
+  [MaF2] Run 12 done - front size: 92
+  [MaF2] Run 13/30  seed=1499
+  [MaF2] Run 13 done - front size: 92
+  [MaF2] Run 14/30  seed=1609
+  [MaF2] Run 14 done - front size: 92
+  [MaF2] Run 15/30  seed=1733
+  [MaF2] Run 15 done - front size: 92
+  [MaF2] Run 16/30  seed=1871
+  [MaF2] Run 16 done - front size: 92
+  [MaF2] Run 17/30  seed=1997
+  [MaF2] Run 17 done - front size: 92
+  [MaF2] Run 18/30  seed=2113
+  [MaF2] Run 18 done - front size: 92
+  [MaF2] Run 19/30  seed=2237
+  [MaF2] Run 19 done - front size: 92
+  [MaF2] Run 20/30  seed=2351
+  [MaF2] Run 20 done - front size: 92
+  [MaF2] Run 21/30  seed=2467
+  [MaF2] Run 21 done - front size: 92
+  [MaF2] Run 22/30  seed=2593
+  [MaF2] Run 22 done - front size: 92
+  [MaF2] Run 23/30  seed=2711
+  [MaF2] Run 23 done - front size: 92
+  [MaF2] Run 24/30  seed=2837
+  [MaF2] Run 24 done - front size: 92
+  [MaF2] Run 25/30  seed=2953
+  [MaF2] Run 25 done - front size: 92
+  [MaF2] Run 26/30  seed=3079
+  [MaF2] Run 26 done - front size: 92
+  [MaF2] Run 27/30  seed=3191
+  [MaF2] Run 27 done - front size: 92
+  [MaF2] Run 28/30  seed=3313
+  [MaF2] Run 28 done - front size: 92
+  [MaF2] Run 29/30  seed=3433
+  [MaF2] Run 29 done - front size: 92
+  [MaF2] Run 30/30  seed=3557
+  [MaF2] Run 30 done - front size: 92
+  MaF2: 30 runs completed in 125.9s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF2_M3.csv
+
+==================================================
+Problem: MaF3  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF3] Run 01/30  seed=42
+  [MaF3] Run 01 done - front size: 92
+  [MaF3] Run 02/30  seed=137
+  [MaF3] Run 02 done - front size: 92
+  [MaF3] Run 03/30  seed=271
+  [MaF3] Run 03 done - front size: 92
+  [MaF3] Run 04/30  seed=491
+  [MaF3] Run 04 done - front size: 92
+  [MaF3] Run 05/30  seed=613
+  [MaF3] Run 05 done - front size: 92
+  [MaF3] Run 06/30  seed=733
+  [MaF3] Run 06 done - front size: 92
+  [MaF3] Run 07/30  seed=857
+  [MaF3] Run 07 done - front size: 92
+  [MaF3] Run 08/30  seed=977
+  [MaF3] Run 08 done - front size: 92
+  [MaF3] Run 09/30  seed=1009
+  [MaF3] Run 09 done - front size: 92
+  [MaF3] Run 10/30  seed=1123
+  [MaF3] Run 10 done - front size: 92
+  [MaF3] Run 11/30  seed=1249
+  [MaF3] Run 11 done - front size: 92
+  [MaF3] Run 12/30  seed=1373
+  [MaF3] Run 12 done - front size: 92
+  [MaF3] Run 13/30  seed=1499
+  [MaF3] Run 13 done - front size: 92
+  [MaF3] Run 14/30  seed=1609
+  [MaF3] Run 14 done - front size: 92
+  [MaF3] Run 15/30  seed=1733
+  [MaF3] Run 15 done - front size: 92
+  [MaF3] Run 16/30  seed=1871
+  [MaF3] Run 16 done - front size: 92
+  [MaF3] Run 17/30  seed=1997
+  [MaF3] Run 17 done - front size: 92
+  [MaF3] Run 18/30  seed=2113
+  [MaF3] Run 18 done - front size: 92
+  [MaF3] Run 19/30  seed=2237
+  [MaF3] Run 19 done - front size: 92
+  [MaF3] Run 20/30  seed=2351
+  [MaF3] Run 20 done - front size: 92
+  [MaF3] Run 21/30  seed=2467
+  [MaF3] Run 21 done - front size: 92
+  [MaF3] Run 22/30  seed=2593
+  [MaF3] Run 22 done - front size: 92
+  [MaF3] Run 23/30  seed=2711
+  [MaF3] Run 23 done - front size: 92
+  [MaF3] Run 24/30  seed=2837
+  [MaF3] Run 24 done - front size: 92
+  [MaF3] Run 25/30  seed=2953
+  [MaF3] Run 25 done - front size: 92
+  [MaF3] Run 26/30  seed=3079
+  [MaF3] Run 26 done - front size: 92
+  [MaF3] Run 27/30  seed=3191
+  [MaF3] Run 27 done - front size: 92
+  [MaF3] Run 28/30  seed=3313
+  [MaF3] Run 28 done - front size: 92
+  [MaF3] Run 29/30  seed=3433
+  [MaF3] Run 29 done - front size: 92
+  [MaF3] Run 30/30  seed=3557
+  [MaF3] Run 30 done - front size: 92
+  MaF3: 30 runs completed in 99.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF3_M3.csv
+
+==================================================
+Problem: MaF4  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF4] Run 01/30  seed=42
+  [MaF4] Run 01 done - front size: 92
+  [MaF4] Run 02/30  seed=137
+  [MaF4] Run 02 done - front size: 92
+  [MaF4] Run 03/30  seed=271
+  [MaF4] Run 03 done - front size: 92
+  [MaF4] Run 04/30  seed=491
+  [MaF4] Run 04 done - front size: 92
+  [MaF4] Run 05/30  seed=613
+  [MaF4] Run 05 done - front size: 92
+  [MaF4] Run 06/30  seed=733
+  [MaF4] Run 06 done - front size: 92
+  [MaF4] Run 07/30  seed=857
+  [MaF4] Run 07 done - front size: 92
+  [MaF4] Run 08/30  seed=977
+  [MaF4] Run 08 done - front size: 92
+  [MaF4] Run 09/30  seed=1009
+  [MaF4] Run 09 done - front size: 92
+  [MaF4] Run 10/30  seed=1123
+  [MaF4] Run 10 done - front size: 92
+  [MaF4] Run 11/30  seed=1249
+  [MaF4] Run 11 done - front size: 92
+  [MaF4] Run 12/30  seed=1373
+  [MaF4] Run 12 done - front size: 92
+  [MaF4] Run 13/30  seed=1499
+  [MaF4] Run 13 done - front size: 92
+  [MaF4] Run 14/30  seed=1609
+  [MaF4] Run 14 done - front size: 92
+  [MaF4] Run 15/30  seed=1733
+  [MaF4] Run 15 done - front size: 92
+  [MaF4] Run 16/30  seed=1871
+  [MaF4] Run 16 done - front size: 92
+  [MaF4] Run 17/30  seed=1997
+  [MaF4] Run 17 done - front size: 92
+  [MaF4] Run 18/30  seed=2113
+  [MaF4] Run 18 done - front size: 92
+  [MaF4] Run 19/30  seed=2237
+  [MaF4] Run 19 done - front size: 92
+  [MaF4] Run 20/30  seed=2351
+  [MaF4] Run 20 done - front size: 92
+  [MaF4] Run 21/30  seed=2467
+  [MaF4] Run 21 done - front size: 92
+  [MaF4] Run 22/30  seed=2593
+  [MaF4] Run 22 done - front size: 92
+  [MaF4] Run 23/30  seed=2711
+  [MaF4] Run 23 done - front size: 92
+  [MaF4] Run 24/30  seed=2837
+  [MaF4] Run 24 done - front size: 92
+  [MaF4] Run 25/30  seed=2953
+  [MaF4] Run 25 done - front size: 92
+  [MaF4] Run 26/30  seed=3079
+  [MaF4] Run 26 done - front size: 92
+  [MaF4] Run 27/30  seed=3191
+  [MaF4] Run 27 done - front size: 92
+  [MaF4] Run 28/30  seed=3313
+  [MaF4] Run 28 done - front size: 92
+  [MaF4] Run 29/30  seed=3433
+  [MaF4] Run 29 done - front size: 92
+  [MaF4] Run 30/30  seed=3557
+  [MaF4] Run 30 done - front size: 92
+  MaF4: 30 runs completed in 107.6s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF4_M3.csv
+
+==================================================
+Problem: MaF5  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF5] Run 01/30  seed=42
+  [MaF5] Run 01 done - front size: 92
+  [MaF5] Run 02/30  seed=137
+  [MaF5] Run 02 done - front size: 92
+  [MaF5] Run 03/30  seed=271
+  [MaF5] Run 03 done - front size: 92
+  [MaF5] Run 04/30  seed=491
+  [MaF5] Run 04 done - front size: 92
+  [MaF5] Run 05/30  seed=613
+  [MaF5] Run 05 done - front size: 92
+  [MaF5] Run 06/30  seed=733
+  [MaF5] Run 06 done - front size: 92
+  [MaF5] Run 07/30  seed=857
+  [MaF5] Run 07 done - front size: 92
+  [MaF5] Run 08/30  seed=977
+  [MaF5] Run 08 done - front size: 92
+  [MaF5] Run 09/30  seed=1009
+  [MaF5] Run 09 done - front size: 92
+  [MaF5] Run 10/30  seed=1123
+  [MaF5] Run 10 done - front size: 92
+  [MaF5] Run 11/30  seed=1249
+  [MaF5] Run 11 done - front size: 92
+  [MaF5] Run 12/30  seed=1373
+  [MaF5] Run 12 done - front size: 92
+  [MaF5] Run 13/30  seed=1499
+  [MaF5] Run 13 done - front size: 92
+  [MaF5] Run 14/30  seed=1609
+  [MaF5] Run 14 done - front size: 92
+  [MaF5] Run 15/30  seed=1733
+  [MaF5] Run 15 done - front size: 92
+  [MaF5] Run 16/30  seed=1871
+  [MaF5] Run 16 done - front size: 92
+  [MaF5] Run 17/30  seed=1997
+  [MaF5] Run 17 done - front size: 92
+  [MaF5] Run 18/30  seed=2113
+  [MaF5] Run 18 done - front size: 92
+  [MaF5] Run 19/30  seed=2237
+  [MaF5] Run 19 done - front size: 92
+  [MaF5] Run 20/30  seed=2351
+  [MaF5] Run 20 done - front size: 92
+  [MaF5] Run 21/30  seed=2467
+  [MaF5] Run 21 done - front size: 92
+  [MaF5] Run 22/30  seed=2593
+  [MaF5] Run 22 done - front size: 92
+  [MaF5] Run 23/30  seed=2711
+  [MaF5] Run 23 done - front size: 92
+  [MaF5] Run 24/30  seed=2837
+  [MaF5] Run 24 done - front size: 92
+  [MaF5] Run 25/30  seed=2953
+  [MaF5] Run 25 done - front size: 92
+  [MaF5] Run 26/30  seed=3079
+  [MaF5] Run 26 done - front size: 92
+  [MaF5] Run 27/30  seed=3191
+  [MaF5] Run 27 done - front size: 92
+  [MaF5] Run 28/30  seed=3313
+  [MaF5] Run 28 done - front size: 92
+  [MaF5] Run 29/30  seed=3433
+  [MaF5] Run 29 done - front size: 92
+  [MaF5] Run 30/30  seed=3557
+  [MaF5] Run 30 done - front size: 92
+  MaF5: 30 runs completed in 115.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF5_M3.csv
+
+==================================================
+Problem: MaF6  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF6] Run 01/30  seed=42
+  [MaF6] Run 01 done - front size: 92
+  [MaF6] Run 02/30  seed=137
+  [MaF6] Run 02 done - front size: 92
+  [MaF6] Run 03/30  seed=271
+  [MaF6] Run 03 done - front size: 92
+  [MaF6] Run 04/30  seed=491
+  [MaF6] Run 04 done - front size: 92
+  [MaF6] Run 05/30  seed=613
+  [MaF6] Run 05 done - front size: 92
+  [MaF6] Run 06/30  seed=733
+  [MaF6] Run 06 done - front size: 92
+  [MaF6] Run 07/30  seed=857
+  [MaF6] Run 07 done - front size: 92
+  [MaF6] Run 08/30  seed=977
+  [MaF6] Run 08 done - front size: 92
+  [MaF6] Run 09/30  seed=1009
+  [MaF6] Run 09 done - front size: 92
+  [MaF6] Run 10/30  seed=1123
+  [MaF6] Run 10 done - front size: 92
+  [MaF6] Run 11/30  seed=1249
+  [MaF6] Run 11 done - front size: 92
+  [MaF6] Run 12/30  seed=1373
+  [MaF6] Run 12 done - front size: 92
+  [MaF6] Run 13/30  seed=1499
+  [MaF6] Run 13 done - front size: 92
+  [MaF6] Run 14/30  seed=1609
+  [MaF6] Run 14 done - front size: 92
+  [MaF6] Run 15/30  seed=1733
+  [MaF6] Run 15 done - front size: 92
+  [MaF6] Run 16/30  seed=1871
+  [MaF6] Run 16 done - front size: 92
+  [MaF6] Run 17/30  seed=1997
+  [MaF6] Run 17 done - front size: 92
+  [MaF6] Run 18/30  seed=2113
+  [MaF6] Run 18 done - front size: 92
+  [MaF6] Run 19/30  seed=2237
+  [MaF6] Run 19 done - front size: 92
+  [MaF6] Run 20/30  seed=2351
+  [MaF6] Run 20 done - front size: 92
+  [MaF6] Run 21/30  seed=2467
+  [MaF6] Run 21 done - front size: 92
+  [MaF6] Run 22/30  seed=2593
+  [MaF6] Run 22 done - front size: 92
+  [MaF6] Run 23/30  seed=2711
+  [MaF6] Run 23 done - front size: 92
+  [MaF6] Run 24/30  seed=2837
+  [MaF6] Run 24 done - front size: 92
+  [MaF6] Run 25/30  seed=2953
+  [MaF6] Run 25 done - front size: 92
+  [MaF6] Run 26/30  seed=3079
+  [MaF6] Run 26 done - front size: 92
+  [MaF6] Run 27/30  seed=3191
+  [MaF6] Run 27 done - front size: 92
+  [MaF6] Run 28/30  seed=3313
+  [MaF6] Run 28 done - front size: 92
+  [MaF6] Run 29/30  seed=3433
+  [MaF6] Run 29 done - front size: 92
+  [MaF6] Run 30/30  seed=3557
+  [MaF6] Run 30 done - front size: 92
+  MaF6: 30 runs completed in 100.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF6_M3.csv
+
+==================================================
+Problem: MaF7  (30 runs, 3 objectives)
+==================================================
+  n_var=22, n_obj=3, n_gen=326
+  [MaF7] Run 01/30  seed=42
+  [MaF7] Run 01 done - front size: 92
+  [MaF7] Run 02/30  seed=137
+  [MaF7] Run 02 done - front size: 92
+  [MaF7] Run 03/30  seed=271
+  [MaF7] Run 03 done - front size: 92
+  [MaF7] Run 04/30  seed=491
+  [MaF7] Run 04 done - front size: 92
+  [MaF7] Run 05/30  seed=613
+  [MaF7] Run 05 done - front size: 92
+  [MaF7] Run 06/30  seed=733
+  [MaF7] Run 06 done - front size: 92
+  [MaF7] Run 07/30  seed=857
+  [MaF7] Run 07 done - front size: 92
+  [MaF7] Run 08/30  seed=977
+  [MaF7] Run 08 done - front size: 92
+  [MaF7] Run 09/30  seed=1009
+  [MaF7] Run 09 done - front size: 92
+  [MaF7] Run 10/30  seed=1123
+  [MaF7] Run 10 done - front size: 92
+  [MaF7] Run 11/30  seed=1249
+  [MaF7] Run 11 done - front size: 92
+  [MaF7] Run 12/30  seed=1373
+  [MaF7] Run 12 done - front size: 92
+  [MaF7] Run 13/30  seed=1499
+  [MaF7] Run 13 done - front size: 92
+  [MaF7] Run 14/30  seed=1609
+  [MaF7] Run 14 done - front size: 92
+  [MaF7] Run 15/30  seed=1733
+  [MaF7] Run 15 done - front size: 92
+  [MaF7] Run 16/30  seed=1871
+  [MaF7] Run 16 done - front size: 92
+  [MaF7] Run 17/30  seed=1997
+  [MaF7] Run 17 done - front size: 92
+  [MaF7] Run 18/30  seed=2113
+  [MaF7] Run 18 done - front size: 92
+  [MaF7] Run 19/30  seed=2237
+  [MaF7] Run 19 done - front size: 92
+  [MaF7] Run 20/30  seed=2351
+  [MaF7] Run 20 done - front size: 92
+  [MaF7] Run 21/30  seed=2467
+  [MaF7] Run 21 done - front size: 92
+  [MaF7] Run 22/30  seed=2593
+  [MaF7] Run 22 done - front size: 92
+  [MaF7] Run 23/30  seed=2711
+  [MaF7] Run 23 done - front size: 92
+  [MaF7] Run 24/30  seed=2837
+  [MaF7] Run 24 done - front size: 92
+  [MaF7] Run 25/30  seed=2953
+  [MaF7] Run 25 done - front size: 92
+  [MaF7] Run 26/30  seed=3079
+  [MaF7] Run 26 done - front size: 92
+  [MaF7] Run 27/30  seed=3191
+  [MaF7] Run 27 done - front size: 92
+  [MaF7] Run 28/30  seed=3313
+  [MaF7] Run 28 done - front size: 92
+  [MaF7] Run 29/30  seed=3433
+  [MaF7] Run 29 done - front size: 92
+  [MaF7] Run 30/30  seed=3557
+  [MaF7] Run 30 done - front size: 92
+  MaF7: 30 runs completed in 117.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF7_M3.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\summary_M3.csv
+
+---------------------------------------------------------------------------
+  NSGA-III on MaF1-7 (3 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+MaF1           0.054404     0.060020     0.064810     0.059897     0.002719
+MaF2           0.034061     0.034985     0.036158     0.035054     0.000490
+MaF3           2.317336    49.891215   493.682788   101.602654   109.988027
+MaF4           2.514637    18.963776    44.785560    18.779526     9.768129
+MaF5           0.257726     0.259703     2.027765     0.619004     0.663952
+MaF6           0.011825     0.015361     0.021233     0.015756     0.002081
+MaF7           0.075452     0.082689     0.370319     0.093517     0.051823
+---------------------------------------------------------------------------
+
+=== MaF nsga3 M4 ===
+
+==================================================
+Problem: MaF1  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF1] Run 01/30  seed=42
+  [MaF1] Run 01 done - front size: 120
+  [MaF1] Run 02/30  seed=137
+  [MaF1] Run 02 done - front size: 100
+  [MaF1] Run 03/30  seed=271
+  [MaF1] Run 03 done - front size: 100
+  [MaF1] Run 04/30  seed=491
+  [MaF1] Run 04 done - front size: 120
+  [MaF1] Run 05/30  seed=613
+  [MaF1] Run 05 done - front size: 120
+  [MaF1] Run 06/30  seed=733
+  [MaF1] Run 06 done - front size: 120
+  [MaF1] Run 07/30  seed=857
+  [MaF1] Run 07 done - front size: 120
+  [MaF1] Run 08/30  seed=977
+  [MaF1] Run 08 done - front size: 120
+  [MaF1] Run 09/30  seed=1009
+  [MaF1] Run 09 done - front size: 100
+  [MaF1] Run 10/30  seed=1123
+  [MaF1] Run 10 done - front size: 120
+  [MaF1] Run 11/30  seed=1249
+  [MaF1] Run 11 done - front size: 120
+  [MaF1] Run 12/30  seed=1373
+  [MaF1] Run 12 done - front size: 120
+  [MaF1] Run 13/30  seed=1499
+  [MaF1] Run 13 done - front size: 120
+  [MaF1] Run 14/30  seed=1609
+  [MaF1] Run 14 done - front size: 120
+  [MaF1] Run 15/30  seed=1733
+  [MaF1] Run 15 done - front size: 120
+  [MaF1] Run 16/30  seed=1871
+  [MaF1] Run 16 done - front size: 100
+  [MaF1] Run 17/30  seed=1997
+  [MaF1] Run 17 done - front size: 120
+  [MaF1] Run 18/30  seed=2113
+  [MaF1] Run 18 done - front size: 120
+  [MaF1] Run 19/30  seed=2237
+  [MaF1] Run 19 done - front size: 120
+  [MaF1] Run 20/30  seed=2351
+  [MaF1] Run 20 done - front size: 100
+  [MaF1] Run 21/30  seed=2467
+  [MaF1] Run 21 done - front size: 120
+  [MaF1] Run 22/30  seed=2593
+  [MaF1] Run 22 done - front size: 120
+  [MaF1] Run 23/30  seed=2711
+  [MaF1] Run 23 done - front size: 120
+  [MaF1] Run 24/30  seed=2837
+  [MaF1] Run 24 done - front size: 100
+  [MaF1] Run 25/30  seed=2953
+  [MaF1] Run 25 done - front size: 100
+  [MaF1] Run 26/30  seed=3079
+  [MaF1] Run 26 done - front size: 120
+  [MaF1] Run 27/30  seed=3191
+  [MaF1] Run 27 done - front size: 100
+  [MaF1] Run 28/30  seed=3313
+  [MaF1] Run 28 done - front size: 120
+  [MaF1] Run 29/30  seed=3433
+  [MaF1] Run 29 done - front size: 120
+  [MaF1] Run 30/30  seed=3557
+  [MaF1] Run 30 done - front size: 120
+  MaF1: 30 runs completed in 126.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF1_M4.csv
+
+==================================================
+Problem: MaF2  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF2] Run 01/30  seed=42
+  [MaF2] Run 01 done - front size: 120
+  [MaF2] Run 02/30  seed=137
+  [MaF2] Run 02 done - front size: 120
+  [MaF2] Run 03/30  seed=271
+  [MaF2] Run 03 done - front size: 120
+  [MaF2] Run 04/30  seed=491
+  [MaF2] Run 04 done - front size: 120
+  [MaF2] Run 05/30  seed=613
+  [MaF2] Run 05 done - front size: 120
+  [MaF2] Run 06/30  seed=733
+  [MaF2] Run 06 done - front size: 100
+  [MaF2] Run 07/30  seed=857
+  [MaF2] Run 07 done - front size: 100
+  [MaF2] Run 08/30  seed=977
+  [MaF2] Run 08 done - front size: 100
+  [MaF2] Run 09/30  seed=1009
+  [MaF2] Run 09 done - front size: 120
+  [MaF2] Run 10/30  seed=1123
+  [MaF2] Run 10 done - front size: 100
+  [MaF2] Run 11/30  seed=1249
+  [MaF2] Run 11 done - front size: 120
+  [MaF2] Run 12/30  seed=1373
+  [MaF2] Run 12 done - front size: 120
+  [MaF2] Run 13/30  seed=1499
+  [MaF2] Run 13 done - front size: 120
+  [MaF2] Run 14/30  seed=1609
+  [MaF2] Run 14 done - front size: 100
+  [MaF2] Run 15/30  seed=1733
+  [MaF2] Run 15 done - front size: 120
+  [MaF2] Run 16/30  seed=1871
+  [MaF2] Run 16 done - front size: 120
+  [MaF2] Run 17/30  seed=1997
+  [MaF2] Run 17 done - front size: 120
+  [MaF2] Run 18/30  seed=2113
+  [MaF2] Run 18 done - front size: 100
+  [MaF2] Run 19/30  seed=2237
+  [MaF2] Run 19 done - front size: 120
+  [MaF2] Run 20/30  seed=2351
+  [MaF2] Run 20 done - front size: 100
+  [MaF2] Run 21/30  seed=2467
+  [MaF2] Run 21 done - front size: 120
+  [MaF2] Run 22/30  seed=2593
+  [MaF2] Run 22 done - front size: 100
+  [MaF2] Run 23/30  seed=2711
+  [MaF2] Run 23 done - front size: 120
+  [MaF2] Run 24/30  seed=2837
+  [MaF2] Run 24 done - front size: 100
+  [MaF2] Run 25/30  seed=2953
+  [MaF2] Run 25 done - front size: 120
+  [MaF2] Run 26/30  seed=3079
+  [MaF2] Run 26 done - front size: 120
+  [MaF2] Run 27/30  seed=3191
+  [MaF2] Run 27 done - front size: 100
+  [MaF2] Run 28/30  seed=3313
+  [MaF2] Run 28 done - front size: 100
+  [MaF2] Run 29/30  seed=3433
+  [MaF2] Run 29 done - front size: 100
+  [MaF2] Run 30/30  seed=3557
+  [MaF2] Run 30 done - front size: 120
+  MaF2: 30 runs completed in 133.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF2_M4.csv
+
+==================================================
+Problem: MaF3  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF3] Run 01/30  seed=42
+  [MaF3] Run 01 done - front size: 120
+  [MaF3] Run 02/30  seed=137
+  [MaF3] Run 02 done - front size: 120
+  [MaF3] Run 03/30  seed=271
+  [MaF3] Run 03 done - front size: 120
+  [MaF3] Run 04/30  seed=491
+  [MaF3] Run 04 done - front size: 120
+  [MaF3] Run 05/30  seed=613
+  [MaF3] Run 05 done - front size: 120
+  [MaF3] Run 06/30  seed=733
+  [MaF3] Run 06 done - front size: 120
+  [MaF3] Run 07/30  seed=857
+  [MaF3] Run 07 done - front size: 100
+  [MaF3] Run 08/30  seed=977
+  [MaF3] Run 08 done - front size: 100
+  [MaF3] Run 09/30  seed=1009
+  [MaF3] Run 09 done - front size: 120
+  [MaF3] Run 10/30  seed=1123
+  [MaF3] Run 10 done - front size: 120
+  [MaF3] Run 11/30  seed=1249
+  [MaF3] Run 11 done - front size: 120
+  [MaF3] Run 12/30  seed=1373
+  [MaF3] Run 12 done - front size: 120
+  [MaF3] Run 13/30  seed=1499
+  [MaF3] Run 13 done - front size: 120
+  [MaF3] Run 14/30  seed=1609
+  [MaF3] Run 14 done - front size: 120
+  [MaF3] Run 15/30  seed=1733
+  [MaF3] Run 15 done - front size: 120
+  [MaF3] Run 16/30  seed=1871
+  [MaF3] Run 16 done - front size: 120
+  [MaF3] Run 17/30  seed=1997
+  [MaF3] Run 17 done - front size: 120
+  [MaF3] Run 18/30  seed=2113
+  [MaF3] Run 18 done - front size: 120
+  [MaF3] Run 19/30  seed=2237
+  [MaF3] Run 19 done - front size: 120
+  [MaF3] Run 20/30  seed=2351
+  [MaF3] Run 20 done - front size: 120
+  [MaF3] Run 21/30  seed=2467
+  [MaF3] Run 21 done - front size: 120
+  [MaF3] Run 22/30  seed=2593
+  [MaF3] Run 22 done - front size: 120
+  [MaF3] Run 23/30  seed=2711
+  [MaF3] Run 23 done - front size: 120
+  [MaF3] Run 24/30  seed=2837
+  [MaF3] Run 24 done - front size: 120
+  [MaF3] Run 25/30  seed=2953
+  [MaF3] Run 25 done - front size: 100
+  [MaF3] Run 26/30  seed=3079
+  [MaF3] Run 26 done - front size: 120
+  [MaF3] Run 27/30  seed=3191
+  [MaF3] Run 27 done - front size: 120
+  [MaF3] Run 28/30  seed=3313
+  [MaF3] Run 28 done - front size: 120
+  [MaF3] Run 29/30  seed=3433
+  [MaF3] Run 29 done - front size: 120
+  [MaF3] Run 30/30  seed=3557
+  [MaF3] Run 30 done - front size: 120
+  MaF3: 30 runs completed in 101.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF3_M4.csv
+
+==================================================
+Problem: MaF4  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF4] Run 01/30  seed=42
+  [MaF4] Run 01 done - front size: 100
+  [MaF4] Run 02/30  seed=137
+  [MaF4] Run 02 done - front size: 120
+  [MaF4] Run 03/30  seed=271
+  [MaF4] Run 03 done - front size: 120
+  [MaF4] Run 04/30  seed=491
+  [MaF4] Run 04 done - front size: 120
+  [MaF4] Run 05/30  seed=613
+  [MaF4] Run 05 done - front size: 120
+  [MaF4] Run 06/30  seed=733
+  [MaF4] Run 06 done - front size: 120
+  [MaF4] Run 07/30  seed=857
+  [MaF4] Run 07 done - front size: 120
+  [MaF4] Run 08/30  seed=977
+  [MaF4] Run 08 done - front size: 120
+  [MaF4] Run 09/30  seed=1009
+  [MaF4] Run 09 done - front size: 100
+  [MaF4] Run 10/30  seed=1123
+  [MaF4] Run 10 done - front size: 120
+  [MaF4] Run 11/30  seed=1249
+  [MaF4] Run 11 done - front size: 100
+  [MaF4] Run 12/30  seed=1373
+  [MaF4] Run 12 done - front size: 120
+  [MaF4] Run 13/30  seed=1499
+  [MaF4] Run 13 done - front size: 120
+  [MaF4] Run 14/30  seed=1609
+  [MaF4] Run 14 done - front size: 100
+  [MaF4] Run 15/30  seed=1733
+  [MaF4] Run 15 done - front size: 100
+  [MaF4] Run 16/30  seed=1871
+  [MaF4] Run 16 done - front size: 120
+  [MaF4] Run 17/30  seed=1997
+  [MaF4] Run 17 done - front size: 120
+  [MaF4] Run 18/30  seed=2113
+  [MaF4] Run 18 done - front size: 120
+  [MaF4] Run 19/30  seed=2237
+  [MaF4] Run 19 done - front size: 120
+  [MaF4] Run 20/30  seed=2351
+  [MaF4] Run 20 done - front size: 120
+  [MaF4] Run 21/30  seed=2467
+  [MaF4] Run 21 done - front size: 120
+  [MaF4] Run 22/30  seed=2593
+  [MaF4] Run 22 done - front size: 120
+  [MaF4] Run 23/30  seed=2711
+  [MaF4] Run 23 done - front size: 120
+  [MaF4] Run 24/30  seed=2837
+  [MaF4] Run 24 done - front size: 120
+  [MaF4] Run 25/30  seed=2953
+  [MaF4] Run 25 done - front size: 120
+  [MaF4] Run 26/30  seed=3079
+  [MaF4] Run 26 done - front size: 120
+  [MaF4] Run 27/30  seed=3191
+  [MaF4] Run 27 done - front size: 100
+  [MaF4] Run 28/30  seed=3313
+  [MaF4] Run 28 done - front size: 120
+  [MaF4] Run 29/30  seed=3433
+  [MaF4] Run 29 done - front size: 120
+  [MaF4] Run 30/30  seed=3557
+  [MaF4] Run 30 done - front size: 120
+  MaF4: 30 runs completed in 109.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF4_M4.csv
+
+==================================================
+Problem: MaF5  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF5] Run 01/30  seed=42
+  [MaF5] Run 01 done - front size: 120
+  [MaF5] Run 02/30  seed=137
+  [MaF5] Run 02 done - front size: 120
+  [MaF5] Run 03/30  seed=271
+  [MaF5] Run 03 done - front size: 100
+  [MaF5] Run 04/30  seed=491
+  [MaF5] Run 04 done - front size: 120
+  [MaF5] Run 05/30  seed=613
+  [MaF5] Run 05 done - front size: 120
+  [MaF5] Run 06/30  seed=733
+  [MaF5] Run 06 done - front size: 120
+  [MaF5] Run 07/30  seed=857
+  [MaF5] Run 07 done - front size: 120
+  [MaF5] Run 08/30  seed=977
+  [MaF5] Run 08 done - front size: 120
+  [MaF5] Run 09/30  seed=1009
+  [MaF5] Run 09 done - front size: 120
+  [MaF5] Run 10/30  seed=1123
+  [MaF5] Run 10 done - front size: 120
+  [MaF5] Run 11/30  seed=1249
+  [MaF5] Run 11 done - front size: 120
+  [MaF5] Run 12/30  seed=1373
+  [MaF5] Run 12 done - front size: 120
+  [MaF5] Run 13/30  seed=1499
+  [MaF5] Run 13 done - front size: 120
+  [MaF5] Run 14/30  seed=1609
+  [MaF5] Run 14 done - front size: 100
+  [MaF5] Run 15/30  seed=1733
+  [MaF5] Run 15 done - front size: 120
+  [MaF5] Run 16/30  seed=1871
+  [MaF5] Run 16 done - front size: 100
+  [MaF5] Run 17/30  seed=1997
+  [MaF5] Run 17 done - front size: 100
+  [MaF5] Run 18/30  seed=2113
+  [MaF5] Run 18 done - front size: 120
+  [MaF5] Run 19/30  seed=2237
+  [MaF5] Run 19 done - front size: 120
+  [MaF5] Run 20/30  seed=2351
+  [MaF5] Run 20 done - front size: 120
+  [MaF5] Run 21/30  seed=2467
+  [MaF5] Run 21 done - front size: 120
+  [MaF5] Run 22/30  seed=2593
+  [MaF5] Run 22 done - front size: 120
+  [MaF5] Run 23/30  seed=2711
+  [MaF5] Run 23 done - front size: 100
+  [MaF5] Run 24/30  seed=2837
+  [MaF5] Run 24 done - front size: 100
+  [MaF5] Run 25/30  seed=2953
+  [MaF5] Run 25 done - front size: 100
+  [MaF5] Run 26/30  seed=3079
+  [MaF5] Run 26 done - front size: 120
+  [MaF5] Run 27/30  seed=3191
+  [MaF5] Run 27 done - front size: 120
+  [MaF5] Run 28/30  seed=3313
+  [MaF5] Run 28 done - front size: 120
+  [MaF5] Run 29/30  seed=3433
+  [MaF5] Run 29 done - front size: 120
+  [MaF5] Run 30/30  seed=3557
+  [MaF5] Run 30 done - front size: 120
+  MaF5: 30 runs completed in 127.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF5_M4.csv
+
+==================================================
+Problem: MaF6  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF6] Run 01/30  seed=42
+  [MaF6] Run 01 done - front size: 120
+  [MaF6] Run 02/30  seed=137
+  [MaF6] Run 02 done - front size: 120
+  [MaF6] Run 03/30  seed=271
+  [MaF6] Run 03 done - front size: 120
+  [MaF6] Run 04/30  seed=491
+  [MaF6] Run 04 done - front size: 120
+  [MaF6] Run 05/30  seed=613
+  [MaF6] Run 05 done - front size: 120
+  [MaF6] Run 06/30  seed=733
+  [MaF6] Run 06 done - front size: 120
+  [MaF6] Run 07/30  seed=857
+  [MaF6] Run 07 done - front size: 100
+  [MaF6] Run 08/30  seed=977
+  [MaF6] Run 08 done - front size: 120
+  [MaF6] Run 09/30  seed=1009
+  [MaF6] Run 09 done - front size: 120
+  [MaF6] Run 10/30  seed=1123
+  [MaF6] Run 10 done - front size: 120
+  [MaF6] Run 11/30  seed=1249
+  [MaF6] Run 11 done - front size: 120
+  [MaF6] Run 12/30  seed=1373
+  [MaF6] Run 12 done - front size: 120
+  [MaF6] Run 13/30  seed=1499
+  [MaF6] Run 13 done - front size: 120
+  [MaF6] Run 14/30  seed=1609
+  [MaF6] Run 14 done - front size: 120
+  [MaF6] Run 15/30  seed=1733
+  [MaF6] Run 15 done - front size: 120
+  [MaF6] Run 16/30  seed=1871
+  [MaF6] Run 16 done - front size: 120
+  [MaF6] Run 17/30  seed=1997
+  [MaF6] Run 17 done - front size: 120
+  [MaF6] Run 18/30  seed=2113
+  [MaF6] Run 18 done - front size: 120
+  [MaF6] Run 19/30  seed=2237
+  [MaF6] Run 19 done - front size: 120
+  [MaF6] Run 20/30  seed=2351
+  [MaF6] Run 20 done - front size: 100
+  [MaF6] Run 21/30  seed=2467
+  [MaF6] Run 21 done - front size: 120
+  [MaF6] Run 22/30  seed=2593
+  [MaF6] Run 22 done - front size: 120
+  [MaF6] Run 23/30  seed=2711
+  [MaF6] Run 23 done - front size: 120
+  [MaF6] Run 24/30  seed=2837
+  [MaF6] Run 24 done - front size: 100
+  [MaF6] Run 25/30  seed=2953
+  [MaF6] Run 25 done - front size: 120
+  [MaF6] Run 26/30  seed=3079
+  [MaF6] Run 26 done - front size: 120
+  [MaF6] Run 27/30  seed=3191
+  [MaF6] Run 27 done - front size: 120
+  [MaF6] Run 28/30  seed=3313
+  [MaF6] Run 28 done - front size: 100
+  [MaF6] Run 29/30  seed=3433
+  [MaF6] Run 29 done - front size: 120
+  [MaF6] Run 30/30  seed=3557
+  [MaF6] Run 30 done - front size: 120
+  MaF6: 30 runs completed in 98.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF6_M4.csv
+
+==================================================
+Problem: MaF7  (30 runs, 4 objectives)
+==================================================
+  n_var=23, n_obj=4, n_gen=250
+  [MaF7] Run 01/30  seed=42
+  [MaF7] Run 01 done - front size: 120
+  [MaF7] Run 02/30  seed=137
+  [MaF7] Run 02 done - front size: 120
+  [MaF7] Run 03/30  seed=271
+  [MaF7] Run 03 done - front size: 120
+  [MaF7] Run 04/30  seed=491
+  [MaF7] Run 04 done - front size: 120
+  [MaF7] Run 05/30  seed=613
+  [MaF7] Run 05 done - front size: 120
+  [MaF7] Run 06/30  seed=733
+  [MaF7] Run 06 done - front size: 120
+  [MaF7] Run 07/30  seed=857
+  [MaF7] Run 07 done - front size: 100
+  [MaF7] Run 08/30  seed=977
+  [MaF7] Run 08 done - front size: 120
+  [MaF7] Run 09/30  seed=1009
+  [MaF7] Run 09 done - front size: 120
+  [MaF7] Run 10/30  seed=1123
+  [MaF7] Run 10 done - front size: 120
+  [MaF7] Run 11/30  seed=1249
+  [MaF7] Run 11 done - front size: 120
+  [MaF7] Run 12/30  seed=1373
+  [MaF7] Run 12 done - front size: 120
+  [MaF7] Run 13/30  seed=1499
+  [MaF7] Run 13 done - front size: 120
+  [MaF7] Run 14/30  seed=1609
+  [MaF7] Run 14 done - front size: 120
+  [MaF7] Run 15/30  seed=1733
+  [MaF7] Run 15 done - front size: 120
+  [MaF7] Run 16/30  seed=1871
+  [MaF7] Run 16 done - front size: 120
+  [MaF7] Run 17/30  seed=1997
+  [MaF7] Run 17 done - front size: 120
+  [MaF7] Run 18/30  seed=2113
+  [MaF7] Run 18 done - front size: 100
+  [MaF7] Run 19/30  seed=2237
+  [MaF7] Run 19 done - front size: 120
+  [MaF7] Run 20/30  seed=2351
+  [MaF7] Run 20 done - front size: 120
+  [MaF7] Run 21/30  seed=2467
+  [MaF7] Run 21 done - front size: 120
+  [MaF7] Run 22/30  seed=2593
+  [MaF7] Run 22 done - front size: 120
+  [MaF7] Run 23/30  seed=2711
+  [MaF7] Run 23 done - front size: 120
+  [MaF7] Run 24/30  seed=2837
+  [MaF7] Run 24 done - front size: 100
+  [MaF7] Run 25/30  seed=2953
+  [MaF7] Run 25 done - front size: 120
+  [MaF7] Run 26/30  seed=3079
+  [MaF7] Run 26 done - front size: 120
+  [MaF7] Run 27/30  seed=3191
+  [MaF7] Run 27 done - front size: 120
+  [MaF7] Run 28/30  seed=3313
+  [MaF7] Run 28 done - front size: 100
+  [MaF7] Run 29/30  seed=3433
+  [MaF7] Run 29 done - front size: 100
+  [MaF7] Run 30/30  seed=3557
+  [MaF7] Run 30 done - front size: 100
+  MaF7: 30 runs completed in 123.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\igd_MaF7_M4.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\nsga3\summary_M4.csv
+
+---------------------------------------------------------------------------
+  NSGA-III on MaF1-7 (4 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+MaF1           0.139453     0.148160     0.159715     0.148655     0.004677
+MaF2           0.083287     0.086732     0.090537     0.086756     0.001655
+MaF3           3.863476    43.223841   529.512312    71.667279    94.946444
+MaF4           1.165066    22.615466    58.022013    25.160909    15.629437
+MaF5           0.888360     0.907845     3.313786     0.998836     0.430625
+MaF6           0.021266     0.031634     0.044665     0.032325     0.005139
+MaF7           0.192678     0.222623     0.460612     0.239035     0.060787
+---------------------------------------------------------------------------
+
+=== MaF qinsga3 M3 ===
+
+==================================================
+Problem: MaF1  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF1] Run 01/30  seed=42
+  [MaF1] Run 01 done - front size: 92
+  [MaF1] Run 02/30  seed=137
+  [MaF1] Run 02 done - front size: 92
+  [MaF1] Run 03/30  seed=271
+  [MaF1] Run 03 done - front size: 92
+  [MaF1] Run 04/30  seed=491
+  [MaF1] Run 04 done - front size: 92
+  [MaF1] Run 05/30  seed=613
+  [MaF1] Run 05 done - front size: 92
+  [MaF1] Run 06/30  seed=733
+  [MaF1] Run 06 done - front size: 92
+  [MaF1] Run 07/30  seed=857
+  [MaF1] Run 07 done - front size: 92
+  [MaF1] Run 08/30  seed=977
+  [MaF1] Run 08 done - front size: 92
+  [MaF1] Run 09/30  seed=1009
+  [MaF1] Run 09 done - front size: 92
+  [MaF1] Run 10/30  seed=1123
+  [MaF1] Run 10 done - front size: 92
+  [MaF1] Run 11/30  seed=1249
+  [MaF1] Run 11 done - front size: 92
+  [MaF1] Run 12/30  seed=1373
+  [MaF1] Run 12 done - front size: 92
+  [MaF1] Run 13/30  seed=1499
+  [MaF1] Run 13 done - front size: 92
+  [MaF1] Run 14/30  seed=1609
+  [MaF1] Run 14 done - front size: 92
+  [MaF1] Run 15/30  seed=1733
+  [MaF1] Run 15 done - front size: 92
+  [MaF1] Run 16/30  seed=1871
+  [MaF1] Run 16 done - front size: 92
+  [MaF1] Run 17/30  seed=1997
+  [MaF1] Run 17 done - front size: 92
+  [MaF1] Run 18/30  seed=2113
+  [MaF1] Run 18 done - front size: 92
+  [MaF1] Run 19/30  seed=2237
+  [MaF1] Run 19 done - front size: 92
+  [MaF1] Run 20/30  seed=2351
+  [MaF1] Run 20 done - front size: 92
+  [MaF1] Run 21/30  seed=2467
+  [MaF1] Run 21 done - front size: 92
+  [MaF1] Run 22/30  seed=2593
+  [MaF1] Run 22 done - front size: 92
+  [MaF1] Run 23/30  seed=2711
+  [MaF1] Run 23 done - front size: 92
+  [MaF1] Run 24/30  seed=2837
+  [MaF1] Run 24 done - front size: 92
+  [MaF1] Run 25/30  seed=2953
+  [MaF1] Run 25 done - front size: 92
+  [MaF1] Run 26/30  seed=3079
+  [MaF1] Run 26 done - front size: 92
+  [MaF1] Run 27/30  seed=3191
+  [MaF1] Run 27 done - front size: 92
+  [MaF1] Run 28/30  seed=3313
+  [MaF1] Run 28 done - front size: 92
+  [MaF1] Run 29/30  seed=3433
+  [MaF1] Run 29 done - front size: 92
+  [MaF1] Run 30/30  seed=3557
+  [MaF1] Run 30 done - front size: 92
+  MaF1: 30 runs completed in 221.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF1_M3.csv
+
+==================================================
+Problem: MaF2  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF2] Run 01/30  seed=42
+  [MaF2] Run 01 done - front size: 92
+  [MaF2] Run 02/30  seed=137
+  [MaF2] Run 02 done - front size: 92
+  [MaF2] Run 03/30  seed=271
+  [MaF2] Run 03 done - front size: 92
+  [MaF2] Run 04/30  seed=491
+  [MaF2] Run 04 done - front size: 92
+  [MaF2] Run 05/30  seed=613
+  [MaF2] Run 05 done - front size: 92
+  [MaF2] Run 06/30  seed=733
+  [MaF2] Run 06 done - front size: 92
+  [MaF2] Run 07/30  seed=857
+  [MaF2] Run 07 done - front size: 92
+  [MaF2] Run 08/30  seed=977
+  [MaF2] Run 08 done - front size: 92
+  [MaF2] Run 09/30  seed=1009
+  [MaF2] Run 09 done - front size: 92
+  [MaF2] Run 10/30  seed=1123
+  [MaF2] Run 10 done - front size: 92
+  [MaF2] Run 11/30  seed=1249
+  [MaF2] Run 11 done - front size: 92
+  [MaF2] Run 12/30  seed=1373
+  [MaF2] Run 12 done - front size: 92
+  [MaF2] Run 13/30  seed=1499
+  [MaF2] Run 13 done - front size: 92
+  [MaF2] Run 14/30  seed=1609
+  [MaF2] Run 14 done - front size: 92
+  [MaF2] Run 15/30  seed=1733
+  [MaF2] Run 15 done - front size: 92
+  [MaF2] Run 16/30  seed=1871
+  [MaF2] Run 16 done - front size: 92
+  [MaF2] Run 17/30  seed=1997
+  [MaF2] Run 17 done - front size: 92
+  [MaF2] Run 18/30  seed=2113
+  [MaF2] Run 18 done - front size: 92
+  [MaF2] Run 19/30  seed=2237
+  [MaF2] Run 19 done - front size: 92
+  [MaF2] Run 20/30  seed=2351
+  [MaF2] Run 20 done - front size: 92
+  [MaF2] Run 21/30  seed=2467
+  [MaF2] Run 21 done - front size: 92
+  [MaF2] Run 22/30  seed=2593
+  [MaF2] Run 22 done - front size: 92
+  [MaF2] Run 23/30  seed=2711
+  [MaF2] Run 23 done - front size: 92
+  [MaF2] Run 24/30  seed=2837
+  [MaF2] Run 24 done - front size: 92
+  [MaF2] Run 25/30  seed=2953
+  [MaF2] Run 25 done - front size: 92
+  [MaF2] Run 26/30  seed=3079
+  [MaF2] Run 26 done - front size: 92
+  [MaF2] Run 27/30  seed=3191
+  [MaF2] Run 27 done - front size: 92
+  [MaF2] Run 28/30  seed=3313
+  [MaF2] Run 28 done - front size: 92
+  [MaF2] Run 29/30  seed=3433
+  [MaF2] Run 29 done - front size: 92
+  [MaF2] Run 30/30  seed=3557
+  [MaF2] Run 30 done - front size: 92
+  MaF2: 30 runs completed in 235.0s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF2_M3.csv
+
+==================================================
+Problem: MaF3  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF3] Run 01/30  seed=42
+  [MaF3] Run 01 done - front size: 92
+  [MaF3] Run 02/30  seed=137
+  [MaF3] Run 02 done - front size: 92
+  [MaF3] Run 03/30  seed=271
+  [MaF3] Run 03 done - front size: 92
+  [MaF3] Run 04/30  seed=491
+  [MaF3] Run 04 done - front size: 92
+  [MaF3] Run 05/30  seed=613
+  [MaF3] Run 05 done - front size: 92
+  [MaF3] Run 06/30  seed=733
+  [MaF3] Run 06 done - front size: 92
+  [MaF3] Run 07/30  seed=857
+  [MaF3] Run 07 done - front size: 92
+  [MaF3] Run 08/30  seed=977
+  [MaF3] Run 08 done - front size: 92
+  [MaF3] Run 09/30  seed=1009
+  [MaF3] Run 09 done - front size: 92
+  [MaF3] Run 10/30  seed=1123
+  [MaF3] Run 10 done - front size: 92
+  [MaF3] Run 11/30  seed=1249
+  [MaF3] Run 11 done - front size: 92
+  [MaF3] Run 12/30  seed=1373
+  [MaF3] Run 12 done - front size: 92
+  [MaF3] Run 13/30  seed=1499
+  [MaF3] Run 13 done - front size: 92
+  [MaF3] Run 14/30  seed=1609
+  [MaF3] Run 14 done - front size: 92
+  [MaF3] Run 15/30  seed=1733
+  [MaF3] Run 15 done - front size: 92
+  [MaF3] Run 16/30  seed=1871
+  [MaF3] Run 16 done - front size: 92
+  [MaF3] Run 17/30  seed=1997
+  [MaF3] Run 17 done - front size: 92
+  [MaF3] Run 18/30  seed=2113
+  [MaF3] Run 18 done - front size: 92
+  [MaF3] Run 19/30  seed=2237
+  [MaF3] Run 19 done - front size: 92
+  [MaF3] Run 20/30  seed=2351
+  [MaF3] Run 20 done - front size: 92
+  [MaF3] Run 21/30  seed=2467
+  [MaF3] Run 21 done - front size: 92
+  [MaF3] Run 22/30  seed=2593
+  [MaF3] Run 22 done - front size: 92
+  [MaF3] Run 23/30  seed=2711
+  [MaF3] Run 23 done - front size: 92
+  [MaF3] Run 24/30  seed=2837
+  [MaF3] Run 24 done - front size: 92
+  [MaF3] Run 25/30  seed=2953
+  [MaF3] Run 25 done - front size: 92
+  [MaF3] Run 26/30  seed=3079
+  [MaF3] Run 26 done - front size: 92
+  [MaF3] Run 27/30  seed=3191
+  [MaF3] Run 27 done - front size: 92
+  [MaF3] Run 28/30  seed=3313
+  [MaF3] Run 28 done - front size: 92
+  [MaF3] Run 29/30  seed=3433
+  [MaF3] Run 29 done - front size: 92
+  [MaF3] Run 30/30  seed=3557
+  [MaF3] Run 30 done - front size: 92
+  MaF3: 30 runs completed in 96.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF3_M3.csv
+
+==================================================
+Problem: MaF4  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF4] Run 01/30  seed=42
+  [MaF4] Run 01 done - front size: 92
+  [MaF4] Run 02/30  seed=137
+  [MaF4] Run 02 done - front size: 92
+  [MaF4] Run 03/30  seed=271
+  [MaF4] Run 03 done - front size: 92
+  [MaF4] Run 04/30  seed=491
+  [MaF4] Run 04 done - front size: 92
+  [MaF4] Run 05/30  seed=613
+  [MaF4] Run 05 done - front size: 92
+  [MaF4] Run 06/30  seed=733
+  [MaF4] Run 06 done - front size: 92
+  [MaF4] Run 07/30  seed=857
+  [MaF4] Run 07 done - front size: 55
+  [MaF4] Run 08/30  seed=977
+  [MaF4] Run 08 done - front size: 92
+  [MaF4] Run 09/30  seed=1009
+  [MaF4] Run 09 done - front size: 92
+  [MaF4] Run 10/30  seed=1123
+  [MaF4] Run 10 done - front size: 92
+  [MaF4] Run 11/30  seed=1249
+  [MaF4] Run 11 done - front size: 92
+  [MaF4] Run 12/30  seed=1373
+  [MaF4] Run 12 done - front size: 92
+  [MaF4] Run 13/30  seed=1499
+  [MaF4] Run 13 done - front size: 92
+  [MaF4] Run 14/30  seed=1609
+  [MaF4] Run 14 done - front size: 92
+  [MaF4] Run 15/30  seed=1733
+  [MaF4] Run 15 done - front size: 92
+  [MaF4] Run 16/30  seed=1871
+  [MaF4] Run 16 done - front size: 92
+  [MaF4] Run 17/30  seed=1997
+  [MaF4] Run 17 done - front size: 92
+  [MaF4] Run 18/30  seed=2113
+  [MaF4] Run 18 done - front size: 92
+  [MaF4] Run 19/30  seed=2237
+  [MaF4] Run 19 done - front size: 92
+  [MaF4] Run 20/30  seed=2351
+  [MaF4] Run 20 done - front size: 92
+  [MaF4] Run 21/30  seed=2467
+  [MaF4] Run 21 done - front size: 92
+  [MaF4] Run 22/30  seed=2593
+  [MaF4] Run 22 done - front size: 92
+  [MaF4] Run 23/30  seed=2711
+  [MaF4] Run 23 done - front size: 92
+  [MaF4] Run 24/30  seed=2837
+  [MaF4] Run 24 done - front size: 92
+  [MaF4] Run 25/30  seed=2953
+  [MaF4] Run 25 done - front size: 92
+  [MaF4] Run 26/30  seed=3079
+  [MaF4] Run 26 done - front size: 92
+  [MaF4] Run 27/30  seed=3191
+  [MaF4] Run 27 done - front size: 92
+  [MaF4] Run 28/30  seed=3313
+  [MaF4] Run 28 done - front size: 92
+  [MaF4] Run 29/30  seed=3433
+  [MaF4] Run 29 done - front size: 92
+  [MaF4] Run 30/30  seed=3557
+  [MaF4] Run 30 done - front size: 92
+  MaF4: 30 runs completed in 121.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF4_M3.csv
+
+==================================================
+Problem: MaF5  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF5] Run 01/30  seed=42
+  [MaF5] Run 01 done - front size: 92
+  [MaF5] Run 02/30  seed=137
+  [MaF5] Run 02 done - front size: 92
+  [MaF5] Run 03/30  seed=271
+  [MaF5] Run 03 done - front size: 92
+  [MaF5] Run 04/30  seed=491
+  [MaF5] Run 04 done - front size: 92
+  [MaF5] Run 05/30  seed=613
+  [MaF5] Run 05 done - front size: 92
+  [MaF5] Run 06/30  seed=733
+  [MaF5] Run 06 done - front size: 92
+  [MaF5] Run 07/30  seed=857
+  [MaF5] Run 07 done - front size: 92
+  [MaF5] Run 08/30  seed=977
+  [MaF5] Run 08 done - front size: 92
+  [MaF5] Run 09/30  seed=1009
+  [MaF5] Run 09 done - front size: 92
+  [MaF5] Run 10/30  seed=1123
+  [MaF5] Run 10 done - front size: 92
+  [MaF5] Run 11/30  seed=1249
+  [MaF5] Run 11 done - front size: 92
+  [MaF5] Run 12/30  seed=1373
+  [MaF5] Run 12 done - front size: 92
+  [MaF5] Run 13/30  seed=1499
+  [MaF5] Run 13 done - front size: 92
+  [MaF5] Run 14/30  seed=1609
+  [MaF5] Run 14 done - front size: 92
+  [MaF5] Run 15/30  seed=1733
+  [MaF5] Run 15 done - front size: 92
+  [MaF5] Run 16/30  seed=1871
+  [MaF5] Run 16 done - front size: 92
+  [MaF5] Run 17/30  seed=1997
+  [MaF5] Run 17 done - front size: 92
+  [MaF5] Run 18/30  seed=2113
+  [MaF5] Run 18 done - front size: 92
+  [MaF5] Run 19/30  seed=2237
+  [MaF5] Run 19 done - front size: 92
+  [MaF5] Run 20/30  seed=2351
+  [MaF5] Run 20 done - front size: 92
+  [MaF5] Run 21/30  seed=2467
+  [MaF5] Run 21 done - front size: 92
+  [MaF5] Run 22/30  seed=2593
+  [MaF5] Run 22 done - front size: 92
+  [MaF5] Run 23/30  seed=2711
+  [MaF5] Run 23 done - front size: 92
+  [MaF5] Run 24/30  seed=2837
+  [MaF5] Run 24 done - front size: 92
+  [MaF5] Run 25/30  seed=2953
+  [MaF5] Run 25 done - front size: 92
+  [MaF5] Run 26/30  seed=3079
+  [MaF5] Run 26 done - front size: 92
+  [MaF5] Run 27/30  seed=3191
+  [MaF5] Run 27 done - front size: 92
+  [MaF5] Run 28/30  seed=3313
+  [MaF5] Run 28 done - front size: 92
+  [MaF5] Run 29/30  seed=3433
+  [MaF5] Run 29 done - front size: 92
+  [MaF5] Run 30/30  seed=3557
+  [MaF5] Run 30 done - front size: 92
+  MaF5: 30 runs completed in 207.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF5_M3.csv
+
+==================================================
+Problem: MaF6  (30 runs, 3 objectives)
+==================================================
+  n_var=12, n_obj=3, n_gen=326
+  [MaF6] Run 01/30  seed=42
+  [MaF6] Run 01 done - front size: 92
+  [MaF6] Run 02/30  seed=137
+  [MaF6] Run 02 done - front size: 92
+  [MaF6] Run 03/30  seed=271
+  [MaF6] Run 03 done - front size: 92
+  [MaF6] Run 04/30  seed=491
+  [MaF6] Run 04 done - front size: 92
+  [MaF6] Run 05/30  seed=613
+  [MaF6] Run 05 done - front size: 92
+  [MaF6] Run 06/30  seed=733
+  [MaF6] Run 06 done - front size: 92
+  [MaF6] Run 07/30  seed=857
+  [MaF6] Run 07 done - front size: 92
+  [MaF6] Run 08/30  seed=977
+  [MaF6] Run 08 done - front size: 92
+  [MaF6] Run 09/30  seed=1009
+  [MaF6] Run 09 done - front size: 92
+  [MaF6] Run 10/30  seed=1123
+  [MaF6] Run 10 done - front size: 92
+  [MaF6] Run 11/30  seed=1249
+  [MaF6] Run 11 done - front size: 92
+  [MaF6] Run 12/30  seed=1373
+  [MaF6] Run 12 done - front size: 92
+  [MaF6] Run 13/30  seed=1499
+  [MaF6] Run 13 done - front size: 92
+  [MaF6] Run 14/30  seed=1609
+  [MaF6] Run 14 done - front size: 92
+  [MaF6] Run 15/30  seed=1733
+  [MaF6] Run 15 done - front size: 92
+  [MaF6] Run 16/30  seed=1871
+  [MaF6] Run 16 done - front size: 92
+  [MaF6] Run 17/30  seed=1997
+  [MaF6] Run 17 done - front size: 92
+  [MaF6] Run 18/30  seed=2113
+  [MaF6] Run 18 done - front size: 92
+  [MaF6] Run 19/30  seed=2237
+  [MaF6] Run 19 done - front size: 92
+  [MaF6] Run 20/30  seed=2351
+  [MaF6] Run 20 done - front size: 92
+  [MaF6] Run 21/30  seed=2467
+  [MaF6] Run 21 done - front size: 92
+  [MaF6] Run 22/30  seed=2593
+  [MaF6] Run 22 done - front size: 92
+  [MaF6] Run 23/30  seed=2711
+  [MaF6] Run 23 done - front size: 92
+  [MaF6] Run 24/30  seed=2837
+  [MaF6] Run 24 done - front size: 92
+  [MaF6] Run 25/30  seed=2953
+  [MaF6] Run 25 done - front size: 92
+  [MaF6] Run 26/30  seed=3079
+  [MaF6] Run 26 done - front size: 92
+  [MaF6] Run 27/30  seed=3191
+  [MaF6] Run 27 done - front size: 92
+  [MaF6] Run 28/30  seed=3313
+  [MaF6] Run 28 done - front size: 92
+  [MaF6] Run 29/30  seed=3433
+  [MaF6] Run 29 done - front size: 92
+  [MaF6] Run 30/30  seed=3557
+  [MaF6] Run 30 done - front size: 92
+  MaF6: 30 runs completed in 146.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF6_M3.csv
+
+==================================================
+Problem: MaF7  (30 runs, 3 objectives)
+==================================================
+  n_var=22, n_obj=3, n_gen=326
+  [MaF7] Run 01/30  seed=42
+  [MaF7] Run 01 done - front size: 92
+  [MaF7] Run 02/30  seed=137
+  [MaF7] Run 02 done - front size: 92
+  [MaF7] Run 03/30  seed=271
+  [MaF7] Run 03 done - front size: 92
+  [MaF7] Run 04/30  seed=491
+  [MaF7] Run 04 done - front size: 92
+  [MaF7] Run 05/30  seed=613
+  [MaF7] Run 05 done - front size: 92
+  [MaF7] Run 06/30  seed=733
+  [MaF7] Run 06 done - front size: 92
+  [MaF7] Run 07/30  seed=857
+  [MaF7] Run 07 done - front size: 92
+  [MaF7] Run 08/30  seed=977
+  [MaF7] Run 08 done - front size: 92
+  [MaF7] Run 09/30  seed=1009
+  [MaF7] Run 09 done - front size: 92
+  [MaF7] Run 10/30  seed=1123
+  [MaF7] Run 10 done - front size: 92
+  [MaF7] Run 11/30  seed=1249
+  [MaF7] Run 11 done - front size: 92
+  [MaF7] Run 12/30  seed=1373
+  [MaF7] Run 12 done - front size: 92
+  [MaF7] Run 13/30  seed=1499
+  [MaF7] Run 13 done - front size: 92
+  [MaF7] Run 14/30  seed=1609
+  [MaF7] Run 14 done - front size: 92
+  [MaF7] Run 15/30  seed=1733
+  [MaF7] Run 15 done - front size: 92
+  [MaF7] Run 16/30  seed=1871
+  [MaF7] Run 16 done - front size: 92
+  [MaF7] Run 17/30  seed=1997
+  [MaF7] Run 17 done - front size: 92
+  [MaF7] Run 18/30  seed=2113
+  [MaF7] Run 18 done - front size: 92
+  [MaF7] Run 19/30  seed=2237
+  [MaF7] Run 19 done - front size: 92
+  [MaF7] Run 20/30  seed=2351
+  [MaF7] Run 20 done - front size: 92
+  [MaF7] Run 21/30  seed=2467
+  [MaF7] Run 21 done - front size: 92
+  [MaF7] Run 22/30  seed=2593
+  [MaF7] Run 22 done - front size: 92
+  [MaF7] Run 23/30  seed=2711
+  [MaF7] Run 23 done - front size: 92
+  [MaF7] Run 24/30  seed=2837
+  [MaF7] Run 24 done - front size: 92
+  [MaF7] Run 25/30  seed=2953
+  [MaF7] Run 25 done - front size: 92
+  [MaF7] Run 26/30  seed=3079
+  [MaF7] Run 26 done - front size: 92
+  [MaF7] Run 27/30  seed=3191
+  [MaF7] Run 27 done - front size: 92
+  [MaF7] Run 28/30  seed=3313
+  [MaF7] Run 28 done - front size: 92
+  [MaF7] Run 29/30  seed=3433
+  [MaF7] Run 29 done - front size: 92
+  [MaF7] Run 30/30  seed=3557
+  [MaF7] Run 30 done - front size: 92
+  MaF7: 30 runs completed in 163.8s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF7_M3.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\summary_M3.csv
+
+---------------------------------------------------------------------------
+  QINSGA3 on MaF1-7 (3 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+MaF1           0.053686     0.056570     0.059026     0.056398     0.001417
+MaF2           0.047295     0.055906     0.067825     0.055703     0.004816
+MaF3           0.133214     0.214174    34.480705     1.589936     6.154247
+MaF4           0.337382     0.441434     1.614409     0.493141     0.228072
+MaF5           0.301346     0.324208     0.369813     0.324294     0.014491
+MaF6           0.008051     0.010494     0.014822     0.010763     0.001916
+MaF7           0.092380     0.105121     0.125951     0.107521     0.007935
+---------------------------------------------------------------------------
+
+=== MaF qinsga3 M4 ===
+
+==================================================
+Problem: MaF1  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF1] Run 01/30  seed=42
+  [MaF1] Run 01 done - front size: 120
+  [MaF1] Run 02/30  seed=137
+  [MaF1] Run 02 done - front size: 120
+  [MaF1] Run 03/30  seed=271
+  [MaF1] Run 03 done - front size: 120
+  [MaF1] Run 04/30  seed=491
+  [MaF1] Run 04 done - front size: 120
+  [MaF1] Run 05/30  seed=613
+  [MaF1] Run 05 done - front size: 120
+  [MaF1] Run 06/30  seed=733
+  [MaF1] Run 06 done - front size: 120
+  [MaF1] Run 07/30  seed=857
+  [MaF1] Run 07 done - front size: 120
+  [MaF1] Run 08/30  seed=977
+  [MaF1] Run 08 done - front size: 120
+  [MaF1] Run 09/30  seed=1009
+  [MaF1] Run 09 done - front size: 120
+  [MaF1] Run 10/30  seed=1123
+  [MaF1] Run 10 done - front size: 120
+  [MaF1] Run 11/30  seed=1249
+  [MaF1] Run 11 done - front size: 120
+  [MaF1] Run 12/30  seed=1373
+  [MaF1] Run 12 done - front size: 120
+  [MaF1] Run 13/30  seed=1499
+  [MaF1] Run 13 done - front size: 120
+  [MaF1] Run 14/30  seed=1609
+  [MaF1] Run 14 done - front size: 120
+  [MaF1] Run 15/30  seed=1733
+  [MaF1] Run 15 done - front size: 120
+  [MaF1] Run 16/30  seed=1871
+  [MaF1] Run 16 done - front size: 120
+  [MaF1] Run 17/30  seed=1997
+  [MaF1] Run 17 done - front size: 120
+  [MaF1] Run 18/30  seed=2113
+  [MaF1] Run 18 done - front size: 120
+  [MaF1] Run 19/30  seed=2237
+  [MaF1] Run 19 done - front size: 120
+  [MaF1] Run 20/30  seed=2351
+  [MaF1] Run 20 done - front size: 120
+  [MaF1] Run 21/30  seed=2467
+  [MaF1] Run 21 done - front size: 120
+  [MaF1] Run 22/30  seed=2593
+  [MaF1] Run 22 done - front size: 120
+  [MaF1] Run 23/30  seed=2711
+  [MaF1] Run 23 done - front size: 120
+  [MaF1] Run 24/30  seed=2837
+  [MaF1] Run 24 done - front size: 120
+  [MaF1] Run 25/30  seed=2953
+  [MaF1] Run 25 done - front size: 120
+  [MaF1] Run 26/30  seed=3079
+  [MaF1] Run 26 done - front size: 120
+  [MaF1] Run 27/30  seed=3191
+  [MaF1] Run 27 done - front size: 120
+  [MaF1] Run 28/30  seed=3313
+  [MaF1] Run 28 done - front size: 120
+  [MaF1] Run 29/30  seed=3433
+  [MaF1] Run 29 done - front size: 120
+  [MaF1] Run 30/30  seed=3557
+  [MaF1] Run 30 done - front size: 120
+  MaF1: 30 runs completed in 244.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF1_M4.csv
+
+==================================================
+Problem: MaF2  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF2] Run 01/30  seed=42
+  [MaF2] Run 01 done - front size: 120
+  [MaF2] Run 02/30  seed=137
+  [MaF2] Run 02 done - front size: 120
+  [MaF2] Run 03/30  seed=271
+  [MaF2] Run 03 done - front size: 120
+  [MaF2] Run 04/30  seed=491
+  [MaF2] Run 04 done - front size: 120
+  [MaF2] Run 05/30  seed=613
+  [MaF2] Run 05 done - front size: 120
+  [MaF2] Run 06/30  seed=733
+  [MaF2] Run 06 done - front size: 120
+  [MaF2] Run 07/30  seed=857
+  [MaF2] Run 07 done - front size: 120
+  [MaF2] Run 08/30  seed=977
+  [MaF2] Run 08 done - front size: 120
+  [MaF2] Run 09/30  seed=1009
+  [MaF2] Run 09 done - front size: 120
+  [MaF2] Run 10/30  seed=1123
+  [MaF2] Run 10 done - front size: 120
+  [MaF2] Run 11/30  seed=1249
+  [MaF2] Run 11 done - front size: 120
+  [MaF2] Run 12/30  seed=1373
+  [MaF2] Run 12 done - front size: 120
+  [MaF2] Run 13/30  seed=1499
+  [MaF2] Run 13 done - front size: 120
+  [MaF2] Run 14/30  seed=1609
+  [MaF2] Run 14 done - front size: 120
+  [MaF2] Run 15/30  seed=1733
+  [MaF2] Run 15 done - front size: 120
+  [MaF2] Run 16/30  seed=1871
+  [MaF2] Run 16 done - front size: 120
+  [MaF2] Run 17/30  seed=1997
+  [MaF2] Run 17 done - front size: 120
+  [MaF2] Run 18/30  seed=2113
+  [MaF2] Run 18 done - front size: 120
+  [MaF2] Run 19/30  seed=2237
+  [MaF2] Run 19 done - front size: 120
+  [MaF2] Run 20/30  seed=2351
+  [MaF2] Run 20 done - front size: 120
+  [MaF2] Run 21/30  seed=2467
+  [MaF2] Run 21 done - front size: 120
+  [MaF2] Run 22/30  seed=2593
+  [MaF2] Run 22 done - front size: 120
+  [MaF2] Run 23/30  seed=2711
+  [MaF2] Run 23 done - front size: 120
+  [MaF2] Run 24/30  seed=2837
+  [MaF2] Run 24 done - front size: 120
+  [MaF2] Run 25/30  seed=2953
+  [MaF2] Run 25 done - front size: 120
+  [MaF2] Run 26/30  seed=3079
+  [MaF2] Run 26 done - front size: 120
+  [MaF2] Run 27/30  seed=3191
+  [MaF2] Run 27 done - front size: 120
+  [MaF2] Run 28/30  seed=3313
+  [MaF2] Run 28 done - front size: 120
+  [MaF2] Run 29/30  seed=3433
+  [MaF2] Run 29 done - front size: 120
+  [MaF2] Run 30/30  seed=3557
+  [MaF2] Run 30 done - front size: 120
+  MaF2: 30 runs completed in 269.0s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF2_M4.csv
+
+==================================================
+Problem: MaF3  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF3] Run 01/30  seed=42
+  [MaF3] Run 01 done - front size: 120
+  [MaF3] Run 02/30  seed=137
+  [MaF3] Run 02 done - front size: 120
+  [MaF3] Run 03/30  seed=271
+  [MaF3] Run 03 done - front size: 120
+  [MaF3] Run 04/30  seed=491
+  [MaF3] Run 04 done - front size: 120
+  [MaF3] Run 05/30  seed=613
+  [MaF3] Run 05 done - front size: 120
+  [MaF3] Run 06/30  seed=733
+  [MaF3] Run 06 done - front size: 120
+  [MaF3] Run 07/30  seed=857
+  [MaF3] Run 07 done - front size: 120
+  [MaF3] Run 08/30  seed=977
+  [MaF3] Run 08 done - front size: 120
+  [MaF3] Run 09/30  seed=1009
+  [MaF3] Run 09 done - front size: 120
+  [MaF3] Run 10/30  seed=1123
+  [MaF3] Run 10 done - front size: 120
+  [MaF3] Run 11/30  seed=1249
+  [MaF3] Run 11 done - front size: 120
+  [MaF3] Run 12/30  seed=1373
+  [MaF3] Run 12 done - front size: 120
+  [MaF3] Run 13/30  seed=1499
+  [MaF3] Run 13 done - front size: 120
+  [MaF3] Run 14/30  seed=1609
+  [MaF3] Run 14 done - front size: 120
+  [MaF3] Run 15/30  seed=1733
+  [MaF3] Run 15 done - front size: 120
+  [MaF3] Run 16/30  seed=1871
+  [MaF3] Run 16 done - front size: 120
+  [MaF3] Run 17/30  seed=1997
+  [MaF3] Run 17 done - front size: 120
+  [MaF3] Run 18/30  seed=2113
+  [MaF3] Run 18 done - front size: 120
+  [MaF3] Run 19/30  seed=2237
+  [MaF3] Run 19 done - front size: 120
+  [MaF3] Run 20/30  seed=2351
+  [MaF3] Run 20 done - front size: 120
+  [MaF3] Run 21/30  seed=2467
+  [MaF3] Run 21 done - front size: 120
+  [MaF3] Run 22/30  seed=2593
+  [MaF3] Run 22 done - front size: 120
+  [MaF3] Run 23/30  seed=2711
+  [MaF3] Run 23 done - front size: 120
+  [MaF3] Run 24/30  seed=2837
+  [MaF3] Run 24 done - front size: 120
+  [MaF3] Run 25/30  seed=2953
+  [MaF3] Run 25 done - front size: 120
+  [MaF3] Run 26/30  seed=3079
+  [MaF3] Run 26 done - front size: 120
+  [MaF3] Run 27/30  seed=3191
+  [MaF3] Run 27 done - front size: 120
+  [MaF3] Run 28/30  seed=3313
+  [MaF3] Run 28 done - front size: 120
+  [MaF3] Run 29/30  seed=3433
+  [MaF3] Run 29 done - front size: 120
+  [MaF3] Run 30/30  seed=3557
+  [MaF3] Run 30 done - front size: 120
+  MaF3: 30 runs completed in 127.7s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF3_M4.csv
+
+==================================================
+Problem: MaF4  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF4] Run 01/30  seed=42
+  [MaF4] Run 01 done - front size: 120
+  [MaF4] Run 02/30  seed=137
+  [MaF4] Run 02 done - front size: 120
+  [MaF4] Run 03/30  seed=271
+  [MaF4] Run 03 done - front size: 120
+  [MaF4] Run 04/30  seed=491
+  [MaF4] Run 04 done - front size: 120
+  [MaF4] Run 05/30  seed=613
+  [MaF4] Run 05 done - front size: 120
+  [MaF4] Run 06/30  seed=733
+  [MaF4] Run 06 done - front size: 120
+  [MaF4] Run 07/30  seed=857
+  [MaF4] Run 07 done - front size: 120
+  [MaF4] Run 08/30  seed=977
+  [MaF4] Run 08 done - front size: 120
+  [MaF4] Run 09/30  seed=1009
+  [MaF4] Run 09 done - front size: 120
+  [MaF4] Run 10/30  seed=1123
+  [MaF4] Run 10 done - front size: 120
+  [MaF4] Run 11/30  seed=1249
+  [MaF4] Run 11 done - front size: 120
+  [MaF4] Run 12/30  seed=1373
+  [MaF4] Run 12 done - front size: 120
+  [MaF4] Run 13/30  seed=1499
+  [MaF4] Run 13 done - front size: 120
+  [MaF4] Run 14/30  seed=1609
+  [MaF4] Run 14 done - front size: 120
+  [MaF4] Run 15/30  seed=1733
+  [MaF4] Run 15 done - front size: 120
+  [MaF4] Run 16/30  seed=1871
+  [MaF4] Run 16 done - front size: 120
+  [MaF4] Run 17/30  seed=1997
+  [MaF4] Run 17 done - front size: 120
+  [MaF4] Run 18/30  seed=2113
+  [MaF4] Run 18 done - front size: 120
+  [MaF4] Run 19/30  seed=2237
+  [MaF4] Run 19 done - front size: 120
+  [MaF4] Run 20/30  seed=2351
+  [MaF4] Run 20 done - front size: 120
+  [MaF4] Run 21/30  seed=2467
+  [MaF4] Run 21 done - front size: 120
+  [MaF4] Run 22/30  seed=2593
+  [MaF4] Run 22 done - front size: 120
+  [MaF4] Run 23/30  seed=2711
+  [MaF4] Run 23 done - front size: 120
+  [MaF4] Run 24/30  seed=2837
+  [MaF4] Run 24 done - front size: 120
+  [MaF4] Run 25/30  seed=2953
+  [MaF4] Run 25 done - front size: 120
+  [MaF4] Run 26/30  seed=3079
+  [MaF4] Run 26 done - front size: 120
+  [MaF4] Run 27/30  seed=3191
+  [MaF4] Run 27 done - front size: 120
+  [MaF4] Run 28/30  seed=3313
+  [MaF4] Run 28 done - front size: 120
+  [MaF4] Run 29/30  seed=3433
+  [MaF4] Run 29 done - front size: 120
+  [MaF4] Run 30/30  seed=3557
+  [MaF4] Run 30 done - front size: 120
+  MaF4: 30 runs completed in 147.2s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF4_M4.csv
+
+==================================================
+Problem: MaF5  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF5] Run 01/30  seed=42
+  [MaF5] Run 01 done - front size: 120
+  [MaF5] Run 02/30  seed=137
+  [MaF5] Run 02 done - front size: 120
+  [MaF5] Run 03/30  seed=271
+  [MaF5] Run 03 done - front size: 120
+  [MaF5] Run 04/30  seed=491
+  [MaF5] Run 04 done - front size: 120
+  [MaF5] Run 05/30  seed=613
+  [MaF5] Run 05 done - front size: 120
+  [MaF5] Run 06/30  seed=733
+  [MaF5] Run 06 done - front size: 120
+  [MaF5] Run 07/30  seed=857
+  [MaF5] Run 07 done - front size: 120
+  [MaF5] Run 08/30  seed=977
+  [MaF5] Run 08 done - front size: 120
+  [MaF5] Run 09/30  seed=1009
+  [MaF5] Run 09 done - front size: 120
+  [MaF5] Run 10/30  seed=1123
+  [MaF5] Run 10 done - front size: 120
+  [MaF5] Run 11/30  seed=1249
+  [MaF5] Run 11 done - front size: 120
+  [MaF5] Run 12/30  seed=1373
+  [MaF5] Run 12 done - front size: 120
+  [MaF5] Run 13/30  seed=1499
+  [MaF5] Run 13 done - front size: 120
+  [MaF5] Run 14/30  seed=1609
+  [MaF5] Run 14 done - front size: 120
+  [MaF5] Run 15/30  seed=1733
+  [MaF5] Run 15 done - front size: 120
+  [MaF5] Run 16/30  seed=1871
+  [MaF5] Run 16 done - front size: 120
+  [MaF5] Run 17/30  seed=1997
+  [MaF5] Run 17 done - front size: 120
+  [MaF5] Run 18/30  seed=2113
+  [MaF5] Run 18 done - front size: 120
+  [MaF5] Run 19/30  seed=2237
+  [MaF5] Run 19 done - front size: 120
+  [MaF5] Run 20/30  seed=2351
+  [MaF5] Run 20 done - front size: 120
+  [MaF5] Run 21/30  seed=2467
+  [MaF5] Run 21 done - front size: 120
+  [MaF5] Run 22/30  seed=2593
+  [MaF5] Run 22 done - front size: 120
+  [MaF5] Run 23/30  seed=2711
+  [MaF5] Run 23 done - front size: 120
+  [MaF5] Run 24/30  seed=2837
+  [MaF5] Run 24 done - front size: 120
+  [MaF5] Run 25/30  seed=2953
+  [MaF5] Run 25 done - front size: 120
+  [MaF5] Run 26/30  seed=3079
+  [MaF5] Run 26 done - front size: 120
+  [MaF5] Run 27/30  seed=3191
+  [MaF5] Run 27 done - front size: 120
+  [MaF5] Run 28/30  seed=3313
+  [MaF5] Run 28 done - front size: 120
+  [MaF5] Run 29/30  seed=3433
+  [MaF5] Run 29 done - front size: 120
+  [MaF5] Run 30/30  seed=3557
+  [MaF5] Run 30 done - front size: 120
+  MaF5: 30 runs completed in 241.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF5_M4.csv
+
+==================================================
+Problem: MaF6  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [MaF6] Run 01/30  seed=42
+  [MaF6] Run 01 done - front size: 120
+  [MaF6] Run 02/30  seed=137
+  [MaF6] Run 02 done - front size: 120
+  [MaF6] Run 03/30  seed=271
+  [MaF6] Run 03 done - front size: 120
+  [MaF6] Run 04/30  seed=491
+  [MaF6] Run 04 done - front size: 120
+  [MaF6] Run 05/30  seed=613
+  [MaF6] Run 05 done - front size: 120
+  [MaF6] Run 06/30  seed=733
+  [MaF6] Run 06 done - front size: 120
+  [MaF6] Run 07/30  seed=857
+  [MaF6] Run 07 done - front size: 120
+  [MaF6] Run 08/30  seed=977
+  [MaF6] Run 08 done - front size: 120
+  [MaF6] Run 09/30  seed=1009
+  [MaF6] Run 09 done - front size: 120
+  [MaF6] Run 10/30  seed=1123
+  [MaF6] Run 10 done - front size: 120
+  [MaF6] Run 11/30  seed=1249
+  [MaF6] Run 11 done - front size: 120
+  [MaF6] Run 12/30  seed=1373
+  [MaF6] Run 12 done - front size: 120
+  [MaF6] Run 13/30  seed=1499
+  [MaF6] Run 13 done - front size: 120
+  [MaF6] Run 14/30  seed=1609
+  [MaF6] Run 14 done - front size: 120
+  [MaF6] Run 15/30  seed=1733
+  [MaF6] Run 15 done - front size: 120
+  [MaF6] Run 16/30  seed=1871
+  [MaF6] Run 16 done - front size: 120
+  [MaF6] Run 17/30  seed=1997
+  [MaF6] Run 17 done - front size: 120
+  [MaF6] Run 18/30  seed=2113
+  [MaF6] Run 18 done - front size: 120
+  [MaF6] Run 19/30  seed=2237
+  [MaF6] Run 19 done - front size: 120
+  [MaF6] Run 20/30  seed=2351
+  [MaF6] Run 20 done - front size: 120
+  [MaF6] Run 21/30  seed=2467
+  [MaF6] Run 21 done - front size: 120
+  [MaF6] Run 22/30  seed=2593
+  [MaF6] Run 22 done - front size: 120
+  [MaF6] Run 23/30  seed=2711
+  [MaF6] Run 23 done - front size: 120
+  [MaF6] Run 24/30  seed=2837
+  [MaF6] Run 24 done - front size: 120
+  [MaF6] Run 25/30  seed=2953
+  [MaF6] Run 25 done - front size: 120
+  [MaF6] Run 26/30  seed=3079
+  [MaF6] Run 26 done - front size: 120
+  [MaF6] Run 27/30  seed=3191
+  [MaF6] Run 27 done - front size: 120
+  [MaF6] Run 28/30  seed=3313
+  [MaF6] Run 28 done - front size: 120
+  [MaF6] Run 29/30  seed=3433
+  [MaF6] Run 29 done - front size: 120
+  [MaF6] Run 30/30  seed=3557
+  [MaF6] Run 30 done - front size: 120
+  MaF6: 30 runs completed in 153.3s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF6_M4.csv
+
+==================================================
+Problem: MaF7  (30 runs, 4 objectives)
+==================================================
+  n_var=23, n_obj=4, n_gen=250
+  [MaF7] Run 01/30  seed=42
+  [MaF7] Run 01 done - front size: 120
+  [MaF7] Run 02/30  seed=137
+  [MaF7] Run 02 done - front size: 120
+  [MaF7] Run 03/30  seed=271
+  [MaF7] Run 03 done - front size: 120
+  [MaF7] Run 04/30  seed=491
+  [MaF7] Run 04 done - front size: 120
+  [MaF7] Run 05/30  seed=613
+  [MaF7] Run 05 done - front size: 120
+  [MaF7] Run 06/30  seed=733
+  [MaF7] Run 06 done - front size: 120
+  [MaF7] Run 07/30  seed=857
+  [MaF7] Run 07 done - front size: 120
+  [MaF7] Run 08/30  seed=977
+  [MaF7] Run 08 done - front size: 120
+  [MaF7] Run 09/30  seed=1009
+  [MaF7] Run 09 done - front size: 120
+  [MaF7] Run 10/30  seed=1123
+  [MaF7] Run 10 done - front size: 120
+  [MaF7] Run 11/30  seed=1249
+  [MaF7] Run 11 done - front size: 120
+  [MaF7] Run 12/30  seed=1373
+  [MaF7] Run 12 done - front size: 120
+  [MaF7] Run 13/30  seed=1499
+  [MaF7] Run 13 done - front size: 120
+  [MaF7] Run 14/30  seed=1609
+  [MaF7] Run 14 done - front size: 120
+  [MaF7] Run 15/30  seed=1733
+  [MaF7] Run 15 done - front size: 120
+  [MaF7] Run 16/30  seed=1871
+  [MaF7] Run 16 done - front size: 120
+  [MaF7] Run 17/30  seed=1997
+  [MaF7] Run 17 done - front size: 120
+  [MaF7] Run 18/30  seed=2113
+  [MaF7] Run 18 done - front size: 120
+  [MaF7] Run 19/30  seed=2237
+  [MaF7] Run 19 done - front size: 120
+  [MaF7] Run 20/30  seed=2351
+  [MaF7] Run 20 done - front size: 120
+  [MaF7] Run 21/30  seed=2467
+  [MaF7] Run 21 done - front size: 120
+  [MaF7] Run 22/30  seed=2593
+  [MaF7] Run 22 done - front size: 120
+  [MaF7] Run 23/30  seed=2711
+  [MaF7] Run 23 done - front size: 120
+  [MaF7] Run 24/30  seed=2837
+  [MaF7] Run 24 done - front size: 120
+  [MaF7] Run 25/30  seed=2953
+  [MaF7] Run 25 done - front size: 120
+  [MaF7] Run 26/30  seed=3079
+  [MaF7] Run 26 done - front size: 120
+  [MaF7] Run 27/30  seed=3191
+  [MaF7] Run 27 done - front size: 120
+  [MaF7] Run 28/30  seed=3313
+  [MaF7] Run 28 done - front size: 120
+  [MaF7] Run 29/30  seed=3433
+  [MaF7] Run 29 done - front size: 120
+  [MaF7] Run 30/30  seed=3557
+  [MaF7] Run 30 done - front size: 120
+  MaF7: 30 runs completed in 199.9s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\igd_MaF7_M4.csv
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\maf\results\qinsga3\summary_M4.csv
+
+---------------------------------------------------------------------------
+  QINSGA3 on MaF1-7 (4 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+MaF1           0.100003     0.105469     0.112377     0.105875     0.002945
+MaF2           0.090606     0.098989     0.104465     0.098728     0.003650
+MaF3           0.220238     0.549797  1687.712993    57.164134   302.787899
+MaF4           1.255270     1.785693     2.845838     1.882547     0.420162
+MaF5           0.921932     0.994929     1.090050     1.000998     0.034815
+MaF6           0.005874     0.007965     0.014304     0.008491     0.001729
+MaF7           0.372389     0.451090     0.511664     0.445820     0.038573
+---------------------------------------------------------------------------
+
+=== ALL DONE ===

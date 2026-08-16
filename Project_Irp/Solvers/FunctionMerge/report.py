@@ -109,7 +109,7 @@ tr:nth-child(even) td{background:var(--row-bg)}
 .bfr-header-row{font-size:11px;font-weight:600;text-transform:uppercase;
   letter-spacing:.04em;color:var(--text-2);border-bottom:2px solid var(--border)}
 .bfr-total-row{font-weight:700;border-top:2px solid var(--border);border-bottom:none;margin-top:2px}
-.bfr-col-label{color:var(--text-1)}
+.bfr-col-label{color:var(--text)}
 .bfr-col-formula{color:var(--text-2)}
 .bfr-formula-text{font-style:italic;font-size:12px}
 .bfr-col-value{text-align:right;font-variant-numeric:tabular-nums}
@@ -202,8 +202,8 @@ function renderKPIs(){
     {cls:'f1', label:'f1 — Logistics cost',   val:o.f1, unit:'cost units'},
     {cls:'f2', label:'f2 — CO₂ emissions',    val:o.f2, unit:'kg CO₂'},
     {cls:'f3', label:'f3 — Travel time',      val:o.f3, unit:'hours'},
-    {cls:'f4', label:'f4 — Working capital',  val:o.f4, unit:'currency  (↑ max)'},
-    {cls:'cx', label:'Composite  f1+f2+f3−f4',val:o.composite, unit:'scalarised objective'},
+    {cls:'f4', label:'f4 — Working capital',  val:o.f4, unit:'currency'},
+    {cls:'cx', label:'Composite  f1+f2+f3+f4',val:o.composite, unit:'scalarised objective'},
   ];
   const row = document.getElementById('kpiRow');
   row.innerHTML = defs.map(d => `
@@ -465,7 +465,7 @@ function renderBFR(){
       <span class="bfr-col-formula bfr-formula-text">Stock + Receivables − Payables</span>
       <span class="bfr-col-value">${net}</span>
     </div>
-    <p class="formula">Scalarization: minimize f1 + f2 + f3 − f4 &nbsp;(f4 maximised by negation)</p>`;
+    <p class="formula">Scalarization: minimize f1 + f2 + f3 + f4</p>`;
 }
 
 /* ── Boot ───────────────────────────────────────────────────────────────── */

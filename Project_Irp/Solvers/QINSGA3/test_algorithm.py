@@ -13,7 +13,7 @@ from Solvers.QINSGA3.algorithm import (
     _select_guides_crowding, _supplement_from_archive_crowding, _select_guides,
     _crowding_saturation_stats, _build_g_constraints,
     _evaluate_with_repair, _repair_pareto_front,
-    _tournament_select_parents, _generate_offspring_batch, _eliminate_duplicates_refill,
+    _generate_offspring_batch, _eliminate_duplicates_refill,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────

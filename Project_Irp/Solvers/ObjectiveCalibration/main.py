@@ -14,7 +14,7 @@ if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
 from models.parametres import load_instance
-from models.constraints import add_all_constraints, add_budget_constraints
+from models.constraints import add_all_constraints
 from models.objectives import build_all_objectives
 from models.variables import build_variables
 
@@ -46,8 +46,9 @@ def _get_ordered_path(arcs):
     return path
 
 
-def _build_model(sets_, params_):
+def _build_model(sets_, params_, timelimit=600):
     mdl  = Model(name="IRP_ManyObjective")
+    mdl.parameters.timelimit = timelimit
     vars_ = build_variables(
         mdl,
         sets_["N"],
@@ -61,11 +62,12 @@ def _build_model(sets_, params_):
     return mdl, vars_, objectives
 
 
-def _solve_single(label, expr, mdl, vars_, objectives, sets_, params_):
+def _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params_):
     mdl.minimize(expr)
     solution = mdl.solve(log_output=False)
     if not solution:
         return None, None
+    solve_status = mdl.solve_details.status
 
     n_nodes  = sets_["N"]
     arcs     = sets_["A"]
@@ -151,18 +153,26 @@ def _solve_single(label, expr, mdl, vars_, objectives, sets_, params_):
 
     value = expr.solution_value
     return value, {
-        "label":       label,
-        "value":       round(value, 4),
-        "routes":      routes,
-        "deliveries":  deliveries,
-        "depot_stock": depot_stock,
-        "bfr_sub":     bfr_sub,
+        "label":        label,
+        "value":        round(value, 4),
+        "solve_status": solve_status,
+        "budget_key":   param_name,
+        "routes":       routes,
+        "deliveries":   deliveries,
+        "depot_stock":  depot_stock,
+        "bfr_sub":      bfr_sub,
     }
 
 
-def build_report_data(data_path=None):
+def build_report_data(data_path=None, timelimit=600):
+    """timelimit (seconds, default 600): CPLEX time limit PER OBJECTIVE (4
+    single-objective solves total). Without a limit an infeasible-to-prove-
+    optimal instance can hang indefinitely; docplex still returns the best
+    incumbent found so far when the limit is hit (status reported in
+    obj_data["solve_status"]), so a timed-out solve degrades gracefully to a
+    feasible-but-not-proven-optimal point instead of failing."""
     sets_, params_ = load_instance(data_path)
-    mdl, vars_, objectives = _build_model(sets_, params_)
+    mdl, vars_, objectives = _build_model(sets_, params_, timelimit=timelimit)
     calibration = [
         ("f1  Logistics cost",        objectives["f1"], "C_max"),
         ("f2  CO2 emissions",         objectives["f2"], "E_max"),
@@ -174,23 +184,10 @@ def build_report_data(data_path=None):
     objs_data     = []
 
     for label, expr, param_name in calibration:
-        value, obj_data = _solve_single(label, expr, mdl, vars_, objectives, sets_, params_)
+        value, obj_data = _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params_)
         if value is not None:
             calib_results[param_name] = round(value * 1.2, 4)
             objs_data.append(obj_data)
-
-    if len(calib_results) == 4:
-        add_budget_constraints(
-            mdl,
-            objectives["f1"],
-            objectives["f2"],
-            objectives["f3"],
-            objectives["f4"],
-            calib_results["C_max"],
-            calib_results["E_max"],
-            calib_results["T_max"],
-            calib_results["B"],
-        )
 
     return {
         "meta": {
@@ -198,7 +195,8 @@ def build_report_data(data_path=None):
             "n_nodes":           len(sets_["N"]),
             "n_periods":         len(sets_["T"]),
             "n_vehicles":        len(sets_["M"]),
-            "n_obj":             len(calibration),
+            "n_obj":             len(objs_data),
+            "n_obj_attempted":   len(calibration),
             "I_O_init_frigo":    params_["I_O_init_frigo"],
             "I_O_init_nonfrigo": params_["I_O_init_nonfrigo"],
             "node_positions":    compute_node_positions(sets_["N"]),
@@ -208,8 +206,8 @@ def build_report_data(data_path=None):
     }
 
 
-def run_objective_calibration(output_path=DEFAULT_REPORT_PATH, data_path=None):
-    return write_report(build_report_data(data_path), output_path)
+def run_objective_calibration(output_path=DEFAULT_REPORT_PATH, data_path=None, timelimit=600):
+    return write_report(build_report_data(data_path, timelimit=timelimit), output_path)
 
 
 if __name__ == "__main__":

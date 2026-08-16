@@ -26,6 +26,23 @@ from Solvers.QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, ru
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 
+# ── Per-(algorithm, instance) run locks ─────────────────────────────────────
+# Prevents two concurrent runs of the SAME algorithm on the SAME instance
+# (double-click, two browser tabs, ...) from racing to write the same
+# instance-specific output/cache files.
+_run_locks: dict[tuple[str, str], threading.Lock] = {}
+_run_locks_guard = threading.Lock()
+
+
+def _get_run_lock(algo: str, inst_key: str) -> threading.Lock:
+    key = (algo, inst_key)
+    with _run_locks_guard:
+        lock = _run_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _run_locks[key] = lock
+        return lock
+
 
 def _new_job(algo: str) -> str:
     job_id = _uuid.uuid4().hex[:12]
@@ -191,6 +208,15 @@ def _resolve_instance():
         fallback = sorted(INSTANCES.keys(), key=int)[0]
         return INSTANCES[fallback], fallback
     raise ValueError("No instance JSON files found in the data/ directory.")
+
+
+def _instance_report_path(base_path: str, inst_key: str) -> str:
+    """base_path (e.g. DEFAULT_REPORT_PATH) with the instance key folded into
+    the filename, so a cached report for one instance is never silently
+    served for another (inst_key comes only from INSTANCES' own dict keys
+    via _resolve_instance(), never raw request text, so it's filename-safe)."""
+    root, ext = os.path.splitext(base_path)
+    return f"{root}_instance{inst_key}{ext}"
 
 app = Flask(__name__)
 
@@ -1476,16 +1502,23 @@ def job_error():
 @app.route("/objective-calibration/run")
 def run_objective_calibration_route():
     data_path, inst_key = _resolve_instance()
+    report_path = _instance_report_path(DEFAULT_REPORT_PATH, inst_key)
     job_id = _new_job("Objective Calibration")
 
     def _run():
+        lock = _get_run_lock("objective-calibration", inst_key)
+        if not lock.acquire(blocking=False):
+            _job_error(job_id, f"An Objective Calibration run for instance {inst_key} is already in progress -- wait for it to finish.")
+            return
         try:
-            run_objective_calibration(data_path=data_path)
+            run_objective_calibration(output_path=report_path, data_path=data_path)
             _job_done(job_id, f"/objective-calibration/report?instance={inst_key}")
         except Exception:
             tb = traceback.format_exc()
             print(tb, flush=True)
             _job_error(job_id, tb)
+        finally:
+            lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
     return _JOB_PAGE.format(algo="Objective Calibration", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
@@ -1493,11 +1526,12 @@ def run_objective_calibration_route():
 
 @app.route("/objective-calibration/report")
 def objective_calibration_report():
-    data_path, _ = _resolve_instance()
+    data_path, inst_key = _resolve_instance()
+    report_path = _instance_report_path(DEFAULT_REPORT_PATH, inst_key)
     try:
-        if not os.path.exists(DEFAULT_REPORT_PATH):
-            run_objective_calibration(data_path=data_path)
-        return send_file(DEFAULT_REPORT_PATH)
+        if not os.path.exists(report_path):
+            run_objective_calibration(output_path=report_path, data_path=data_path)
+        return send_file(report_path)
     except Exception:
         return render_error(traceback.format_exc()), 500
 
@@ -1505,11 +1539,16 @@ def objective_calibration_report():
 @app.route("/function-merge/run")
 def run_function_merge_route():
     data_path, inst_key = _resolve_instance()
+    report_path = _instance_report_path(FM_REPORT_PATH, inst_key)
     job_id = _new_job("Function Merge")
 
     def _run():
+        lock = _get_run_lock("function-merge", inst_key)
+        if not lock.acquire(blocking=False):
+            _job_error(job_id, f"A Function Merge run for instance {inst_key} is already in progress -- wait for it to finish.")
+            return
         try:
-            result = run_function_merge(data_path=data_path)
+            result = run_function_merge(output_path=report_path, data_path=data_path)
             if result is None:
                 _job_error(job_id,
                     f"No feasible solution found for instance {inst_key} within the time limit.\n"
@@ -1520,6 +1559,8 @@ def run_function_merge_route():
             tb = traceback.format_exc()
             print(tb, flush=True)
             _job_error(job_id, tb)
+        finally:
+            lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
     return _JOB_PAGE.format(algo="Function Merge", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
@@ -1527,11 +1568,12 @@ def run_function_merge_route():
 
 @app.route("/function-merge/report")
 def function_merge_report():
-    data_path, _ = _resolve_instance()
+    data_path, inst_key = _resolve_instance()
+    report_path = _instance_report_path(FM_REPORT_PATH, inst_key)
     try:
-        if not os.path.exists(FM_REPORT_PATH):
-            run_function_merge(data_path=data_path)
-        return send_file(FM_REPORT_PATH)
+        if not os.path.exists(report_path):
+            run_function_merge(output_path=report_path, data_path=data_path)
+        return send_file(report_path)
     except Exception:
         return render_error(traceback.format_exc()), 500
 
@@ -1543,6 +1585,10 @@ def run_nsga3_route():
     job_id = _new_job("NSGA-III")
 
     def _run():
+        lock = _get_run_lock("nsga3", inst_key)
+        if not lock.acquire(blocking=False):
+            _job_error(job_id, f"An NSGA-III run for instance {inst_key} is already in progress -- wait for it to finish.")
+            return
         try:
             run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
             _job_done(job_id, f"/nsga3/report?instance={inst_key}")
@@ -1550,6 +1596,8 @@ def run_nsga3_route():
             tb = traceback.format_exc()
             print(tb, flush=True)
             _job_error(job_id, tb)
+        finally:
+            lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
     return _JOB_PAGE.format(algo="NSGA-III", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
@@ -1576,6 +1624,10 @@ def run_qinsga3_route():
     job_id = _new_job("QI-NSGA-III")
 
     def _run():
+        lock = _get_run_lock("qinsga3", inst_key)
+        if not lock.acquire(blocking=False):
+            _job_error(job_id, f"A QI-NSGA-III run for instance {inst_key} is already in progress -- wait for it to finish.")
+            return
         try:
             run_qinsga3_report(output_path=QINSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
             _job_done(job_id, f"/qinsga3/report?instance={inst_key}")
@@ -1583,6 +1635,8 @@ def run_qinsga3_route():
             tb = traceback.format_exc()
             print(tb, flush=True)
             _job_error(job_id, tb)
+        finally:
+            lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
     return _JOB_PAGE.format(algo="QI-NSGA-III", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
@@ -1685,7 +1739,13 @@ def main():
         args=(url, port),
         daemon=True,
     ).start()
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    # threaded=True: report routes can fall back to a synchronous solve
+    # (objective_calibration_report, function_merge_report, nsga3_report,
+    # qinsga3_report) when no cached report exists yet -- without this, the
+    # dev server's default single-threaded request handling means that solve
+    # blocks every other request, including /job/api polling for an
+    # unrelated already-running background job.
+    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
 
 
 if __name__ == "__main__":

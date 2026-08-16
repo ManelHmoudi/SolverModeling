@@ -46,8 +46,21 @@ Performance:
     inner loops over population or archive members.
   - arch_F_norm is computed once per generation and shared by both
     _supplement_from_archive and _migrate, removing a redundant _normalise_F call.
-  - The elitist survival step doubles per-generation evaluation cost (parent
-    + offspring), so a run now takes roughly 2x as long as before.
+  - The elitist survival step (parent + offspring) needs both populations'
+    F/G each generation, but re-evaluating the parent from scratch is
+    unnecessary: when noise_scale == 0.0, measure() is a deterministic
+    function of theta, so the parent entering generation g is bit-identical
+    to what was already measured+evaluated as part of generation g-1's own
+    merged_pop -- its F/G are cached from the previous generation's
+    survival.do() result instead of being recomputed via a second full
+    ProcessPoolExecutor pass. The cache is invalidated (forcing one real
+    re-evaluation) whenever theta is modified after being cached: generation
+    0, and any generation where niche-recentring reset or archive migration
+    fires (both overwrite qpop.theta post-survival). In production
+    (noise_scale=0.0, migration_period=10, delta_similar=0.0) this cuts real
+    evaluation cost from ~2x NSGA-III's per-generation budget down to
+    roughly ~1.1x (one real re-evaluation every 10 generations, for
+    migration) instead of every generation.
 """
 
 from __future__ import annotations
@@ -1575,10 +1588,31 @@ def run_qinsga3(
                 np.array([r[1] for r in results]),
             )
 
+        # Cache of the previous generation's survived F/G, keyed to the
+        # theta they were computed from. When noise_scale == 0.0, measure()
+        # is a deterministic function of theta (chromosome.py's noise term
+        # is multiplied by sigma=0), so qpop.theta entering a generation --
+        # if unchanged since it was last measured+evaluated as part of the
+        # PREVIOUS generation's merged_pop -- produces X_parent bit-identical
+        # to what _eval_batch already returned F/G for. Re-running the full
+        # ProcessPoolExecutor pass on those same individuals every generation
+        # recomputes already-known numbers, silently doubling QI-NSGA-III's
+        # real evaluation budget relative to NSGA-III for no algorithmic
+        # benefit. _prev_cache_valid is forced False (full re-evaluation)
+        # whenever theta is modified after being cached -- generation 0
+        # (nothing cached yet), and after niche-recentring reset or archive
+        # migration below, both of which overwrite qpop.theta post-survival.
+        _prev_survived_F: np.ndarray | None = None
+        _prev_survived_G: np.ndarray | None = None
+        _prev_cache_valid = False
+
         for gen in range(max_gen):
             theta_parent = qpop.theta.copy()
             X_parent     = qpop.measure()
-            F_parent, G_parent = _eval_batch(X_parent)
+            if _prev_cache_valid and noise_scale == 0.0:
+                F_parent, G_parent = _prev_survived_F, _prev_survived_G
+            else:
+                F_parent, G_parent = _eval_batch(X_parent)
             F_pen_parent = _penalised_F(F_parent, G_parent)
 
             pareto_idx = sorter.do(F_pen_parent)[0]
@@ -1733,6 +1767,9 @@ def run_qinsga3(
             merged_pop  = Population.new(X=theta_pool, F=F_true_pool, G=G_pool)
             survived    = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
             qpop.theta  = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
+            _prev_survived_F  = np.asarray(survived.get("F"), dtype=float)
+            _prev_survived_G  = np.asarray(survived.get("G"), dtype=float)
+            _prev_cache_valid = True
 
             if use_rqpso_rotation or use_pso_rotation:
                 survived_F_norm = _normalise_F(
@@ -1758,6 +1795,7 @@ def run_qinsga3(
                     qpop.theta[reset_mask] = rng.uniform(
                         0.0, np.pi / 2.0, size=(n_reset, n_genes)
                     )
+                    _prev_cache_valid = False
 
             if (arch_F_norm is not None
                     and migration_period > 0
@@ -1766,6 +1804,7 @@ def run_qinsga3(
                     qpop, arch_theta_arr, arch_F_norm,
                     assoc, ref_dirs, rng, n_migrate=n_migrate,
                 )
+                _prev_cache_valid = False
 
             if callback is not None and (gen % 10 == 0 or gen == max_gen - 1):
                 callback(gen, F_offspring, G_offspring, off_pareto_idx)

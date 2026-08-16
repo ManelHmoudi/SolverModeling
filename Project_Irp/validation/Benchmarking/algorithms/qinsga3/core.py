@@ -21,7 +21,30 @@ theta<->X encoding helpers are imported directly from
 Solvers/QINSGA3/algorithm.py — not duplicated — so a future fix to that
 shared math applies to both the IRP path and this benchmark path
 automatically. Solvers/QINSGA3/algorithm.py itself is never modified by
-this module.
+this module. The generational LOOP ITSELF, however, is a separate copy, not
+shared code -- a fix to algorithm.py's loop (e.g. its eval-caching, see
+below) does NOT apply here automatically and must be ported by hand, as
+done here.
+
+Eval-caching (ported from Solvers/QINSGA3/algorithm.py, kept in sync with
+it): the parent population entering a generation is exactly the theta
+survival.do() selected last generation, whose F/G were already computed as
+part of that generation's merged_pop. With noise_scale == 0.0, measure() is
+deterministic, so re-running _eval_batch on this same population every
+generation just recomputes already-known numbers -- doubling this
+benchmark's real evaluation budget relative to NSGA-III's for no
+algorithmic reason. F/G are now cached from survival.do()'s result instead,
+cutting real per-generation evaluation cost from ~2x NSGA-III's down to
+~1.1x at equal generation counts (one real re-evaluation every
+migration_period generations, when migration overwrites qpop.theta
+post-survival). Requires survival.do() to be given the REAL (unpenalised)
+F/G, not F_pen -- for these unconstrained DTLZ/MaF problems (G always
+empty) _penalised_F(F, G) == F exactly, so this is numerically a no-op
+versus the previous F_pen-based version. noise_scale defaults to 0.02 here
+(see below), so most default benchmark runs do NOT get this speedup unless
+called with noise_scale=0.0 explicitly -- matching algorithm.py, where the
+production IRP default noise_scale=0.0 is what makes its own cache apply on
+almost every generation.
 
 Benchmark-only addition: `escape_prob`. QuantumPopulation always starts
 every individual at theta=pi/4, i.e. x ~= midpoint of [xl, xu] for every
@@ -133,10 +156,30 @@ def run_qinsga3_generic(
             G = np.zeros((X.shape[0], 0))
         return np.asarray(F), np.asarray(G)
 
+    # Cache of the previous generation's survived F/G, mirroring
+    # Solvers/QINSGA3/algorithm.py's own cache (see that module's docstring
+    # "Performance" section): when noise_scale == 0.0, measure() is a
+    # deterministic function of theta, so the parent entering a generation
+    # -- if unchanged since it was last measured+evaluated as part of the
+    # PREVIOUS generation's merged_pop -- is bit-identical to what
+    # _eval_batch already returned F/G for last generation. Re-evaluating it
+    # here recomputes already-known numbers, silently doubling this
+    # benchmark's real evaluation budget relative to NSGA-III for no reason
+    # (this loop is a separate copy of algorithm.py's generation loop, not
+    # shared code, so algorithm.py's own fix does not apply here
+    # automatically). Invalidated after generation 0 and after migration
+    # (which overwrites qpop.theta post-survival, same as production).
+    _prev_survived_F: np.ndarray | None = None
+    _prev_survived_G: np.ndarray | None = None
+    _prev_cache_valid = False
+
     for gen in range(max_gen):
         theta_parent = qpop.theta.copy()
         X_parent     = qpop.measure()
-        F_parent, G_parent = _eval_batch(X_parent)
+        if _prev_cache_valid and noise_scale == 0.0:
+            F_parent, G_parent = _prev_survived_F, _prev_survived_G
+        else:
+            F_parent, G_parent = _eval_batch(X_parent)
         F_pen_parent = _penalised_F(F_parent, G_parent)
 
         pareto_idx = sorter.do(F_pen_parent)[0]
@@ -216,17 +259,25 @@ def run_qinsga3_generic(
         #
         # survival.do() (pymoo's public entry point), not survival._do()
         # directly — matches Solvers/QINSGA3/algorithm.py's production loop.
-        # For these unconstrained DTLZ/MaF problems this is a no-op
-        # (pymoo's Survival.do() only splits feasible/infeasible when
-        # problem.has_constraints() is True), but calling the same public
-        # method the production loop uses keeps this benchmark copy an
-        # honest mirror rather than a second implementation that happens to
-        # agree only on unconstrained problems.
-        theta_pool = np.vstack([theta_parent, theta_offspring])
-        F_pool     = np.vstack([F_pen_parent, F_pen_offspring])
-        merged_pop = Population.new(X=theta_pool, F=F_pool)
-        survived   = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
-        qpop.theta = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
+        # Uses the REAL F/G (not F_pen) here, also matching algorithm.py —
+        # for these unconstrained DTLZ/MaF problems (n_ieq_constr=0, G always
+        # empty) _penalised_F(F, G) == F exactly (zero rows summed = zero
+        # penalty), so this is numerically a no-op versus the previous
+        # F_pen-based version; it's needed to let survived.get("F")/("G")
+        # below feed the eval-cache above with the true (unpenalised)
+        # objectives _archive_update expects, and keeps this benchmark copy
+        # an honest mirror of the production loop rather than a second
+        # implementation that only happens to agree on unconstrained
+        # problems.
+        theta_pool  = np.vstack([theta_parent, theta_offspring])
+        F_true_pool = np.vstack([F_parent, F_offspring])
+        G_pool      = np.vstack([G_parent, G_offspring])
+        merged_pop  = Population.new(X=theta_pool, F=F_true_pool, G=G_pool)
+        survived    = survival.do(problem, merged_pop, n_survive=pop_size, random_state=rng)
+        qpop.theta  = np.clip(np.asarray(survived.get("X"), dtype=float), 0.0, np.pi / 2.0)
+        _prev_survived_F  = np.asarray(survived.get("F"), dtype=float)
+        _prev_survived_G  = np.asarray(survived.get("G"), dtype=float)
+        _prev_cache_valid = True
 
         if (arch_F_norm is not None
                 and migration_period > 0
@@ -235,6 +286,7 @@ def run_qinsga3_generic(
                 qpop, arch_theta_arr, arch_F_norm,
                 assoc, ref_dirs, rng, n_migrate=n_migrate,
             )
+            _prev_cache_valid = False
 
     X_final = qpop.measure()
     F_final, G_final = _eval_batch(X_final)

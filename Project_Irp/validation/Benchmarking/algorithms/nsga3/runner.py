@@ -26,12 +26,13 @@ case under uncertain demand", Complex & Intelligent Systems 11:136, Table 2
                   follows.
 """
 import numpy as np
-from pymoo.algorithms.moo.nsga3 import NSGA3
+from pymoo.algorithms.moo.nsga3 import NSGA3, ReferenceDirectionSurvival
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.optimize import minimize
 from pymoo.termination import get_termination
+from pymoo.util.archive import MultiObjectiveArchive, SurvivalTruncation
 from pymoo.util.ref_dirs import get_reference_directions
 
 # Das-Dennis partition count per number of objectives (Cui et al. 2025, Table 2).
@@ -78,10 +79,31 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
     np.random.seed(seed)
     ref_dirs, pop_size = get_run_config(problem.n_obj)
 
+    # External non-dominated archive, matching QI-NSGA-III's own benchmark
+    # runner (Validation/Benchmarking/algorithms/qinsga3/core.py's
+    # arch_X/_crowding_trim, max_size=500, always on) -- without this,
+    # NSGA-III only ever reports its very last generation's population
+    # (pymoo's own filter_optimum on the final pop), while QI-NSGA-III
+    # reports the best non-dominated individuals seen across the WHOLE run,
+    # capped at 500 and trimmed to pop_size at the end. Same fix already
+    # applied on the IRP side (Solvers/NSGA3/main.py's use_archive) -- ported
+    # here for the same reason: an asymmetric archive inflates QI-NSGA-III's
+    # apparent benchmark performance for a reason that has nothing to do
+    # with its search quality. Truncation reuses NSGA-III's own
+    # ReferenceDirectionSurvival (its own niching principle), a fresh
+    # instance per run so its ideal/nadir tracking is independent of the
+    # algorithm's own environmental-selection survival.
+    archive_survival = ReferenceDirectionSurvival(ref_dirs)
+    archive = MultiObjectiveArchive(
+        max_size=500,
+        truncation=SurvivalTruncation(archive_survival, problem),
+    )
+
     algorithm = NSGA3(
         pop_size=pop_size,
         ref_dirs=ref_dirs,
         sampling=FloatRandomSampling(),
+        archive=archive,
         crossover=SBX(prob=1.0, eta=20),
         mutation=PM(prob=1.0 / problem.n_var, eta=20),
     )
@@ -94,12 +116,24 @@ def run_single(problem, n_gen: int, seed: int) -> np.ndarray:
         verbose=False,
     )
 
-    if result.F is None or len(result.F) == 0:
+    if result.archive is not None and len(result.archive) > 0:
+        # Final trim to pop_size, matching QI-NSGA-III's own end-of-run
+        # _crowding_trim(archive, pop_size) step -- same ReferenceDirection
+        # Survival instance the archive used throughout the run, for a
+        # consistent niching reference.
+        arch_pop = result.archive
+        if len(arch_pop) > pop_size:
+            arch_pop = archive_survival.do(problem, arch_pop, n_survive=pop_size)
+        F = arch_pop.get("F")
+    else:
+        F = result.F
+
+    if F is None or len(F) == 0:
         raise RuntimeError(
             f"NSGA-III returned no solutions for {type(problem).__name__} "
             f"(n_obj={problem.n_obj}) with seed={seed}."
         )
-    return result.F
+    return np.asarray(F)
 
 
 def run_experiment(problem_name: str, problem, n_gen: int, n_runs: int = 30) -> list:

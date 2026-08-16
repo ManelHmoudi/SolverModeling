@@ -165,7 +165,6 @@ var DATA  = /*DATA_PLACEHOLDER*/null;
 var OBJS  = DATA.objs, BOUNDS = DATA.bounds, META = DATA.meta;
 var OC    = ["#534ab7","#3b6d11","#185fa5","#854f0b"];
 var TC    = ["#2e9e5a","#d07c20","#3b7dd8","#a040c0"];
-var BK    = ["C_max","E_max","T_max","B"];
 
 if(!OBJS||!OBJS.length){
   document.getElementById('meta-line').textContent=
@@ -189,16 +188,24 @@ if(localStorage.getItem('irp-theme')==='dark'){
 }
 
 // ── Meta ─────────────────────────────────────────────────────────────────────
+var objCountText = (META.n_obj_attempted && META.n_obj_attempted!==META.n_obj)
+  ? META.n_obj+'/'+META.n_obj_attempted+' objectives (partial — see warnings below)'
+  : META.n_obj+' objectives';
 document.getElementById('meta-line').textContent=
-  META.n_nodes+' nodes · '+META.n_periods+' periods · '+META.n_vehicles+' vehicles · '+META.n_obj+' objectives';
+  META.n_nodes+' nodes · '+META.n_periods+' periods · '+META.n_vehicles+' vehicles · '+objCountText;
 
 // ── KPI cards ─────────────────────────────────────────────────────────────────
 OBJS.forEach(function(o,i){
-  var bk=BK[i];
+  var bk=o.budget_key;
+  var statusLower = (o.solve_status||'').toLowerCase();
+  var isOptimal = statusLower.indexOf('optimal')!==-1;
+  var statusBadge = isOptimal ? '' :
+    '<div class="kb" style="color:#a32d2d;font-weight:600;margin-top:3px">'+
+    '⚠ not proven optimal ('+(o.solve_status||'unknown status')+') — budget threshold may be looser than intended</div>';
   document.getElementById('kpi-grid').innerHTML+=
     '<div class="kpi"><div class="kl">'+o.label+'</div>'+
     '<div class="kv" style="color:'+OC[i]+'">'+o.value.toFixed(4)+'</div>'+
-    '<div class="kb">Budget '+bk+' = '+BOUNDS[bk].toFixed(4)+'</div></div>';
+    '<div class="kb">Budget '+bk+' = '+BOUNDS[bk].toFixed(4)+'</div>'+statusBadge+'</div>';
 });
 
 // ── State ─────────────────────────────────────────────────────────────────────

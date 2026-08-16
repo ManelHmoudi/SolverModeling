@@ -178,14 +178,23 @@ def _build_report_data(runs_data):
     # PF_ref = ND(union of every solution across every run) -- empirical
     # reference front for GD/IGD instead of a Das-Dennis reference-direction
     # grid. See Solvers/NSGA3/metrics.py's build_empirical_reference_front.
-    pf_ref = build_empirical_reference_front(all_F)
+    # Each run is scored against a LEAVE-ONE-RUN-OUT variant (built from
+    # every OTHER run only) below, never this exact shared front, so a run's
+    # own solutions can never contribute to the reference it is measured
+    # against (which would let it trivially score a zero self-distance).
+    per_run_F = [
+        np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
+                   s["objectives"]["f3"], s["objectives"]["f4"]]
+                  for s in r["solutions"]])
+        for r in runs_data
+    ]
 
-    for r in runs_data:
-        F_run = np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
-                           s["objectives"]["f3"], s["objectives"]["f4"]]
-                          for s in r["solutions"]])
+    for idx, r in enumerate(runs_data):
+        F_run = per_run_F[idx]
+        other_F = [F2 for j, F2 in enumerate(per_run_F) if j != idx]
+        pf_ref_minus_r = build_empirical_reference_front(np.vstack(other_F)) if other_F else None
         old_q = r["meta"]["quality"]
-        new_q = compute_pareto_metrics(F_run, g_ideal, g_nadir, reference_front=pf_ref)
+        new_q = compute_pareto_metrics(F_run, g_ideal, g_nadir, reference_front=pf_ref_minus_r)
         new_q["ideal"] = old_q.get("ideal")
         new_q["nadir"] = old_q.get("nadir")
         r["meta"]["quality"] = new_q
