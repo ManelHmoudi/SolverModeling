@@ -41,26 +41,34 @@ Solvers/QINSGA3/README.md's "small-sample Mann-Whitney floor" discussion),
 which affects the "Effet moteur" section instead. Use 6+ seeds before
 trusting a non-significant "Effet 2-opt" result.
 
-NOTE on evaluation budget: matching max_gen and pop_size does NOT match the
-number of objective-function evaluations actually spent. NSGA-III evaluates
-exactly effective_pop individuals per generation (pop_size infills each
-iteration, pymoo's own GeneticAlgorithm default) -> effective_pop * max_gen
-total. QI-NSGA-III's run_qinsga3 evaluates the PARENT population (needed
-every generation since qpop.measure() redraws measurement noise, so a
-survivor's cached F from the previous generation is stale) AND the offspring
-population each generation, plus one final measurement pass after the loop
--> effective_pop * (2 * max_gen + 1) total -- essentially double. This
-script reports both algorithms' real evaluation counts (n_eval) alongside
-every result so the "Effet moteur quantique" section can be read with this
-in mind: any QI-NSGA-III advantage there is confounded with QI-NSGA-III
-having spent roughly 2x the function evaluations, not isolated to the
-rotation-gate mechanism alone. The "Effet 2-opt" section is NOT affected by
-this (it compares each algorithm only to itself, at whatever budget it
-actually used). Pass --qinsga3-gen (e.g. --gen 300 --qinsga3-gen 150) to run
-QI-NSGA-III at a different generation count than NSGA-III specifically to
-match real evaluation budgets instead of max_gen -- 150 gives
-effective_pop*(2*150+1), within 0.3% of NSGA-III's effective_pop*300 at the
-project's own pop=200 (60200 vs 60000).
+NOTE on evaluation budget: matching max_gen and pop_size does NOT
+automatically match the number of objective-function evaluations actually
+spent. NSGA-III evaluates exactly effective_pop individuals per generation
+(pop_size infills each iteration, pymoo's own GeneticAlgorithm default) ->
+effective_pop * max_gen total. QI-NSGA-III's run_qinsga3 evaluates the
+offspring population every generation, but the PARENT population only
+when its cache is invalid -- with noise_scale=0.0 (this project's
+production default), qpop.measure() is a deterministic function of theta,
+so a survivor's F from the previous generation's own evaluation is still
+exactly correct and is reused instead of recomputed (see Solvers/QINSGA3/
+algorithm.py's "Performance" docstring section) -- invalidated only when
+theta changes after being cached, i.e. generation 0 and every generation
+right after an archive migration fires. This makes QI-NSGA-III's real
+evaluation count data-dependent (not a fixed multiple of max_gen) and, at
+equal max_gen, typically close to but still somewhat above NSGA-III's --
+measured directly on this project's own 100-client instance at max_gen=300:
+66400 vs NSGA-III's 60000 (~1.11x), not the ~2x a pre-cache-fix formula
+would have predicted. This script reports both algorithms' REAL evaluation
+counts (n_eval) alongside every result, counted directly (not estimated by
+a formula -- see _run_qinsga3_counted), so the "Effet moteur quantique"
+section can be read with this in mind. The "Effet 2-opt" section is NOT
+affected by this (it compares each algorithm only to itself, at whatever
+budget it actually used). Pass --qinsga3-gen to run QI-NSGA-III at a
+different generation count than NSGA-III specifically to match real
+evaluation budgets instead of max_gen -- qinsga3_gen=271 was found by
+direct instrumentation to give exactly 60000 real evaluations on this
+project's own 100-client instance at pop=200, an exact match to NSGA-III's
+effective_pop*300, not merely an approximation.
 
 NSGA-III's search is replicated locally (same pymoo setup
 Solvers/NSGA3/main.py::run_nsga3 uses) rather than calling run_nsga3
@@ -102,7 +110,7 @@ from models.parametres            import load_instance
 from Solvers.NSGA3.metrics        import compute_pareto_metrics, build_empirical_reference_front
 from Solvers.NSGA3.problem        import IRPProblem
 from Solvers.NSGA3.report_builder import _evaluate_pareto
-from Solvers.QINSGA3.algorithm    import run_qinsga3
+from Solvers.QINSGA3.algorithm    import run_qinsga3, _archive_update_epsilon, _crowding_trim
 
 N_PARTITIONS = 8
 N_OBJ        = 4
@@ -119,7 +127,8 @@ _CONFIGS = [
 
 
 def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
-                     use_archive: bool = False):
+                     use_archive: bool = False,
+                     use_epsilon_archive: bool = False, epsilon_divisions: int = 20):
     """Local replication of Solvers/NSGA3/main.py::run_nsga3's search setup,
     returning (pareto_X, n_eval) -- run_nsga3 itself has no low-level
     equivalent that skips writing the shared chromosome cache file, so this
@@ -132,7 +141,23 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
     parameter -- see its docstring for the fairness-audit finding this
     tests (QI-NSGA-III returns its front from an external archive spanning
     the whole run, NSGA-III returns only its final generation's population
-    by default)."""
+    by default).
+
+    use_epsilon_archive (default False, mutually exclusive with use_archive):
+    gives NSGA-III an external archive maintained by the LITERAL SAME
+    epsilon-dominance function QI-NSGA-III's own use_epsilon_archive uses
+    (Solvers/QINSGA3/algorithm.py::_archive_update_epsilon), via a per-
+    generation pymoo callback reading algorithm.pop -- not pymoo's own
+    MultiObjectiveArchive (plain dominance, what use_archive above gives).
+    This is the true apples-to-apples equity test: both algorithms bounded
+    by the SAME archiving rule, rather than one plain / one epsilon or one
+    archived / one not. theta has no meaning for NSGA-III (it has no
+    quantum encoding) -- X is passed in its place purely so
+    _archive_update_epsilon's signature is satisfied; the returned
+    arch_theta list is discarded. epsilon is computed once, the first
+    generation algorithm.survival.norm's ideal/nadir are populated (mirrors
+    run_qinsga3's own use_epsilon_archive timing exactly), then held fixed.
+    """
     np.random.seed(seed)
     _random.seed(seed)
 
@@ -148,6 +173,34 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
         if use_archive else None
     )
 
+    eps_arch_X: list = []
+    eps_arch_F: list = []
+    eps_arch_theta: list = []
+    _eps_state = {"ideal": None, "epsilon": None}
+
+    def _epsilon_archive_callback(algorithm):
+        pop = algorithm.pop
+        if pop is None or len(pop) == 0:
+            return
+        X = pop.get("X")
+        F = pop.get("F")
+        G = pop.get("G")
+        if G is None or G.size == 0:
+            G = np.zeros((len(pop), 0))
+        if _eps_state["epsilon"] is None:
+            norm = getattr(algorithm.survival, "norm", None)
+            if norm is not None and norm.nadir_point is not None:
+                ideal = np.asarray(norm.ideal_point, dtype=float)
+                nadir = np.asarray(norm.nadir_point, dtype=float)
+                _eps_state["ideal"]   = ideal
+                _eps_state["epsilon"] = np.maximum(nadir - ideal, 1e-9) / epsilon_divisions
+            else:
+                return
+        _archive_update_epsilon(
+            X, F, G, X, eps_arch_X, eps_arch_F, eps_arch_theta,
+            _eps_state["ideal"], _eps_state["epsilon"], max_size=500,
+        )
+
     algorithm = NSGA3(
         pop_size  = effective_pop,
         ref_dirs  = ref_dirs,
@@ -158,12 +211,23 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
         # sets the per-gene rate -- matches the fix in Solvers/NSGA3/
         # main.py::run_nsga3, which this function mirrors.
         mutation  = PM(prob=1.0, prob_var=1.0 / n_genes, eta=20),
+        callback  = _epsilon_archive_callback if use_epsilon_archive else None,
     )
     result = minimize(
         problem, algorithm, get_termination("n_gen", max_gen), seed=seed, verbose=False,
     )
 
-    if use_archive and result.archive is not None and len(result.archive) > 0:
+    if use_epsilon_archive:
+        if eps_arch_X:
+            arch_X_arr = np.array(eps_arch_X)
+            if len(arch_X_arr) > effective_pop:
+                arch_X_arr, _, _ = _crowding_trim(
+                    arch_X_arr, np.array(eps_arch_F), np.array(eps_arch_theta), effective_pop,
+                )
+            pareto_X = arch_X_arr
+        else:
+            pareto_X = result.X if result.X is not None else np.empty((0, n_genes))
+    elif use_archive and result.archive is not None and len(result.archive) > 0:
         arch_pop = result.archive
         if len(arch_pop) > effective_pop:
             arch_pop = archive_survival.do(problem, arch_pop, n_survive=effective_pop)
@@ -174,32 +238,66 @@ def _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
     return pareto_X, result.algorithm.evaluator.n_eval
 
 
-def _qinsga3_n_eval(effective_pop: int, max_gen: int) -> int:
-    """QI-NSGA-III's real evaluation count: run_qinsga3 (Solvers/QINSGA3/
-    algorithm.py) calls _eval_batch on the parent population and the
-    offspring population every generation (lines ~1297, ~1421), plus one
-    final _eval_batch(X_final) after the loop (line ~1498) -- confirmed by
-    grepping every _eval_batch( call site, not assumed."""
-    return effective_pop * (2 * max_gen + 1)
+def _run_qinsga3_counted(**kwargs):
+    """Call run_qinsga3 while counting its REAL number of evaluated
+    individuals, the same way _run_nsga3_once reads pymoo's own evaluator
+    counter for NSGA-III -- no closed-form formula, an actual count.
+
+    Needed because run_qinsga3's parent-population evaluation is no longer
+    unconditional every generation: it is cached (skipped) whenever
+    noise_scale == 0.0 and theta hasn't changed since the previous
+    generation's own evaluation, invalidated only by archive migration or
+    niche-recentring reset (see Solvers/QINSGA3/algorithm.py's "Performance"
+    docstring section). The real count is therefore data-dependent (how
+    often migration actually fires, which depends on how quickly the
+    archive fills past 4 entries) -- verified by direct instrumentation on
+    the project's own 100-client instance to be as low as ~1.0x NSGA-III's
+    budget at a calibrated generation count (qinsga3_gen=271 -> exactly
+    60000, matching NSGA-III's effective_pop*300 exactly, not the ~2x a
+    closed-form pre-cache-fix formula would have predicted), NOT a fixed
+    ~2x or ~1.1x ratio that a formula could capture in general.
+
+    Counts every individual passed to ProcessPoolExecutor.map -- the exact
+    call site _eval_batch uses (Solvers/QINSGA3/algorithm.py) -- across the
+    whole run_qinsga3 call, in-process (the call itself, not its worker-
+    process execution, so a plain module-level monkeypatch sees it).
+    """
+    from concurrent.futures import ProcessPoolExecutor
+    count = {"n": 0}
+    orig_map = ProcessPoolExecutor.map
+
+    def _counted_map(self, fn, iterable, *a, **kw):
+        items = list(iterable)
+        count["n"] += len(items)
+        return orig_map(self, fn, items, *a, **kw)
+
+    ProcessPoolExecutor.map = _counted_map
+    try:
+        result = run_qinsga3(**kwargs)
+    finally:
+        ProcessPoolExecutor.map = orig_map
+    return result, count["n"]
 
 
 def _config_F(pareto_X, sets_, params_, repair: bool, use_or_opt: bool = False,
               use_single_relocation: bool = False, use_two_opt: bool = True,
-              use_inter_route_relocate: bool = False, use_route_swap: bool = False) -> np.ndarray:
+              use_inter_route_relocate: bool = False, use_route_swap: bool = False,
+              use_delivery_shift: bool = False) -> np.ndarray:
     """Decode (and optionally 2-opt-repair, optionally Or-opt-widened) a
     chromosome array via the shared _evaluate_pareto, returning its
     (f1,f2,f3,f4) objective matrix. use_or_opt/use_single_relocation/
-    use_two_opt/use_inter_route_relocate/use_route_swap only have an effect
-    when repair=True (see _evaluate_pareto's own docstrings) -- applied
-    identically to both algorithms' "avec 2-opt" configs by the caller, for
-    a fair vs-not comparison matching how the 2-opt-vs-not comparison
-    itself works."""
+    use_two_opt/use_inter_route_relocate/use_route_swap/use_delivery_shift
+    only have an effect when repair=True (see _evaluate_pareto's own
+    docstrings) -- applied identically to both algorithms' "avec 2-opt"
+    configs by the caller, for a fair vs-not comparison matching how the
+    2-opt-vs-not comparison itself works."""
     if pareto_X is None or len(pareto_X) == 0:
         return np.empty((0, N_OBJ))
     result = _evaluate_pareto(pareto_X, sets_, params_, {}, repair=repair, use_or_opt=use_or_opt,
                                use_single_relocation=use_single_relocation, use_two_opt=use_two_opt,
                                use_inter_route_relocate=use_inter_route_relocate,
-                               use_route_swap=use_route_swap)
+                               use_route_swap=use_route_swap,
+                               use_delivery_shift=use_delivery_shift)
     return np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
                        s["objectives"]["f3"], s["objectives"]["f4"]]
                       for s in result["solutions"]])
@@ -299,6 +397,8 @@ def run_comparison(
     compensate_dx_dtheta: bool = False, use_or_opt: bool = False,
     use_single_relocation: bool = False, use_two_opt: bool = True,
     use_inter_route_relocate: bool = False, use_route_swap: bool = False,
+    use_delivery_shift: bool = False,
+    use_epsilon_archive: bool = False, epsilon_divisions: int = 20,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
@@ -389,7 +489,36 @@ def run_comparison(
     also exchange two clients between different routes within the same
     period -- the advisor's Niveau-2 "swap entre deux tournees" move --
     see Solvers/QINSGA3/repair.py's _repair_route_result use_route_swap
-    docstring. Pass --use-route-swap 1 to enable it for comparison."""
+    docstring. Pass --use-route-swap 1 to enable it for comparison.
+
+    use_delivery_shift (default False -- ablation-only): widens the "avec
+    2-opt" configs' local search, for BOTH algorithms symmetrically, to
+    also shift a client's delivered quantity between two ADJACENT periods
+    it is already served in -- the advisor's Niveau-3 "deplacement partiel
+    d'une livraison vers une periode voisine" move, an inventory-timing
+    lever distinct from every Niveau-1/2 route-topology move above -- see
+    Solvers/QINSGA3/repair.py's _repair_route_result use_delivery_shift
+    docstring. Pass --use-delivery-shift 1 to enable it for comparison.
+
+    use_epsilon_archive (default False -- ablation-only, search-time only,
+    unlike every ablation above which acts at repair time on the final
+    front): gives BOTH algorithms an external archive maintained by
+    epsilon-dominance archiving (Laumanns, Thiele, Deb & Zitzler 2002)
+    instead of their own respective defaults (QI-NSGA-III's own plain-
+    dominance archive; NSGA-III's plain final-generation-only reporting) --
+    see Solvers/QINSGA3/algorithm.py's run_qinsga3 use_epsilon_archive
+    docstring and _run_nsga3_once's own use_epsilon_archive docstring
+    (literally the same _archive_update_epsilon function, applied via a
+    per-generation callback for NSGA-III). This is the true equity test:
+    both algorithms bounded by the SAME archiving rule -- added after
+    finding that giving NSGA-III a PLAIN archive (--use-archive) while
+    QI-NSGA-III uses epsilon-dominance does not equalise front sizes, it
+    just flips which side balloons (NSGA-III's own plain archive explodes
+    toward pop_size too -- see sensitivity/2opt_fairness_100clients_3seed_
+    archive_campaign_log.txt). Pass --use-epsilon-archive 1 to enable it for
+    both; --epsilon-divisions N (default 20) controls the grid resolution.
+    Mutually exclusive with --use-archive in practice (epsilon takes
+    priority for NSGA-III if both are somehow set)."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -407,7 +536,8 @@ def run_comparison(
           f"use_archive(NSGA-III)={use_archive} | compensate_dx_dtheta(QI)={compensate_dx_dtheta} | "
           f"use_or_opt(both)={use_or_opt} | use_single_relocation(both)={use_single_relocation} | "
           f"use_two_opt(both)={use_two_opt} | use_inter_route_relocate(both)={use_inter_route_relocate} | "
-          f"use_route_swap(both)={use_route_swap}")
+          f"use_route_swap(both)={use_route_swap} | use_delivery_shift(both)={use_delivery_shift} | "
+          f"use_epsilon_archive(both)={use_epsilon_archive}(div={epsilon_divisions})")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
@@ -439,6 +569,12 @@ def run_comparison(
     if use_route_swap:
         print("  NOTE: use_route_swap enabled for BOTH algorithms' 'avec 2-opt' configs -- "
               "not the production default. See module docstring.")
+    if use_delivery_shift:
+        print("  NOTE: use_delivery_shift enabled for BOTH algorithms' 'avec 2-opt' configs -- "
+              "not the production default. See module docstring.")
+    if use_epsilon_archive:
+        print(f"  NOTE: use_epsilon_archive enabled for BOTH algorithms (divisions={epsilon_divisions}) -- "
+              "not the production default for either. See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -452,22 +588,25 @@ def run_comparison(
 
         t0 = time.time()
         X_nsga3, nsga3_n_eval = _run_nsga3_once(sets_, params_, ref_dirs, effective_pop, max_gen, seed,
-                                                  use_archive=use_archive)
+                                                  use_archive=use_archive,
+                                                  use_epsilon_archive=use_epsilon_archive,
+                                                  epsilon_divisions=epsilon_divisions)
         t_nsga3 = time.time() - t0
         n_eval_nsga3.append(nsga3_n_eval)
         print(f"  NSGA-III    search done in {t_nsga3:.1f}s | front={len(X_nsga3)} | n_eval={nsga3_n_eval}")
 
         t0 = time.time()
-        X_qinsga3, _, _ = run_qinsga3(
+        (X_qinsga3, _, _), qinsga3_n_eval = _run_qinsga3_counted(
             sets_=sets_, params_=params_, ref_dirs=ref_dirs,
             pop_size=effective_pop, max_gen=qinsga3_gen, seed=seed,
             repair_final_front=False, noise_scale=noise_scale,
             eliminate_duplicates=eliminate_duplicates,
             compensate_dx_dtheta=compensate_dx_dtheta,
+            use_epsilon_archive=use_epsilon_archive,
+            epsilon_divisions=epsilon_divisions,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
-        qinsga3_n_eval = _qinsga3_n_eval(effective_pop, qinsga3_gen)
         n_eval_qinsga3.append(qinsga3_n_eval)
         print(f"  QI-NSGA-III search done in {t_qinsga3:.1f}s | front={n_qi} | n_eval={qinsga3_n_eval}")
 
@@ -481,7 +620,8 @@ def run_comparison(
             F = _config_F(X, sets_, params_, repair=repair, use_or_opt=use_or_opt,
                           use_single_relocation=use_single_relocation, use_two_opt=use_two_opt,
                           use_inter_route_relocate=use_inter_route_relocate,
-                          use_route_swap=use_route_swap)
+                          use_route_swap=use_route_swap,
+                          use_delivery_shift=use_delivery_shift)
             t_repair = time.time() - t0
             F_by_config[label].append(F)
             elapsed_by_config[label].append(base_elapsed + t_repair)
@@ -762,10 +902,30 @@ if __name__ == "__main__":
                              "production default) -- the advisor's Niveau-2 swap move. "
                              "Pass 1 to test whether this helps either algorithm -- see "
                              "the module docstring's use_route_swap note.")
+    parser.add_argument("--use-delivery-shift", type=int, choices=[0, 1], default=0,
+                        help="Widen the 'avec 2-opt' configs' local search, for BOTH "
+                             "algorithms symmetrically, to also shift a client's delivered "
+                             "quantity between two ADJACENT periods it is already served "
+                             "in (NOT the production default) -- the advisor's Niveau-3 "
+                             "inventory-timing move. Pass 1 to test whether this helps "
+                             "either algorithm -- see the module docstring's "
+                             "use_delivery_shift note.")
+    parser.add_argument("--use-epsilon-archive", type=int, choices=[0, 1], default=0,
+                        help="Give BOTH algorithms an external archive bounded by the "
+                             "SAME epsilon-dominance rule (NOT the production default for "
+                             "either) -- search-time only, unlike every other ablation "
+                             "flag above. Pass 1 to test the true equity config -- see "
+                             "the module docstring's use_epsilon_archive note.")
+    parser.add_argument("--epsilon-divisions", type=int, default=20,
+                        help="Grid resolution for --use-epsilon-archive (default 20 "
+                             "boxes per objective's observed range). Only used when "
+                             "--use-epsilon-archive 1.")
     args = parser.parse_args()
     run_comparison(args.instance, args.seeds, args.gen, args.pop,
                     args.qinsga3_gen, args.noise_scale,
                     bool(args.eliminate_duplicates), bool(args.use_archive),
                     bool(args.compensate_dx_dtheta), bool(args.use_or_opt),
                     bool(args.use_single_relocation), bool(args.use_two_opt),
-                    bool(args.use_inter_route_relocate), bool(args.use_route_swap))
+                    bool(args.use_inter_route_relocate), bool(args.use_route_swap),
+                    bool(args.use_delivery_shift),
+                    bool(args.use_epsilon_archive), args.epsilon_divisions)

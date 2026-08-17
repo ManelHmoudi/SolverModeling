@@ -14,6 +14,7 @@ from Solvers.QINSGA3.algorithm import (
     _crowding_saturation_stats, _build_g_constraints,
     _evaluate_with_repair, _repair_pareto_front,
     _generate_offspring_batch, _eliminate_duplicates_refill,
+    _epsilon_box_index, _archive_update_epsilon,
 )
 
 # ── _normalise_F ──────────────────────────────────────────────────────────
@@ -829,3 +830,153 @@ def test_eliminate_duplicates_refill_no_duplicates_is_a_noop():
     )
 
     assert np.array_equal(result, X_offspring_snapshot)
+
+
+# ── _epsilon_box_index / _archive_update_epsilon ────────────────────────────
+
+def test_epsilon_box_index_hand_verified():
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    F = np.array([
+        [0.5, 0.5],
+        [1.5, 1.5],
+        [2.9, 0.1],
+    ])
+    boxes = _epsilon_box_index(F, ideal, epsilon)
+    np.testing.assert_array_equal(boxes, np.array([[0, 0], [1, 1], [2, 0]]))
+
+
+def _feasible_G(n: int) -> np.ndarray:
+    return np.zeros((n, 4))
+
+
+def test_archive_update_epsilon_first_point_always_added():
+    arch_X, arch_F, arch_theta = [], [], []
+    X = np.array([[9.0]])
+    F = np.array([[0.5, 0.5]])
+    theta = np.array([[9.0]])
+    _archive_update_epsilon(
+        X, F, _feasible_G(1), theta, arch_X, arch_F, arch_theta,
+        ideal=np.array([0.0, 0.0]), epsilon=np.array([1.0, 1.0]),
+    )
+    assert len(arch_F) == 1
+    np.testing.assert_array_equal(arch_F[0], F[0])
+
+
+def test_archive_update_epsilon_same_box_keeps_closer_to_ideal_corner():
+    """Box (0,0)'s ideal-ward corner is [0,0] (ideal + box*epsilon). A later
+    candidate in the SAME box that is closer to that corner (i.e. dominates
+    the occupant, since lower is better here) must replace it; the occupant
+    is discarded, not kept alongside it."""
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+
+    f1 = np.array([[0.9, 0.9]])   # box (0,0), far from the [0,0] corner
+    _archive_update_epsilon(
+        np.array([[1.0]]), f1, _feasible_G(1), np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1
+
+    f2 = np.array([[0.1, 0.1]])   # same box (0,0), much closer to the corner
+    _archive_update_epsilon(
+        np.array([[2.0]]), f2, _feasible_G(1), np.array([[2.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1, "same-box occupant must be replaced, not appended"
+    np.testing.assert_array_equal(arch_F[0], f2[0])
+
+
+def test_archive_update_epsilon_same_box_worse_candidate_rejected():
+    """The inverse of the above: a same-box candidate FARTHER from the ideal
+    corner than the current occupant must be rejected outright."""
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+
+    f1 = np.array([[0.1, 0.1]])
+    _archive_update_epsilon(
+        np.array([[1.0]]), f1, _feasible_G(1), np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    f2 = np.array([[0.9, 0.9]])   # same box (0,0), farther from the corner
+    _archive_update_epsilon(
+        np.array([[2.0]]), f2, _feasible_G(1), np.array([[2.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1
+    np.testing.assert_array_equal(arch_F[0], f1[0])
+
+
+def test_archive_update_epsilon_rejects_candidate_dominated_by_different_box():
+    """A candidate whose box is epsilon-dominated by an existing, DIFFERENT
+    box's occupant is rejected -- box (0,0) epsilon-dominates box (1,1)."""
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+
+    _archive_update_epsilon(
+        np.array([[1.0]]), np.array([[0.1, 0.1]]), _feasible_G(1), np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    _archive_update_epsilon(
+        np.array([[2.0]]), np.array([[1.1, 1.1]]), _feasible_G(1), np.array([[2.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1
+    np.testing.assert_array_equal(arch_F[0], np.array([0.1, 0.1]))
+
+
+def test_archive_update_epsilon_new_box_removes_dominated_older_entries():
+    """A candidate landing in a NEW, unoccupied box that epsilon-dominates an
+    existing different-box entry must evict that entry."""
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+
+    _archive_update_epsilon(
+        np.array([[1.0]]), np.array([[2.1, 2.1]]), _feasible_G(1), np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1
+
+    _archive_update_epsilon(
+        np.array([[2.0]]), np.array([[0.1, 0.1]]), _feasible_G(1), np.array([[2.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 1, "older, now-dominated entry in a different box must be evicted"
+    np.testing.assert_array_equal(arch_F[0], np.array([0.1, 0.1]))
+
+
+def test_archive_update_epsilon_new_box_non_dominated_entries_kept():
+    """Two mutually non-dominated points in different boxes (a genuine
+    trade-off, e.g. one better on f1 and worse on f2) must BOTH survive --
+    this is what protects a good early-generation solution from a different
+    region of the front from being discarded."""
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+
+    _archive_update_epsilon(
+        np.array([[1.0]]), np.array([[0.1, 2.9]]), _feasible_G(1), np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    _archive_update_epsilon(
+        np.array([[2.0]]), np.array([[2.9, 0.1]]), _feasible_G(1), np.array([[2.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 2
+
+
+def test_archive_update_epsilon_infeasible_candidate_skipped():
+    ideal   = np.array([0.0, 0.0])
+    epsilon = np.array([1.0, 1.0])
+    arch_X, arch_F, arch_theta = [], [], []
+    G_infeasible = np.array([[1.0, 0.0, 0.0, 0.0]])   # violates one constraint
+
+    _archive_update_epsilon(
+        np.array([[1.0]]), np.array([[0.1, 0.1]]), G_infeasible, np.array([[1.0]]),
+        arch_X, arch_F, arch_theta, ideal, epsilon,
+    )
+    assert len(arch_F) == 0

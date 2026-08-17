@@ -1,0 +1,297 @@
+
+==================================================
+Problem: DTLZ1  (30 runs, 4 objectives)
+==================================================
+  n_var=8, n_obj=4, n_gen=250
+  [DTLZ1] Run 01/30  seed=42
+  [DTLZ1] Run 01 done - front size: 120
+  [DTLZ1] Run 02/30  seed=137
+  [DTLZ1] Run 02 done - front size: 120
+  [DTLZ1] Run 03/30  seed=271
+  [DTLZ1] Run 03 done - front size: 120
+  [DTLZ1] Run 04/30  seed=491
+  [DTLZ1] Run 04 done - front size: 112
+  [DTLZ1] Run 05/30  seed=613
+  [DTLZ1] Run 05 done - front size: 79
+  [DTLZ1] Run 06/30  seed=733
+  [DTLZ1] Run 06 done - front size: 120
+  [DTLZ1] Run 07/30  seed=857
+  [DTLZ1] Run 07 done - front size: 107
+  [DTLZ1] Run 08/30  seed=977
+  [DTLZ1] Run 08 done - front size: 92
+  [DTLZ1] Run 09/30  seed=1009
+  [DTLZ1] Run 09 done - front size: 120
+  [DTLZ1] Run 10/30  seed=1123
+  [DTLZ1] Run 10 done - front size: 120
+  [DTLZ1] Run 11/30  seed=1249
+  [DTLZ1] Run 11 done - front size: 120
+  [DTLZ1] Run 12/30  seed=1373
+  [DTLZ1] Run 12 done - front size: 120
+  [DTLZ1] Run 13/30  seed=1499
+  [DTLZ1] Run 13 done - front size: 103
+  [DTLZ1] Run 14/30  seed=1609
+  [DTLZ1] Run 14 done - front size: 120
+  [DTLZ1] Run 15/30  seed=1733
+  [DTLZ1] Run 15 done - front size: 116
+  [DTLZ1] Run 16/30  seed=1871
+  [DTLZ1] Run 16 done - front size: 120
+  [DTLZ1] Run 17/30  seed=1997
+  [DTLZ1] Run 17 done - front size: 120
+  [DTLZ1] Run 18/30  seed=2113
+  [DTLZ1] Run 18 done - front size: 120
+  [DTLZ1] Run 19/30  seed=2237
+  [DTLZ1] Run 19 done - front size: 120
+  [DTLZ1] Run 20/30  seed=2351
+  [DTLZ1] Run 20 done - front size: 120
+  [DTLZ1] Run 21/30  seed=2467
+  [DTLZ1] Run 21 done - front size: 101
+  [DTLZ1] Run 22/30  seed=2593
+  [DTLZ1] Run 22 done - front size: 120
+  [DTLZ1] Run 23/30  seed=2711
+  [DTLZ1] Run 23 done - front size: 120
+  [DTLZ1] Run 24/30  seed=2837
+  [DTLZ1] Run 24 done - front size: 120
+  [DTLZ1] Run 25/30  seed=2953
+  [DTLZ1] Run 25 done - front size: 111
+  [DTLZ1] Run 26/30  seed=3079
+  [DTLZ1] Run 26 done - front size: 120
+  [DTLZ1] Run 27/30  seed=3191
+  [DTLZ1] Run 27 done - front size: 117
+  [DTLZ1] Run 28/30  seed=3313
+  [DTLZ1] Run 28 done - front size: 120
+  [DTLZ1] Run 29/30  seed=3433
+  [DTLZ1] Run 29 done - front size: 119
+  [DTLZ1] Run 30/30  seed=3557
+  [DTLZ1] Run 30 done - front size: 120
+  DTLZ1: 30 runs completed in 74.0s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ1_M4.csv
+
+==================================================
+Problem: DTLZ2  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ2] Run 01/30  seed=42
+  [DTLZ2] Run 01 done - front size: 120
+  [DTLZ2] Run 02/30  seed=137
+  [DTLZ2] Run 02 done - front size: 120
+  [DTLZ2] Run 03/30  seed=271
+  [DTLZ2] Run 03 done - front size: 120
+  [DTLZ2] Run 04/30  seed=491
+  [DTLZ2] Run 04 done - front size: 120
+  [DTLZ2] Run 05/30  seed=613
+  [DTLZ2] Run 05 done - front size: 120
+  [DTLZ2] Run 06/30  seed=733
+  [DTLZ2] Run 06 done - front size: 120
+  [DTLZ2] Run 07/30  seed=857
+  [DTLZ2] Run 07 done - front size: 120
+  [DTLZ2] Run 08/30  seed=977
+  [DTLZ2] Run 08 done - front size: 120
+  [DTLZ2] Run 09/30  seed=1009
+  [DTLZ2] Run 09 done - front size: 120
+  [DTLZ2] Run 10/30  seed=1123
+  [DTLZ2] Run 10 done - front size: 120
+  [DTLZ2] Run 11/30  seed=1249
+  [DTLZ2] Run 11 done - front size: 120
+  [DTLZ2] Run 12/30  seed=1373
+  [DTLZ2] Run 12 done - front size: 120
+  [DTLZ2] Run 13/30  seed=1499
+  [DTLZ2] Run 13 done - front size: 120
+  [DTLZ2] Run 14/30  seed=1609
+  [DTLZ2] Run 14 done - front size: 120
+  [DTLZ2] Run 15/30  seed=1733
+  [DTLZ2] Run 15 done - front size: 120
+  [DTLZ2] Run 16/30  seed=1871
+  [DTLZ2] Run 16 done - front size: 120
+  [DTLZ2] Run 17/30  seed=1997
+  [DTLZ2] Run 17 done - front size: 120
+  [DTLZ2] Run 18/30  seed=2113
+  [DTLZ2] Run 18 done - front size: 120
+  [DTLZ2] Run 19/30  seed=2237
+  [DTLZ2] Run 19 done - front size: 120
+  [DTLZ2] Run 20/30  seed=2351
+  [DTLZ2] Run 20 done - front size: 120
+  [DTLZ2] Run 21/30  seed=2467
+  [DTLZ2] Run 21 done - front size: 120
+  [DTLZ2] Run 22/30  seed=2593
+  [DTLZ2] Run 22 done - front size: 120
+  [DTLZ2] Run 23/30  seed=2711
+  [DTLZ2] Run 23 done - front size: 120
+  [DTLZ2] Run 24/30  seed=2837
+  [DTLZ2] Run 24 done - front size: 120
+  [DTLZ2] Run 25/30  seed=2953
+  [DTLZ2] Run 25 done - front size: 120
+  [DTLZ2] Run 26/30  seed=3079
+  [DTLZ2] Run 26 done - front size: 120
+  [DTLZ2] Run 27/30  seed=3191
+  [DTLZ2] Run 27 done - front size: 120
+  [DTLZ2] Run 28/30  seed=3313
+  [DTLZ2] Run 28 done - front size: 120
+  [DTLZ2] Run 29/30  seed=3433
+  [DTLZ2] Run 29 done - front size: 120
+  [DTLZ2] Run 30/30  seed=3557
+  [DTLZ2] Run 30 done - front size: 120
+  DTLZ2: 30 runs completed in 73.5s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ2_M4.csv
+
+==================================================
+Problem: DTLZ3  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ3] Run 01/30  seed=42
+  [DTLZ3] Run 01 done - front size: 105
+  [DTLZ3] Run 02/30  seed=137
+  [DTLZ3] Run 02 done - front size: 114
+  [DTLZ3] Run 03/30  seed=271
+  [DTLZ3] Run 03 done - front size: 111
+  [DTLZ3] Run 04/30  seed=491
+  [DTLZ3] Run 04 done - front size: 110
+  [DTLZ3] Run 05/30  seed=613
+  [DTLZ3] Run 05 done - front size: 116
+  [DTLZ3] Run 06/30  seed=733
+  [DTLZ3] Run 06 done - front size: 115
+  [DTLZ3] Run 07/30  seed=857
+  [DTLZ3] Run 07 done - front size: 115
+  [DTLZ3] Run 08/30  seed=977
+  [DTLZ3] Run 08 done - front size: 120
+  [DTLZ3] Run 09/30  seed=1009
+  [DTLZ3] Run 09 done - front size: 103
+  [DTLZ3] Run 10/30  seed=1123
+  [DTLZ3] Run 10 done - front size: 88
+  [DTLZ3] Run 11/30  seed=1249
+  [DTLZ3] Run 11 done - front size: 118
+  [DTLZ3] Run 12/30  seed=1373
+  [DTLZ3] Run 12 done - front size: 116
+  [DTLZ3] Run 13/30  seed=1499
+  [DTLZ3] Run 13 done - front size: 95
+  [DTLZ3] Run 14/30  seed=1609
+  [DTLZ3] Run 14 done - front size: 114
+  [DTLZ3] Run 15/30  seed=1733
+  [DTLZ3] Run 15 done - front size: 81
+  [DTLZ3] Run 16/30  seed=1871
+  [DTLZ3] Run 16 done - front size: 116
+  [DTLZ3] Run 17/30  seed=1997
+  [DTLZ3] Run 17 done - front size: 118
+  [DTLZ3] Run 18/30  seed=2113
+  [DTLZ3] Run 18 done - front size: 106
+  [DTLZ3] Run 19/30  seed=2237
+  [DTLZ3] Run 19 done - front size: 99
+  [DTLZ3] Run 20/30  seed=2351
+  [DTLZ3] Run 20 done - front size: 118
+  [DTLZ3] Run 21/30  seed=2467
+  [DTLZ3] Run 21 done - front size: 120
+  [DTLZ3] Run 22/30  seed=2593
+  [DTLZ3] Run 22 done - front size: 120
+  [DTLZ3] Run 23/30  seed=2711
+  [DTLZ3] Run 23 done - front size: 120
+  [DTLZ3] Run 24/30  seed=2837
+  [DTLZ3] Run 24 done - front size: 102
+  [DTLZ3] Run 25/30  seed=2953
+  [DTLZ3] Run 25 done - front size: 105
+  [DTLZ3] Run 26/30  seed=3079
+  [DTLZ3] Run 26 done - front size: 120
+  [DTLZ3] Run 27/30  seed=3191
+  [DTLZ3] Run 27 done - front size: 113
+  [DTLZ3] Run 28/30  seed=3313
+  [DTLZ3] Run 28 done - front size: 120
+  [DTLZ3] Run 29/30  seed=3433
+  [DTLZ3] Run 29 done - front size: 107
+  [DTLZ3] Run 30/30  seed=3557
+  [DTLZ3] Run 30 done - front size: 120
+  DTLZ3: 30 runs completed in 69.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ3_M4.csv
+
+==================================================
+Problem: DTLZ4  (30 runs, 4 objectives)
+==================================================
+  n_var=13, n_obj=4, n_gen=250
+  [DTLZ4] Run 01/30  seed=42
+  [DTLZ4] Run 01 done - front size: 12
+  [DTLZ4] Run 02/30  seed=137
+  [DTLZ4] Run 02 done - front size: 120
+  [DTLZ4] Run 03/30  seed=271
+  [DTLZ4] Run 03 done - front size: 120
+  [DTLZ4] Run 04/30  seed=491
+  [DTLZ4] Run 04 done - front size: 120
+  [DTLZ4] Run 05/30  seed=613
+  [DTLZ4] Run 05 done - front size: 120
+  [DTLZ4] Run 06/30  seed=733
+  [DTLZ4] Run 06 done - front size: 120
+  [DTLZ4] Run 07/30  seed=857
+  [DTLZ4] Run 07 done - front size: 120
+  [DTLZ4] Run 08/30  seed=977
+  [DTLZ4] Run 08 done - front size: 120
+  [DTLZ4] Run 09/30  seed=1009
+  [DTLZ4] Run 09 done - front size: 120
+  [DTLZ4] Run 10/30  seed=1123
+  [DTLZ4] Run 10 done - front size: 120
+  [DTLZ4] Run 11/30  seed=1249
+  [DTLZ4] Run 11 done - front size: 120
+  [DTLZ4] Run 12/30  seed=1373
+  [DTLZ4] Run 12 done - front size: 120
+  [DTLZ4] Run 13/30  seed=1499
+  [DTLZ4] Run 13 done - front size: 120
+  [DTLZ4] Run 14/30  seed=1609
+  [DTLZ4] Run 14 done - front size: 120
+  [DTLZ4] Run 15/30  seed=1733
+  [DTLZ4] Run 15 done - front size: 120
+  [DTLZ4] Run 16/30  seed=1871
+  [DTLZ4] Run 16 done - front size: 120
+  [DTLZ4] Run 17/30  seed=1997
+  [DTLZ4] Run 17 done - front size: 120
+  [DTLZ4] Run 18/30  seed=2113
+  [DTLZ4] Run 18 done - front size: 120
+  [DTLZ4] Run 19/30  seed=2237
+  [DTLZ4] Run 19 done - front size: 120
+  [DTLZ4] Run 20/30  seed=2351
+  [DTLZ4] Run 20 done - front size: 120
+  [DTLZ4] Run 21/30  seed=2467
+  [DTLZ4] Run 21 done - front size: 120
+  [DTLZ4] Run 22/30  seed=2593
+  [DTLZ4] Run 22 done - front size: 120
+  [DTLZ4] Run 23/30  seed=2711
+  [DTLZ4] Run 23 done - front size: 120
+  [DTLZ4] Run 24/30  seed=2837
+  [DTLZ4] Run 24 done - front size: 120
+  [DTLZ4] Run 25/30  seed=2953
+  [DTLZ4] Run 25 done - front size: 120
+  [DTLZ4] Run 26/30  seed=3079
+  [DTLZ4] Run 26 done - front size: 120
+  [DTLZ4] Run 27/30  seed=3191
+  [DTLZ4] Run 27 done - front size: 120
+  [DTLZ4] Run 28/30  seed=3313
+  [DTLZ4] Run 28 done - front size: 120
+  [DTLZ4] Run 29/30  seed=3433
+  [DTLZ4] Run 29 done - front size: 120
+  [DTLZ4] Run 30/30  seed=3557
+  [DTLZ4] Run 30 done - front size: 120
+  DTLZ4: 30 runs completed in 75.4s
+  Saved per-run IGD -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\igd_DTLZ4_M4.csv
+
+==================================================
+Problem: DTLZ5  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ5 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ6  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ6 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+==================================================
+Problem: DTLZ7  (30 runs, 4 objectives)
+==================================================
+  Skipping DTLZ7 at M=4: no analytical Pareto front available for this problem beyond M=3.
+
+Summary CSV -> C:\Users\Mariem\OneDrive\Bureau\SolverModeling\Project_Irp\Validation\Benchmarking\dtlz\results\nsga3\summary_M4.csv
+
+---------------------------------------------------------------------------
+  NSGA-III on DTLZ1-7 (4 objectives) - Cui et al. 2025 protocol
+---------------------------------------------------------------------------
+Problem        IGD Best   IGD Median    IGD Worst     IGD Mean      IGD Std
+---------------------------------------------------------------------------
+DTLZ1          0.041135     0.263234     0.776712     0.214947     0.185515
+DTLZ2          0.121039     0.121124     0.121318     0.121128     0.000048
+DTLZ3          0.195184     5.138665    14.394569     5.785954     3.541791
+DTLZ4          0.121092     0.121152     0.751686     0.142183     0.113182
+---------------------------------------------------------------------------
+

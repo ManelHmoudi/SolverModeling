@@ -146,7 +146,8 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
                            use_single_relocation: bool = False,
                            use_two_opt: bool = True,
                            use_inter_route_relocate: bool = False,
-                           use_route_swap: bool = False) -> tuple[np.ndarray, np.ndarray]:
+                           use_route_swap: bool = False,
+                           use_delivery_shift: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Remedy G: decode + repair (2-opt, Baldwinian -- see repair.py) +
     evaluate, replacing IRPProblem._evaluate for QINSGA3 only, when
     use_route_repair=True. See
@@ -166,6 +167,9 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
 
     use_route_swap (default False): forwarded to _repair_route_result --
     see its own use_route_swap docstring.
+
+    use_delivery_shift (default False): forwarded to _repair_route_result
+    -- see its own use_delivery_shift docstring.
     """
     from Solvers.NSGA3.decoder import decode_chromosome, build_routes
     from Solvers.NSGA3.evaluator import compute_f1, compute_f2, compute_f3, compute_f4
@@ -177,7 +181,8 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
                                          use_single_relocation=use_single_relocation,
                                          use_two_opt=use_two_opt,
                                          use_inter_route_relocate=use_inter_route_relocate,
-                                         use_route_swap=use_route_swap)
+                                         use_route_swap=use_route_swap,
+                                         use_delivery_shift=use_delivery_shift)
 
     F = np.array([
         compute_f1(route_result, sets_, params_),
@@ -202,6 +207,7 @@ def _repair_pareto_front(
     use_two_opt: bool = True,
     use_inter_route_relocate: bool = False,
     use_route_swap: bool = False,
+    use_delivery_shift: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Post-processing variant of remedy G, for run_qinsga3's
     repair_final_front parameter: repairs each front chromosome's decoded
@@ -232,6 +238,10 @@ def _repair_pareto_front(
     use_route_swap (default False): forwarded to _evaluate_with_repair --
     see Solvers/QINSGA3/repair.py's _repair_route_result use_route_swap
     docstring.
+
+    use_delivery_shift (default False): forwarded to _evaluate_with_repair
+    -- see Solvers/QINSGA3/repair.py's _repair_route_result
+    use_delivery_shift docstring.
     """
     F_list = []
     G_list = []
@@ -240,7 +250,8 @@ def _repair_pareto_front(
                                       use_single_relocation=use_single_relocation,
                                       use_two_opt=use_two_opt,
                                       use_inter_route_relocate=use_inter_route_relocate,
-                                      use_route_swap=use_route_swap)
+                                      use_route_swap=use_route_swap,
+                                      use_delivery_shift=use_delivery_shift)
         F_list.append(F)
         G_list.append(G)
     return np.array(F_list), np.array(G_list)
@@ -1285,6 +1296,143 @@ def _archive_update(
         arch_theta[:] = list(arr_theta)
 
 
+def _epsilon_box_index(F: np.ndarray, ideal: np.ndarray, epsilon: np.ndarray) -> np.ndarray:
+    """Integer epsilon-dominance box index per row of F [Laumanns, Thiele,
+    Deb & Zitzler 2002, "Combining Convergence and Diversity in Evolutionary
+    Multiobjective Optimization"]: B(f) = floor((f - ideal) / epsilon), one
+    integer per objective. Two points sharing the same box index occupy the
+    same region of objective space at this resolution -- the archive keeps
+    at most one representative per box (see _archive_update_epsilon), which
+    is what bounds its size by the number of distinct regions the true front
+    actually occupies, rather than by generation count."""
+    return np.floor((F - ideal) / epsilon).astype(np.int64)
+
+
+def _archive_update_epsilon(
+    new_X:     np.ndarray,
+    new_F:     np.ndarray,
+    new_G:     np.ndarray,
+    new_theta: np.ndarray,
+    arch_X:    list,
+    arch_F:    list,
+    arch_theta: list,
+    ideal:     np.ndarray,
+    epsilon:   np.ndarray,
+    max_size:  int = 500,
+) -> None:
+    """Epsilon-dominance variant of _archive_update -- see that function's
+    own docstring for the feasibility/dominance-check baseline this extends.
+
+    Motivation (found and diagnosed this session): the plain Pareto-dominance
+    archive never expires an entry unless a LATER candidate literally
+    dominates it on every objective -- on a problem whose true achievable
+    front is small (e.g. a 30-client IRP instance vs the project's main
+    100-client one), the archive still keeps accumulating early-run, never-
+    quite-beaten extreme points for the whole run, ending up 5-6x larger
+    than what the search actually converged to and measurably degrading
+    GD/IGD (the reported front is diluted with unrefined, unrepresentative
+    points) -- confirmed directly in sensitivity/2opt_fairness_30clients_
+    7seed_campaign_log.txt (QI-NSGA-III front saturating at pop_size=200 in
+    5/7 seeds, vs NSGA-III's own converged ~29-35) and reproduced generically
+    by giving NSGA-III the same external-archive treatment (sensitivity/
+    2opt_fairness_100clients_3seed_archive_campaign_log.txt).
+
+    Epsilon-dominance bounds the archive differently: divide objective space
+    into a fixed grid (box width `epsilon` per objective, from `ideal`), and
+    keep AT MOST ONE representative per box -- the one closest to that box's
+    own ideal-ward corner. This naturally caps the archive by how many
+    distinct regions the true front spans (which tracks the problem's actual
+    richness), not by how many generations ran, while still protecting a
+    genuinely good early-generation solution from the same fate a plain
+    "report only the final generation" fix would risk: if it is the best
+    occupant of its box and nothing later takes that box's corner more
+    tightly, it survives for the whole run, same as in the un-bounded
+    archive -- it is only ever discarded in favour of a STRICTLY better-
+    positioned occupant of the exact same region, not merely because time
+    passed.
+
+    A candidate is REJECTED if any current archive entry occupying a
+    DIFFERENT box epsilon-dominates it (box-vector <=, strictly < in at
+    least one objective). If it lands in an already-occupied box, it
+    replaces that occupant only if it is closer (squared box-normalised
+    distance) to the box's own ideal-ward corner; otherwise it is discarded
+    and the existing occupant is kept. If it lands in a new, unoccupied box,
+    every existing archive entry it epsilon-dominates is removed, mirroring
+    _archive_update's own dominated-entry cleanup. `max_size` remains a
+    backstop crowding_trim safety cap (should rarely bind, since the box
+    grid itself already bounds growth), matching _archive_update's own
+    signature so callers can switch between the two update strategies
+    without changing anything else.
+    """
+    feasible = np.maximum(new_G, 0.0).sum(axis=1) == 0
+    feas_idx = np.where(feasible)[0]
+    if len(feas_idx) == 0:
+        return
+
+    cand_X     = new_X[feas_idx]
+    cand_F     = new_F[feas_idx]
+    cand_theta = new_theta[feas_idx]
+
+    for c in range(len(cand_F)):
+        f = cand_F[c]
+        b_f = _epsilon_box_index(f[None, :], ideal, epsilon)[0]
+
+        n_arch = len(arch_F)
+        if n_arch == 0:
+            arch_X.append(cand_X[c].copy())
+            arch_F.append(f.copy())
+            arch_theta.append(cand_theta[c].copy())
+            continue
+
+        arr_F = np.array(arch_F)
+        arr_b = _epsilon_box_index(arr_F, ideal, epsilon)
+        same_box = (arr_b == b_f).all(axis=1)
+
+        # Rejected if epsilon-dominated by any DIFFERENT-box archive entry.
+        if same_box.any() is False or (~same_box).any():
+            other_b = arr_b[~same_box]
+            if len(other_b):
+                if ((other_b <= b_f).all(axis=1) & (other_b < b_f).any(axis=1)).any():
+                    continue
+
+        same_idx = np.where(same_box)[0]
+        if len(same_idx) > 0:
+            occ_idx  = int(same_idx[0])
+            occ_f    = arr_F[occ_idx]
+            corner   = ideal + b_f * epsilon
+            f_dist   = np.sum(((f     - corner) / epsilon) ** 2)
+            occ_dist = np.sum(((occ_f - corner) / epsilon) ** 2)
+            if f_dist < occ_dist:
+                arch_X[occ_idx]     = cand_X[c].copy()
+                arch_F[occ_idx]     = f.copy()
+                arch_theta[occ_idx] = cand_theta[c].copy()
+            continue
+
+        # New box: drop every existing entry this candidate epsilon-dominates.
+        other_idx = np.where(~same_box)[0]
+        if len(other_idx):
+            other_b  = arr_b[other_idx]
+            dom_mask = (b_f <= other_b).all(axis=1) & (b_f < other_b).any(axis=1)
+            remove   = set(other_idx[dom_mask].tolist())
+            if remove:
+                keep = [i for i in range(n_arch) if i not in remove]
+                arch_X[:]     = [arch_X[i]     for i in keep]
+                arch_F[:]     = [arch_F[i]     for i in keep]
+                arch_theta[:] = [arch_theta[i] for i in keep]
+
+        arch_X.append(cand_X[c].copy())
+        arch_F.append(f.copy())
+        arch_theta.append(cand_theta[c].copy())
+
+    if len(arch_F) > max_size:
+        arr_X, arr_F, arr_theta = _crowding_trim(
+            np.array(arch_X), np.array(arch_F), np.array(arch_theta), max_size,
+        )
+        arch_X[:]     = list(arr_X)
+        arch_F[:]     = list(arr_F)
+        arch_theta[:] = list(arr_theta)
+
+
 # ---------------------------------------------------------------------------
 # Main QINSGA-III loop
 # ---------------------------------------------------------------------------
@@ -1328,6 +1476,9 @@ def run_qinsga3(
     use_two_opt:      bool  = True,
     use_inter_route_relocate: bool = False,
     use_route_swap:   bool  = False,
+    use_delivery_shift: bool = False,
+    use_epsilon_archive: bool = False,
+    epsilon_divisions: int = 20,
     callback          = None,
     crowding_saturation_log: list | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1504,6 +1655,37 @@ def run_qinsga3(
     repair_final_front=True): forwarded the same way, running the
     Niveau-2 route-swap pass (exchanging two clients between different
     routes) -- see _repair_route_result's own use_route_swap docstring.
+
+    use_delivery_shift (default False -- ablation-only, applies only when
+    repair_final_front=True): forwarded the same way, running the
+    Niveau-3 partial delivery-timing shift pass -- see
+    _repair_route_result's own use_delivery_shift docstring.
+
+    use_epsilon_archive (default False -- ablation-only) replaces the
+    external archive's plain Pareto-dominance bookkeeping (_archive_update)
+    with epsilon-dominance archiving (_archive_update_epsilon, Laumanns,
+    Thiele, Deb & Zitzler 2002) at all three archive-update call sites
+    below. Diagnosed this session: on a small true Pareto front (e.g. the
+    30-client IRP instance), the plain archive keeps accumulating never-
+    literally-dominated points for the whole run and saturates at its
+    pop_size final-trim target regardless of how small the actual front is,
+    diluting the reported GD/IGD -- see sensitivity/2opt_fairness_30clients_
+    7seed_campaign_log.txt and the generic (non-quantum-specific)
+    reproduction in sensitivity/2opt_fairness_100clients_3seed_
+    archive_campaign_log.txt (NSGA-III given the same archive treatment
+    shows the same explosion). Epsilon-dominance bounds the archive by the
+    number of distinct epsilon-sized regions of objective space the search
+    actually occupies instead. epsilon is computed once, the first
+    generation survival.norm's ideal/nadir are populated (gen 0 falls back
+    to the plain archive, matching every other ideal/nadir-dependent step
+    above), as (nadir - ideal) / epsilon_divisions per objective, then held
+    fixed for the rest of the run.
+
+    epsilon_divisions (default 20, only used when use_epsilon_archive=True)
+    is how many boxes each objective's observed range is divided into --
+    larger values give a finer grid (larger, less-aggressively-pruned
+    archive); smaller values give a coarser grid (smaller archive, coarser
+    front resolution).
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1562,6 +1744,29 @@ def run_qinsga3(
     arch_theta: list[np.ndarray] = []
     _MAX_ARCHIVE = 500
 
+    # Epsilon grid, frozen the first generation survival.norm's ideal/nadir
+    # are available (see use_epsilon_archive's own docstring above) --
+    # unused (stays None) when use_epsilon_archive=False.
+    _eps_ideal:   np.ndarray | None = None
+    _eps_epsilon: np.ndarray | None = None
+
+    def _do_archive_update(cX: np.ndarray, cF: np.ndarray, cG: np.ndarray, cTheta: np.ndarray) -> None:
+        nonlocal _eps_ideal, _eps_epsilon
+        if not use_epsilon_archive:
+            _archive_update(cX, cF, cG, cTheta, arch_X, arch_F, arch_theta, _MAX_ARCHIVE)
+            return
+        if _eps_epsilon is None:
+            if survival.norm.nadir_point is None:
+                _archive_update(cX, cF, cG, cTheta, arch_X, arch_F, arch_theta, _MAX_ARCHIVE)
+                return
+            _eps_ideal = np.asarray(survival.norm.ideal_point, dtype=float)
+            nadir      = np.asarray(survival.norm.nadir_point, dtype=float)
+            _eps_epsilon = np.maximum(nadir - _eps_ideal, 1e-9) / epsilon_divisions
+        _archive_update_epsilon(
+            cX, cF, cG, cTheta, arch_X, arch_F, arch_theta,
+            _eps_ideal, _eps_epsilon, _MAX_ARCHIVE,
+        )
+
     if use_rqpso_rotation or use_pso_rotation:
         pbest_theta  = qpop.theta.copy()
         pbest_scalar = np.full(pop_size, np.inf)
@@ -1616,9 +1821,9 @@ def run_qinsga3(
             F_pen_parent = _penalised_F(F_parent, G_parent)
 
             pareto_idx = sorter.do(F_pen_parent)[0]
-            _archive_update(
+            _do_archive_update(
                 X_parent[pareto_idx], F_parent[pareto_idx], G_parent[pareto_idx],
-                theta_parent[pareto_idx], arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
+                theta_parent[pareto_idx],
             )
 
             # Share the SAME ideal/nadir as the elitist survival step below
@@ -1737,9 +1942,9 @@ def run_qinsga3(
             F_pen_offspring = _penalised_F(F_offspring, G_offspring)
 
             off_pareto_idx = sorter.do(F_pen_offspring)[0]
-            _archive_update(
+            _do_archive_update(
                 X_offspring[off_pareto_idx], F_offspring[off_pareto_idx], G_offspring[off_pareto_idx],
-                theta_offspring[off_pareto_idx], arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
+                theta_offspring[off_pareto_idx],
             )
 
             # --- Elitist survival: merge parent + offspring, keep best pop_size
@@ -1818,10 +2023,9 @@ def run_qinsga3(
         F_final, G_final = _eval_batch(X_final)
         F_pen_final      = _penalised_F(F_final, G_final)
         final_pareto_idx = sorter.do(F_pen_final)[0]
-        _archive_update(
+        _do_archive_update(
             X_final[final_pareto_idx], F_final[final_pareto_idx],
             G_final[final_pareto_idx], qpop.theta[final_pareto_idx],
-            arch_X, arch_F, arch_theta, _MAX_ARCHIVE,
         )
 
     if arch_X:
@@ -1841,7 +2045,8 @@ def run_qinsga3(
                                                    use_single_relocation=use_single_relocation,
                                                    use_two_opt=use_two_opt,
                                                    use_inter_route_relocate=use_inter_route_relocate,
-                                                   use_route_swap=use_route_swap)
+                                                   use_route_swap=use_route_swap,
+                                                   use_delivery_shift=use_delivery_shift)
         # Repair optimises f1 only, per individual -- it can newly dominate
         # another front member (confirmed on a real front: 40/40
         # non-dominated before repair, only 26/40 after). Re-filter to

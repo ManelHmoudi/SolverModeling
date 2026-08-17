@@ -306,7 +306,8 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict,
                           use_single_relocation: bool = False,
                           use_two_opt: bool = True,
                           use_inter_route_relocate: bool = False,
-                          use_route_swap: bool = False) -> dict:
+                          use_route_swap: bool = False,
+                          use_delivery_shift: bool = False) -> dict:
     """Best-improvement local search per route: for every truck's path
     longer than 3 nodes (more than 1 client), repeatedly scans every 2-opt
     candidate swap in the window (plus every Or-opt segment-relocation
@@ -395,11 +396,21 @@ def _repair_route_result(route_result: dict, sets_: dict, params_: dict,
     DIFFERENT routes, the advisor's Niveau-2 "swap entre deux tournees"
     move), after use_inter_route_relocate and before the intra-route loop
     -- see _repair_route_swap's own docstring.
+
+    use_delivery_shift (default False -- ablation-only): runs
+    _repair_delivery_shift last (partial quantity shift between two
+    ADJACENT periods a client is already served in, the advisor's Niveau-3
+    "deplacement partiel d'une livraison vers une periode voisine" move) --
+    a fundamentally different neighbourhood from every other lever here
+    (inventory timing, not route topology) -- see _repair_delivery_shift's
+    own docstring.
     """
     if use_inter_route_relocate:
         route_result = _repair_inter_route_relocate(route_result, sets_, params_)
     if use_route_swap:
         route_result = _repair_route_swap(route_result, sets_, params_)
+    if use_delivery_shift:
+        route_result = _repair_delivery_shift(route_result, sets_, params_)
 
     working = dict(route_result)
     working["x"] = dict(route_result["x"])
@@ -827,5 +838,260 @@ def _repair_route_swap(route_result: dict, sets_: dict, params_: dict) -> dict:
                  for k2b, r in working["routes_data"][t].items()),
                 default=0.0,
             )
+
+    return working
+
+
+def _truck_serving(routes_at_period: dict, client) -> object | None:
+    """Return the truck id serving `client` at this period's routes_data
+    entry, or None if the client isn't served that period at all."""
+    client_str = str(client)
+    for k, info in routes_at_period.items():
+        if client_str in info["qty"]:
+            return k
+    return None
+
+
+_DELIVERY_SHIFT_MAX_ITER = 20   # mirrors _MAX_REPAIR_ITER's own rationale.
+
+
+def _delivery_shift_candidates(route_result: dict, sets_: dict, params_: dict):
+    """Yield every valid partial-delivery shift between two ADJACENT periods
+    -- the advisor's Niveau-3 "deplacement partiel d'une livraison vers une
+    periode voisine" move -- for a client already served (actual_qty > 0)
+    in BOTH periods with the SAME frigo/non-frigo label (a different label
+    would need a different truck TYPE, not just a different truck, out of
+    scope: this move never adds/removes a stop or changes which truck TYPE
+    serves a client, only the quantity split between two already-existing
+    stops).
+
+    For adjacent periods t1 < t2, moving delta units of client l's delivery
+    changes depot_stock at EXACTLY t1 (the earlier of the pair) by +-delta
+    and leaves every other period's stock unchanged (proof: shipped[t1] and
+    shipped[t2] each move by -+delta while their SUM is invariant, so the
+    cumulative stock trajectory from t2 onward, which only depends on that
+    sum, is unaffected -- see _repair_delivery_shift's own docstring for the
+    full argument). Two directions per pair:
+      - "delay"   (case A): donor=t1, receiver=t2 -- I[t1] increases by delta
+        (less shipped at t1, so more stays in stock).
+      - "advance" (case B): donor=t2, receiver=t1 -- I[t1] decreases by delta
+        (more shipped at t1 to cover what receiver now gets early).
+
+    Each direction's max feasible delta is capped by three independent,
+    provably-safe bounds (see _repair_delivery_shift's docstring for why the
+    donor-floor bound is safe): the receiving truck's capacity headroom,
+    the donor's own nominal per-period demand floor (q_lt[l, donor period]:
+    reducing actual_qty down to but not below this can never violate the
+    cumulative-catch-up requirement, since periods before the donor are
+    untouched by this move and periods from the donor onward can only gain
+    slack, not lose it), and the depot's stock bound (I_max for case A,
+    I_min for case B) at the one period that actually moves. Yields
+    (client, t_donor, t_receiver, k_donor, k_receiver, t_early, sign,
+    max_delta) -- sign is +1 for case A, -1 for case B, applied to
+    depot_stock[t_early] as sign * delta.
+    """
+    T             = sets_["T"]
+    clients       = sets_["clients"]
+    requires_cold = params_["requires_cold"]
+    q_lt          = params_["q_lt"]
+    Q             = params_["Q"]
+    I_min_f       = params_["I_O_min_frigo"]
+    I_max_f       = params_["I_O_max_frigo"]
+    I_min_nf      = params_["I_O_min_nonfrigo"]
+    I_max_nf      = params_["I_O_max_nonfrigo"]
+    actual_qty    = route_result["actual_qty"]
+    depot_stock   = route_result["depot_stock"]
+    routes_data   = route_result["routes_data"]
+
+    for idx in range(len(T) - 1):
+        t1, t2 = T[idx], T[idx + 1]
+        routes_t1 = routes_data.get(t1, {})
+        routes_t2 = routes_data.get(t2, {})
+
+        for l in clients:
+            if requires_cold[l, t1] != requires_cold[l, t2]:
+                continue
+            q1 = actual_qty.get((l, t1), 0)
+            q2 = actual_qty.get((l, t2), 0)
+            if q1 <= 0 or q2 <= 0:
+                continue
+
+            k1 = _truck_serving(routes_t1, l)
+            k2 = _truck_serving(routes_t2, l)
+            if k1 is None or k2 is None:
+                continue
+
+            is_frigo  = requires_cold[l, t1]
+            I_min     = I_min_f if is_frigo else I_min_nf
+            I_max     = I_max_f if is_frigo else I_max_nf
+            stock_key = "frigo" if is_frigo else "nonfrigo"
+            I_t1      = depot_stock.get(t1, {}).get(stock_key, 0.0)
+
+            load1 = sum(int(qq) for qq in routes_t1[k1]["qty"].values())
+            load2 = sum(int(qq) for qq in routes_t2[k2]["qty"].values())
+
+            # Case A ("delay"): donor=t1/k1, receiver=t2/k2, I[t1] += delta.
+            # q1 - 1 (not q1): the donor stop must keep at least 1 unit, or
+            # it becomes a real visit delivering nothing -- routes_data's
+            # qty dict would then disagree with the path (which still
+            # contains the stop), a bookkeeping mismatch this move must
+            # never introduce since it never restructures paths.
+            max_delta_a = min(
+                Q[k2] - load2,
+                max(0, q1 - q_lt.get((l, t1), 0)),
+                max(0, I_max - I_t1),
+                q1 - 1,
+            )
+            if max_delta_a > 0:
+                yield (l, t1, t2, k1, k2, t1, +1, int(max_delta_a))
+
+            # Case B ("advance"): donor=t2/k2, receiver=t1/k1, I[t1] -= delta.
+            max_delta_b = min(
+                Q[k1] - load1,
+                max(0, q2 - q_lt.get((l, t2), 0)),
+                max(0, I_t1 - I_min),
+                q2 - 1,
+            )
+            if max_delta_b > 0:
+                yield (l, t2, t1, k2, k1, t1, -1, int(max_delta_b))
+
+
+def _repair_delivery_shift(route_result: dict, sets_: dict, params_: dict) -> dict:
+    """Niveau-3 local search: best-improvement partial shift of a client's
+    delivered quantity between two ADJACENT periods it is already served in
+    -- the advisor's "deplacement partiel d'une livraison vers une periode
+    voisine" move. Distinct in kind from every Niveau-1/2 route-topology
+    move already tried and rejected this session (2-opt aside): those move
+    WHICH truck visits a client and in WHAT order; this one never touches
+    either -- both periods' paths stay structurally identical, only the
+    SPLIT of quantity between two already-existing stops moves.
+
+    Why no multi-period stock-trajectory replay is needed: depot_stock
+    follows I[t] = I[t-1] + R[t] - shipped[t]. Shifting delta units of one
+    client's delivery from period t1 to the very next period t2 changes
+    shipped[t1] by -delta and shipped[t2] by +delta -- opposite signs, equal
+    magnitude. I[t1] = I[t1-1] + R[t1] - shipped[t1] therefore moves by
+    +delta (t1-1 and R[t1] untouched). I[t2] = I[t1] + R[t2] - shipped[t2] =
+    (I[t1]_old + delta) + R[t2] - (shipped[t2]_old + delta) = I[t1]_old +
+    R[t2] - shipped[t2]_old = I[t2]_old exactly -- unchanged, and so is
+    every period after it (the recurrence from t2 onward only ever sees
+    I[t2], not the intermediate detour through t1). So this move touches
+    depot_stock at exactly ONE period, a direct O(1) adjustment rather than
+    a decoder re-run.
+
+    f3 (pure distance/speed) is untouched -- x_vars/paths don't change. f2
+    (CO2) and f1's y1 (transport) DO move slightly: the arc flow f_vars
+    along both (unchanged) paths is a suffix-sum of quantities that now
+    includes a different amount for this client, computed here via
+    _evaluate_candidate on the SAME path (paths structurally identical, so
+    tau_return/arrival_times cannot change -- verified neither
+    _evaluate_candidate's timing pass nor _route_traversal_time reads
+    qty_on_route). f1's y2 (holding cost) moves by h_O * delta at the one
+    affected period. f4's stock component moves with depot_stock too; f4's
+    receivables/payables are invariant to WHEN a fixed total quantity is
+    delivered (both depend only on each client's TOTAL delivered quantity
+    across the horizon, which this move conserves by construction -- it is
+    zero-sum per client) -- not tracked here since the acceptance rule,
+    matching every other repair in this module, is f1 only.
+
+    Every cost term here (transport, holding) is LINEAR in the shifted
+    delta, so an improving candidate's best delta is always the MAXIMUM
+    feasible one (capacity/floor/stock-bound-limited, see
+    _delivery_shift_candidates) -- no diminishing returns to search over,
+    unlike topology moves where a fixed-size neighbourhood is re-scanned.
+
+    Baldwinian: updates x, f, actual_qty, depot_stock, and routes_data (both
+    touched periods' qty dicts). tau_return and arrival_times are untouched,
+    per the timing argument above.
+    """
+    working = dict(route_result)
+    working["x"]           = dict(route_result["x"])
+    working["f"]           = dict(route_result["f"])
+    working["actual_qty"]  = dict(route_result["actual_qty"])
+    working["depot_stock"] = {t: dict(v) for t, v in route_result["depot_stock"].items()}
+    working["routes_data"] = {
+        t: dict(routes) for t, routes in route_result["routes_data"].items()
+    }
+    requires_cold = params_["requires_cold"]
+
+    for _ in range(_DELIVERY_SHIFT_MAX_ITER):
+        best = None   # (delta_f1, l, t_donor, t_receiver, k_donor, k_receiver,
+                      #  t_early, sign, delta, eval_donor, eval_receiver,
+                      #  new_qty_donor, new_qty_receiver)
+
+        for l, t_donor, t_receiver, k_donor, k_receiver, t_early, sign, delta in \
+                _delivery_shift_candidates(working, sets_, params_):
+            info_donor    = working["routes_data"][t_donor][k_donor]
+            info_receiver = working["routes_data"][t_receiver][k_receiver]
+            qty_donor    = {int(x): qq for x, qq in info_donor["qty"].items()}
+            qty_receiver = {int(x): qq for x, qq in info_receiver["qty"].items()}
+
+            tau_before_donor    = working["tau_return"].get(t_donor, 0.0)
+            tau_before_receiver = working["tau_return"].get(t_receiver, 0.0)
+
+            old_contrib = (
+                _route_f1_contribution(info_donor["path"], working["f"],
+                                        working["arrival_times"], t_donor, k_donor, params_)
+                + _route_f1_contribution(info_receiver["path"], working["f"],
+                                          working["arrival_times"], t_receiver, k_receiver, params_)
+            )
+
+            new_qty_donor    = dict(qty_donor)
+            new_qty_donor[l] = qty_donor[l] - delta
+            new_qty_receiver = dict(qty_receiver)
+            new_qty_receiver[l] = qty_receiver.get(l, 0) + delta
+
+            eval_donor = _evaluate_candidate(
+                info_donor["path"], new_qty_donor, t_donor, k_donor, tau_before_donor, params_
+            )
+            if eval_donor is None:
+                continue
+            eval_receiver = _evaluate_candidate(
+                info_receiver["path"], new_qty_receiver, t_receiver, k_receiver, tau_before_receiver, params_
+            )
+            if eval_receiver is None:
+                continue
+
+            delta_holding = params_["h_O"] * sign * delta
+            delta_f1 = (eval_donor[3] + eval_receiver[3] - old_contrib) + delta_holding
+
+            if delta_f1 < 0 and (best is None or delta_f1 < best[0]):
+                best = (delta_f1, l, t_donor, t_receiver, k_donor, k_receiver,
+                        t_early, sign, delta, eval_donor, eval_receiver,
+                        new_qty_donor, new_qty_receiver)
+
+        if best is None:
+            break
+
+        (_delta_f1, l, t_donor, t_receiver, k_donor, k_receiver,
+         t_early, sign, delta, eval_donor, eval_receiver,
+         new_qty_donor, new_qty_receiver) = best
+
+        info_donor    = working["routes_data"][t_donor][k_donor]
+        info_receiver = working["routes_data"][t_receiver][k_receiver]
+        x_d, f_d, _arr_d, _ = eval_donor
+        x_r, f_r, _arr_r, _ = eval_receiver
+
+        working["x"] = _replace_route_arcs(working["x"], info_donor["path"], t_donor, k_donor, x_d)
+        working["x"] = _replace_route_arcs(working["x"], info_receiver["path"], t_receiver, k_receiver, x_r)
+        working["f"] = _replace_route_arcs(working["f"], info_donor["path"], t_donor, k_donor, f_d)
+        working["f"] = _replace_route_arcs(working["f"], info_receiver["path"], t_receiver, k_receiver, f_r)
+
+        working["routes_data"][t_donor][k_donor] = {
+            "path": info_donor["path"],
+            "qty":  {str(x): qq for x, qq in new_qty_donor.items() if qq > 0},
+        }
+        working["routes_data"][t_receiver][k_receiver] = {
+            "path": info_receiver["path"],
+            "qty":  {str(x): qq for x, qq in new_qty_receiver.items()},
+        }
+
+        working["actual_qty"][l, t_donor]    = new_qty_donor[l]
+        working["actual_qty"][l, t_receiver] = new_qty_receiver[l]
+
+        stock_key = "frigo" if requires_cold[l, t_early] else "nonfrigo"
+        working["depot_stock"][t_early][stock_key] = round(
+            working["depot_stock"][t_early][stock_key] + sign * delta, 4
+        )
 
     return working

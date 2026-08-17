@@ -11,6 +11,7 @@ from Solvers.QINSGA3.repair import (
     _evaluate_candidate, _or_opt_candidates,
     _inter_route_relocate_candidates, _repair_inter_route_relocate,
     _route_swap_candidates, _repair_route_swap,
+    _delivery_shift_candidates, _repair_delivery_shift,
 )
 from Solvers.NSGA3.evaluator import compute_f1
 
@@ -1215,3 +1216,245 @@ def test_repair_route_result_route_swap_true_applies_the_move():
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 3, 0]
     assert repaired["routes_data"][1][2]["path"] == [0, 2, 0]
     assert compute_f1(repaired, sets_, params_) == 4.0
+
+
+# ── _delivery_shift_candidates / _repair_delivery_shift ──────────────────
+
+def test_delivery_shift_candidates_hand_verified():
+    """Client 1 served at t=1 (qty=5, truck 1) and t=2 (qty=5, truck 2),
+    both frigo. q_lt (nominal per-period demand) = 3 at each period. Q=10
+    both trucks (load=qty=5, headroom=5 each). I_O_max_frigo=10,
+    I_O_min_frigo=0, depot_stock[1]["frigo"]=2.0.
+
+    Case A (delay, donor=t1/truck1, receiver=t2/truck2), I[t1] += delta:
+      min(headroom=Q[2]-load2=10-5=5, floor=q1-q_lt[1,1]=5-3=2,
+          stock=I_max-I[t1]=10-2=8, q1-1=4) = 2
+    Case B (advance, donor=t2/truck2, receiver=t1/truck1), I[t1] -= delta:
+      min(headroom=Q[1]-load1=10-5=5, floor=q2-q_lt[1,2]=5-3=2,
+          stock=I[t1]-I_min=2-0=2, q2-1=4) = 2
+    """
+    sets_ = {"clients": [1], "T": [1, 2]}
+    params_ = {
+        "requires_cold": defaultdict(lambda: True),
+        "q_lt": {(1, 1): 3, (1, 2): 3},
+        "Q": {1: 10, 2: 10},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 10,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 10,
+    }
+    route_result = {
+        "actual_qty": {(1, 1): 5, (1, 2): 5},
+        "depot_stock": {1: {"frigo": 2.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+            2: {2: {"path": [0, 1, 0], "qty": {"1": 5}}},
+        },
+    }
+
+    candidates = list(_delivery_shift_candidates(route_result, sets_, params_))
+    assert len(candidates) == 2
+    assert (1, 1, 2, 1, 2, 1, +1, 2) in candidates   # case A
+    assert (1, 2, 1, 2, 1, 1, -1, 2) in candidates   # case B
+
+
+def test_delivery_shift_candidates_blocks_frigo_nonfrigo_mismatch():
+    """Client served both periods, but requires_cold differs between them
+    (a real early-dispatch scenario where the coldness label itself changes
+    period to period) -- out of scope for this move (would need a
+    different truck TYPE, not just a different truck), must yield nothing."""
+    sets_ = {"clients": [1], "T": [1, 2]}
+    params_ = {
+        "requires_cold": {(1, 1): True, (1, 2): False},
+        "q_lt": {(1, 1): 1, (1, 2): 1},
+        "Q": {1: 10},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 10,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 10,
+    }
+    route_result = {
+        "actual_qty": {(1, 1): 5, (1, 2): 5},
+        "depot_stock": {1: {"frigo": 2.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+            2: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+        },
+    }
+    assert list(_delivery_shift_candidates(route_result, sets_, params_)) == []
+
+
+def test_delivery_shift_candidates_skips_when_not_served_both_periods():
+    """Client served at t=1 only (actual_qty at t=2 is 0) -- no existing
+    stop at t=2 to shift quantity to/from, must yield nothing (this move
+    never inserts a new stop)."""
+    sets_ = {"clients": [1], "T": [1, 2]}
+    params_ = {
+        "requires_cold": defaultdict(lambda: True),
+        "q_lt": {(1, 1): 1, (1, 2): 1},
+        "Q": {1: 10},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 10,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 10,
+    }
+    route_result = {
+        "actual_qty": {(1, 1): 5, (1, 2): 0},
+        "depot_stock": {1: {"frigo": 2.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+            2: {},
+        },
+    }
+    assert list(_delivery_shift_candidates(route_result, sets_, params_)) == []
+
+
+def test_repair_delivery_shift_finds_improvement_via_holding_cost():
+    """Client 1 served at t=1 (qty=3) and t=2 (qty=5), same truck 1, zero
+    distance (d=0 everywhere) so transport cost cannot move -- isolates the
+    holding-cost mechanism. h_O=1.0, depot_stock[1]["frigo"]=10.0,
+    I_O_min_frigo=0 (headroom for advancing), q_lt=1 at both periods (floor
+    room), Q=100 (capacity never binds).
+
+    Case B (advance, donor=t2, receiver=t1) is the only improving direction:
+    shipping MORE at t1 (earlier) lowers how long that stock sits, so
+    holding cost drops. Hand-verified max delta:
+      min(headroom=Q[1]-load1=100-3=97, floor=q2-q_lt[1,2]=5-1=4,
+          stock=I[t1]-I_min=10-0=10, q2-1=4) = 4
+    New actual_qty: t1 -> 3+4=7, t2 -> 5-4=1. depot_stock[1]["frigo"]
+    -> 10-4=6.0 (t2's stock, already 0.0, is untouched -- proven invariant
+    by the module docstring's cumulative-sum argument).
+
+    f1 = y1 (transport, 0 throughout, d=0) + y2 (holding, h_O*sum(stock))
+       + y3 (0, c1=c2=0). Before: y2 = 1.0*(10+0+0+0) = 10.0. After:
+    y2 = 1.0*(6+0+0+0) = 6.0. Delta = -4.0, matching sign*delta*h_O =
+    -1*4*1.0 = -4.0 exactly (no transport-cost term, since d=0).
+    """
+    sets_ = {"clients": [1], "T": [1, 2]}
+    d = defaultdict(lambda: 0.0)
+    params_ = {
+        "d": d,
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 1.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+        "requires_cold": defaultdict(lambda: True),
+        "frigo_trucks":  {1},
+        "Q":             {1: 100},
+        "q_lt":          {(1, 1): 1, (1, 2): 1},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 100,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 100,
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 0, 1, 1): 1, (0, 1, 2, 1): 1, (1, 0, 2, 1): 1},
+        "f": {(0, 1, 1, 1): 3, (1, 0, 1, 1): 0, (0, 1, 2, 1): 5, (1, 0, 2, 1): 0},
+        "depot_stock": {1: {"frigo": 10.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 0.0, (1, 2): 0.0},
+        "truck_assign": {(1, 1): 1, (1, 2): 1},
+        "actual_qty": {(1, 1): 3, (1, 2): 5},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 3}}},
+            2: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+        },
+        "tau_return": {1: 0.0, 2: 0.0},
+    }
+
+    orig_f1 = compute_f1(route_result, sets_, params_)
+    assert orig_f1 == 10.0
+
+    repaired = _repair_delivery_shift(route_result, sets_, params_)
+
+    assert repaired["actual_qty"][1, 1] == 7
+    assert repaired["actual_qty"][1, 2] == 1
+    assert repaired["depot_stock"][1]["frigo"] == 6.0
+    assert repaired["depot_stock"][2]["frigo"] == 0.0
+    assert repaired["routes_data"][1][1]["qty"] == {"1": 7}
+    assert repaired["routes_data"][2][1]["qty"] == {"1": 1}
+    assert compute_f1(repaired, sets_, params_) == 6.0
+
+
+# ── _repair_route_result(use_delivery_shift=...) ─────────────────────────
+
+def test_repair_route_result_delivery_shift_default_false_matches_baseline():
+    """use_delivery_shift is a keyword-only-by-convention parameter
+    defaulting to False -- calling without it must behave identically to
+    explicitly passing False, on the same rigged route this file's own
+    delivery-shift test uses."""
+    sets_ = {"clients": [1], "T": [1, 2]}
+    d = defaultdict(lambda: 0.0)
+    params_ = {
+        "d": d,
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 1.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+        "requires_cold": defaultdict(lambda: True),
+        "frigo_trucks":  {1},
+        "Q":             {1: 100},
+        "q_lt":          {(1, 1): 1, (1, 2): 1},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 100,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 100,
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 0, 1, 1): 1, (0, 1, 2, 1): 1, (1, 0, 2, 1): 1},
+        "f": {(0, 1, 1, 1): 3, (1, 0, 1, 1): 0, (0, 1, 2, 1): 5, (1, 0, 2, 1): 0},
+        "depot_stock": {1: {"frigo": 10.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 0.0, (1, 2): 0.0},
+        "truck_assign": {(1, 1): 1, (1, 2): 1},
+        "actual_qty": {(1, 1): 3, (1, 2): 5},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 3}}},
+            2: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+        },
+        "tau_return": {1: 0.0, 2: 0.0},
+    }
+
+    default_call   = _repair_route_result(route_result, sets_, params_, use_two_opt=False)
+    explicit_false = _repair_route_result(route_result, sets_, params_, use_two_opt=False,
+                                           use_delivery_shift=False)
+    assert default_call["actual_qty"] == explicit_false["actual_qty"]
+    assert default_call["actual_qty"] == route_result["actual_qty"]
+
+
+def test_repair_route_result_delivery_shift_true_applies_the_move():
+    """Same rigged route as test_repair_delivery_shift_finds_improvement_
+    via_holding_cost -- with use_delivery_shift=True passed through the
+    main entry point (_repair_route_result), the shift must be found and
+    applied. use_two_opt=False isolates the delivery-shift pass (both
+    routes here are single-client, 2-opt/Or-opt would find nothing anyway,
+    but disabling it keeps the test's intent explicit)."""
+    sets_ = {"clients": [1], "T": [1, 2]}
+    d = defaultdict(lambda: 0.0)
+    params_ = {
+        "d": d,
+        "v": {1: 1.0},
+        "s": {},
+        "c_ijk": defaultdict(lambda: 1.0),
+        "h_O": 1.0, "c1": 0.0, "c2": 0.0,
+        "ET": defaultdict(lambda: 0.0),
+        "LT": defaultdict(lambda: 1e9),
+        "requires_cold": defaultdict(lambda: True),
+        "frigo_trucks":  {1},
+        "Q":             {1: 100},
+        "q_lt":          {(1, 1): 1, (1, 2): 1},
+        "I_O_min_frigo": 0, "I_O_max_frigo": 100,
+        "I_O_min_nonfrigo": 0, "I_O_max_nonfrigo": 100,
+    }
+    route_result = {
+        "x": {(0, 1, 1, 1): 1, (1, 0, 1, 1): 1, (0, 1, 2, 1): 1, (1, 0, 2, 1): 1},
+        "f": {(0, 1, 1, 1): 3, (1, 0, 1, 1): 0, (0, 1, 2, 1): 5, (1, 0, 2, 1): 0},
+        "depot_stock": {1: {"frigo": 10.0, "nonfrigo": 0.0}, 2: {"frigo": 0.0, "nonfrigo": 0.0}},
+        "arrival_times": {(1, 1): 0.0, (1, 2): 0.0},
+        "truck_assign": {(1, 1): 1, (1, 2): 1},
+        "actual_qty": {(1, 1): 3, (1, 2): 5},
+        "routes_data": {
+            1: {1: {"path": [0, 1, 0], "qty": {"1": 3}}},
+            2: {1: {"path": [0, 1, 0], "qty": {"1": 5}}},
+        },
+        "tau_return": {1: 0.0, 2: 0.0},
+    }
+
+    repaired = _repair_route_result(route_result, sets_, params_, use_two_opt=False,
+                                     use_delivery_shift=True)
+
+    assert repaired["actual_qty"][1, 1] == 7
+    assert repaired["actual_qty"][1, 2] == 1
+    assert compute_f1(repaired, sets_, params_) == 6.0

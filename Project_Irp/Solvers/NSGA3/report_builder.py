@@ -41,7 +41,7 @@ def _build_delivery_rows(route_result, sets_, params_):
 def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
                       use_or_opt: bool = False, use_single_relocation: bool = False,
                       use_two_opt: bool = True, use_inter_route_relocate: bool = False,
-                      use_route_swap: bool = False):
+                      use_route_swap: bool = False, use_delivery_shift: bool = False):
     """Evaluate Pareto chromosomes and return the run data dict.
 
     Called after a fresh solver run and on every report refresh
@@ -74,6 +74,10 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
     use_route_swap (default False, only meaningful when repair=True):
     forwarded to _repair_route_result the same way -- see its own
     use_route_swap docstring.
+
+    use_delivery_shift (default False, only meaningful when repair=True):
+    forwarded to _repair_route_result the same way -- see its own
+    use_delivery_shift docstring.
     """
     solutions = []
     for i, chromosome in enumerate(pareto_X):
@@ -85,7 +89,8 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
                                                  use_single_relocation=use_single_relocation,
                                                  use_two_opt=use_two_opt,
                                                  use_inter_route_relocate=use_inter_route_relocate,
-                                                 use_route_swap=use_route_swap)
+                                                 use_route_swap=use_route_swap,
+                                                 use_delivery_shift=use_delivery_shift)
 
         f1         = compute_f1(route_result, sets_, params_)
         f2         = compute_f2(route_result, sets_, params_)

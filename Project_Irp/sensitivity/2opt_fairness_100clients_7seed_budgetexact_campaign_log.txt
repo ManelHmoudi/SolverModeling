@@ -1,0 +1,204 @@
+============================================================================================
+  2-OPT FAIRNESS CAMPAIGN -- NSGA-III vs QI-NSGA-III, 4 configurations
+============================================================================================
+  Instance : 100 clients | pop=200 | gen(NSGA-III)=300 | gen(QI-NSGA-III)=271 | noise_scale(QI)=0.0 | eliminate_duplicates(QI)=False | use_archive(NSGA-III)=False | compensate_dx_dtheta(QI)=False | use_or_opt(both)=False | use_single_relocation(both)=False | use_two_opt(both)=True | use_inter_route_relocate(both)=False | use_route_swap(both)=False | use_delivery_shift(both)=False
+  NOTE: asymmetric generation counts -- budget-matched run, not a max_gen-matched run. See module docstring.
+  Seeds    : [42, 137, 271, 491, 613, 733, 857]
+============================================================================================
+
+>>> seed=42
+  NSGA-III    search done in 385.2s | front=14 | n_eval=60000
+  QI-NSGA-III search done in 114.4s | front=93 | n_eval=108600
+    NSGA-III sans 2-opt      front=14  decode+repair=0.10s
+    NSGA-III avec 2-opt      front=13  decode+repair=1.43s
+    QI-NSGA-III sans 2-opt   front=93  decode+repair=0.60s
+    QI-NSGA-III avec 2-opt   front=43  decode+repair=5.33s
+
+>>> seed=137
+  NSGA-III    search done in 375.1s | front=28 | n_eval=60000
+  QI-NSGA-III search done in 113.9s | front=83 | n_eval=108600
+    NSGA-III sans 2-opt      front=28  decode+repair=0.18s
+    NSGA-III avec 2-opt      front=26  decode+repair=2.47s
+    QI-NSGA-III sans 2-opt   front=83  decode+repair=0.53s
+    QI-NSGA-III avec 2-opt   front=33  decode+repair=5.38s
+
+>>> seed=271
+  NSGA-III    search done in 383.7s | front=25 | n_eval=60000
+  QI-NSGA-III search done in 113.0s | front=126 | n_eval=108600
+    NSGA-III sans 2-opt      front=25  decode+repair=0.17s
+    NSGA-III avec 2-opt      front=18  decode+repair=2.33s
+    QI-NSGA-III sans 2-opt   front=126  decode+repair=0.92s
+    QI-NSGA-III avec 2-opt   front=52  decode+repair=7.93s
+
+>>> seed=491
+  NSGA-III    search done in 380.1s | front=27 | n_eval=60000
+  QI-NSGA-III search done in 113.3s | front=143 | n_eval=108600
+    NSGA-III sans 2-opt      front=27  decode+repair=0.18s
+    NSGA-III avec 2-opt      front=18  decode+repair=2.20s
+    QI-NSGA-III sans 2-opt   front=143  decode+repair=0.93s
+    QI-NSGA-III avec 2-opt   front=77  decode+repair=9.17s
+
+>>> seed=613
+  NSGA-III    search done in 377.6s | front=19 | n_eval=60000
+  QI-NSGA-III search done in 115.7s | front=39 | n_eval=108600
+    NSGA-III sans 2-opt      front=19  decode+repair=0.15s
+    NSGA-III avec 2-opt      front=13  decode+repair=1.43s
+    QI-NSGA-III sans 2-opt   front=39  decode+repair=0.25s
+    QI-NSGA-III avec 2-opt   front=31  decode+repair=2.33s
+
+>>> seed=733
+  NSGA-III    search done in 378.0s | front=23 | n_eval=60000
+  QI-NSGA-III search done in 114.7s | front=200 | n_eval=108600
+    NSGA-III sans 2-opt      front=23  decode+repair=0.15s
+    NSGA-III avec 2-opt      front=20  decode+repair=1.66s
+    QI-NSGA-III sans 2-opt   front=200  decode+repair=1.29s
+    QI-NSGA-III avec 2-opt   front=126  decode+repair=12.82s
+
+>>> seed=857
+  NSGA-III    search done in 376.3s | front=13 | n_eval=60000
+  QI-NSGA-III search done in 223.5s | front=119 | n_eval=108600
+    NSGA-III sans 2-opt      front=13  decode+repair=0.18s
+    NSGA-III avec 2-opt      front=11  decode+repair=1.83s
+    QI-NSGA-III sans 2-opt   front=119  decode+repair=1.16s
+    QI-NSGA-III avec 2-opt   front=61  decode+repair=11.80s
+
+Ideal global partage : [16145.0674   881.9733    71.6487  4565.2603]
+Nadir global partage  : [18524.7553  1066.6786    86.6252  4655.6712]
+Front de reference empirique (PF_ref, tous runs confondus) : 93 solutions non dominees (sur 1494 au total, 1468 apres deduplication) -- affichage seul ; chaque run est evalue contre PF_ref^(-r), reconstruit sans ses propres solutions (leave-one-run-out).
+
+--------------------------------------------------------------------------------------------
+  RESULTATS (ideal/nadir global partage entre les 4 configurations)
+--------------------------------------------------------------------------------------------
+
+  HV (^)
+    NSGA-III sans 2-opt      mean=0.291953  std=0.111501
+    NSGA-III avec 2-opt      mean=0.454862  std=0.135379
+    QI-NSGA-III sans 2-opt   mean=0.390409  std=0.076222
+    QI-NSGA-III avec 2-opt   mean=0.450647  std=0.091413
+
+  GD (v)
+    NSGA-III sans 2-opt      mean=0.295885  std=0.135329
+    NSGA-III avec 2-opt      mean=0.197575  std=0.089503
+    QI-NSGA-III sans 2-opt   mean=0.215708  std=0.066135
+    QI-NSGA-III avec 2-opt   mean=0.147623  std=0.044464
+
+  IGD (v)
+    NSGA-III sans 2-opt      mean=0.417755  std=0.136136
+    NSGA-III avec 2-opt      mean=0.263172  std=0.073951
+    QI-NSGA-III sans 2-opt   mean=0.263650  std=0.066390
+    QI-NSGA-III avec 2-opt   mean=0.227251  std=0.043458
+
+  Spacing (v)
+    NSGA-III sans 2-opt      mean=0.042820  std=0.007661
+    NSGA-III avec 2-opt      mean=0.046121  std=0.018260
+    QI-NSGA-III sans 2-opt   mean=0.021631  std=0.006016
+    QI-NSGA-III avec 2-opt   mean=0.032216  std=0.011725
+
+--------------------------------------------------------------------------------------------
+  Effet 2-opt (Wilcoxon apparie -- meme front initial, meme seed)
+--------------------------------------------------------------------------------------------
+
+  NSGA-III
+    HV       W=0.0  p=0.015625  -> significatif (p<0.05)
+    GD       W=0.0  p=0.015625  -> significatif (p<0.05)
+    IGD      W=0.0  p=0.015625  -> significatif (p<0.05)
+    Spacing  W=11.0  p=0.687500  -> non significatif
+
+  QI-NSGA-III
+    HV       W=1.0  p=0.031250  -> significatif (p<0.05)
+    GD       W=0.0  p=0.015625  -> significatif (p<0.05)
+    IGD      W=3.0  p=0.078125  -> non significatif
+    Spacing  W=0.0  p=0.015625  -> significatif (p<0.05)
+
+--------------------------------------------------------------------------------------------
+  Budget d'evaluations reel (max_gen egal ne veut PAS dire n_eval egal)
+--------------------------------------------------------------------------------------------
+    NSGA-III     n_eval  mean=60000  std=0
+    QI-NSGA-III  n_eval  mean=108600  std=0
+    ratio QI-NSGA-III / NSGA-III : 1.81x
+    -> la section "Effet moteur quantique" ci-dessous compare deux
+       moteurs a budget d'evaluations DIFFERENT (voir note dans le
+       docstring du module) -- lire les p-values de cette section
+       avec ce ratio en tete, surtout si QI-NSGA-III ressort meilleur.
+
+--------------------------------------------------------------------------------------------
+  Effet moteur quantique -- Wilcoxon signed-rank (PRIMAIRE, seeds appariees)
+--------------------------------------------------------------------------------------------
+  Les seeds sont communes aux deux algorithmes (seed r pour NSGA-III et seed r pour
+  QI-NSGA-III) -- les donnees sont structurellement appariees, donc Wilcoxon exploite
+  mieux le protocole que Mann-Whitney (qui reste ci-dessous comme verification de
+  robustesse). Chaque indicateur est aussi accompagne d'une taille d'effet (le p ne dit
+  QUE si l'ecart est distinguable du hasard, pas s'il est important en pratique) :
+  correlation biserielle de rang r (Wilcoxon), IC bootstrap 95% de la mediane des
+  differences appariees. Une correction de Holm (controle de l'erreur familiale sur les
+  4 indicateurs testes ensemble) est appliquee a la fin de chaque bloc.
+
+  Sans 2-opt des deux cotes (ecart brut)
+    HV       W=4.0  p=0.109375  -> non significatif  |  r_biserial=-0.714  |  mediane(NSGA-QI)=-0.1420  IC95%=[-0.1744, +0.0474]
+    GD       W=8.0  p=0.375000  -> non significatif  |  r_biserial=+0.429  |  mediane(NSGA-QI)=+0.0571  IC95%=[-0.1023, +0.1772]
+    IGD      W=3.0  p=0.078125  -> non significatif  |  r_biserial=+0.786  |  mediane(NSGA-QI)=+0.2014  IC95%=[-0.0367, +0.2286]
+    Spacing  W=0.0  p=0.015625  -> significatif (p<0.05)  |  r_biserial=+1.000  |  mediane(NSGA-QI)=+0.0180  IC95%=[+0.0173, +0.0251]
+    Correction de Holm (alpha=0.05, 4 indicateurs testes ensemble) :
+      Spacing  p=0.015625  seuil_ajuste=0.01250  -> NON significatif apres correction  <-- CHANGE DE VERDICT vs p brut
+      IGD      p=0.078125  seuil_ajuste=0.01667  -> NON significatif apres correction
+      HV       p=0.109375  seuil_ajuste=0.02500  -> NON significatif apres correction
+      GD       p=0.375000  seuil_ajuste=0.05000  -> NON significatif apres correction
+
+  Avec 2-opt des deux cotes (ecart equitable)
+    HV       W=12.0  p=0.812500  -> non significatif  |  r_biserial=-0.143  |  mediane(NSGA-QI)=-0.0054  IC95%=[-0.1411, +0.1193]
+    GD       W=8.0  p=0.375000  -> non significatif  |  r_biserial=+0.429  |  mediane(NSGA-QI)=+0.0628  IC95%=[-0.0640, +0.1197]
+    IGD      W=9.0  p=0.468750  -> non significatif  |  r_biserial=+0.357  |  mediane(NSGA-QI)=+0.0547  IC95%=[-0.0245, +0.1133]
+    Spacing  W=6.0  p=0.218750  -> non significatif  |  r_biserial=+0.571  |  mediane(NSGA-QI)=+0.0213  IC95%=[-0.0106, +0.0396]
+    Correction de Holm (alpha=0.05, 4 indicateurs testes ensemble) :
+      Spacing  p=0.218750  seuil_ajuste=0.01250  -> NON significatif apres correction
+      GD       p=0.375000  seuil_ajuste=0.01667  -> NON significatif apres correction
+      IGD      p=0.468750  seuil_ajuste=0.02500  -> NON significatif apres correction
+      HV       p=0.812500  seuil_ajuste=0.05000  -> NON significatif apres correction
+
+--------------------------------------------------------------------------------------------
+  Effet moteur quantique (Mann-Whitney U -- verification de robustesse)
+--------------------------------------------------------------------------------------------
+
+  Sans 2-opt des deux cotes (ecart brut)
+    HV       U=14.0  p=0.208625  -> non significatif  |  A12=0.286
+    GD       U=31.0  p=0.455711  -> non significatif  |  A12=0.633
+    IGD      U=41.0  p=0.037879  -> significatif (p<0.05)  |  A12=0.837
+    Spacing  U=49.0  p=0.000583  -> significatif (p<0.05)  |  A12=1.000
+
+  Avec 2-opt des deux cotes (ecart equitable)
+    HV       U=24.0  p=1.000000  -> non significatif  |  A12=0.490
+    GD       U=32.0  p=0.382867  -> non significatif  |  A12=0.653
+    IGD      U=32.0  p=0.382867  -> non significatif  |  A12=0.653
+    Spacing  U=38.0  p=0.097319  -> non significatif  |  A12=0.776
+
+--------------------------------------------------------------------------------------------
+  Test de dispersion (Brown-Forsythe -- egalite de variance/stabilite)
+--------------------------------------------------------------------------------------------
+  Un ecart-type plus petit NE prouve PAS, a lui seul, une stabilite
+  statistiquement differente -- il faut un test dedie a la dispersion,
+  pas seulement comparer deux std bruts. Brown-Forsythe = test de Levene
+  centre sur la MEDIANE (pas la moyenne), robuste si les distributions
+  ne sont pas normales -- H0 : les deux groupes ont la meme variance.
+
+  Sans 2-opt des deux cotes
+    HV       W=0.9610  p=0.346294  -> non significatif  (std NSGA-III=0.111501, std QI-NSGA-III=0.076222)
+    GD       W=1.2733  p=0.281205  -> non significatif  (std NSGA-III=0.135329, std QI-NSGA-III=0.066135)
+    IGD      W=2.1911  p=0.164582  -> non significatif  (std NSGA-III=0.136136, std QI-NSGA-III=0.066390)
+    Spacing  W=0.1895  p=0.671088  -> non significatif  (std NSGA-III=0.007661, std QI-NSGA-III=0.006016)
+
+  Avec 2-opt des deux cotes (comparaison equitable)
+    HV       W=0.6172  p=0.447340  -> non significatif  (std NSGA-III=0.135379, std QI-NSGA-III=0.091413)
+    GD       W=1.5129  p=0.242273  -> non significatif  (std NSGA-III=0.089503, std QI-NSGA-III=0.044464)
+    IGD      W=1.9206  p=0.191002  -> non significatif  (std NSGA-III=0.073951, std QI-NSGA-III=0.043458)
+    Spacing  W=0.7970  p=0.389547  -> non significatif  (std NSGA-III=0.018260, std QI-NSGA-III=0.011725)
+
+--------------------------------------------------------------------------------------------
+  Temps moyen par configuration (recherche + decodage/repair)
+--------------------------------------------------------------------------------------------
+    NSGA-III sans 2-opt      mean=379.6s
+    NSGA-III avec 2-opt      mean=381.3s
+    QI-NSGA-III sans 2-opt   mean=130.6s
+    QI-NSGA-III avec 2-opt   mean=137.6s
+
+============================================================================================
+
