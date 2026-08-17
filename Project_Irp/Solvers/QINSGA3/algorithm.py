@@ -1479,6 +1479,7 @@ def run_qinsga3(
     use_delivery_shift: bool = False,
     use_epsilon_archive: bool = False,
     epsilon_divisions: int = 20,
+    archive_final_front: bool = True,
     callback          = None,
     crowding_saturation_log: list | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1686,6 +1687,20 @@ def run_qinsga3(
     larger values give a finer grid (larger, less-aggressively-pruned
     archive); smaller values give a coarser grid (smaller archive, coarser
     front resolution).
+
+    archive_final_front (default True -- production default) selects
+    whether the RETURNED front comes from the external archive (trimmed to
+    pop_size) or from the final generation's own population, mirroring
+    NSGA-III's own default (no archive at all, last generation only) --
+    see Solvers/NSGA3/main.py's use_archive docstring for that side. Set to
+    False to test QI-NSGA-III without ANY archive-based final-front
+    reporting, for a like-for-like comparison against NSGA-III's own
+    default (neither algorithm using an archive to report its front).
+    Only affects what gets RETURNED at the end of the run -- the archive
+    itself keeps accumulating and keeps driving migration/guide diversity
+    during the search either way (that part is not a reporting artifact,
+    it is how QI-NSGA-III's own search works), so this is a narrower,
+    more surgical test than disabling the archive mechanism outright.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -2028,7 +2043,7 @@ def run_qinsga3(
             G_final[final_pareto_idx], qpop.theta[final_pareto_idx],
         )
 
-    if arch_X:
+    if archive_final_front and arch_X:
         arch_X_arr, arch_F_arr, _ = _crowding_trim(
             np.array(arch_X), np.array(arch_F), np.array(arch_theta), pop_size
         )

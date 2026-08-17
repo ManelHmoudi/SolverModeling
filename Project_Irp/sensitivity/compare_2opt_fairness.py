@@ -399,6 +399,7 @@ def run_comparison(
     use_inter_route_relocate: bool = False, use_route_swap: bool = False,
     use_delivery_shift: bool = False,
     use_epsilon_archive: bool = False, epsilon_divisions: int = 20,
+    qinsga3_archive_final_front: bool = True,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
@@ -518,7 +519,17 @@ def run_comparison(
     archive_campaign_log.txt). Pass --use-epsilon-archive 1 to enable it for
     both; --epsilon-divisions N (default 20) controls the grid resolution.
     Mutually exclusive with --use-archive in practice (epsilon takes
-    priority for NSGA-III if both are somehow set)."""
+    priority for NSGA-III if both are somehow set).
+
+    qinsga3_archive_final_front (default True -- production default):
+    set to False to make QI-NSGA-III report its final front from its own
+    last generation instead of its external archive, matching NSGA-III's
+    own default (no archive at all) -- a like-for-like "neither algorithm
+    uses an archive to report its front" comparison. Unlike --use-archive/
+    --use-epsilon-archive, this does NOT touch the archive's role in
+    migration/guide diversity DURING the search (see run_qinsga3's own
+    archive_final_front docstring) -- only what gets returned at the end.
+    Pass --qinsga3-archive-final-front 0 to disable it."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -537,7 +548,8 @@ def run_comparison(
           f"use_or_opt(both)={use_or_opt} | use_single_relocation(both)={use_single_relocation} | "
           f"use_two_opt(both)={use_two_opt} | use_inter_route_relocate(both)={use_inter_route_relocate} | "
           f"use_route_swap(both)={use_route_swap} | use_delivery_shift(both)={use_delivery_shift} | "
-          f"use_epsilon_archive(both)={use_epsilon_archive}(div={epsilon_divisions})")
+          f"use_epsilon_archive(both)={use_epsilon_archive}(div={epsilon_divisions}) | "
+          f"qinsga3_archive_final_front={qinsga3_archive_final_front}")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
@@ -575,6 +587,10 @@ def run_comparison(
     if use_epsilon_archive:
         print(f"  NOTE: use_epsilon_archive enabled for BOTH algorithms (divisions={epsilon_divisions}) -- "
               "not the production default for either. See module docstring.")
+    if not qinsga3_archive_final_front:
+        print("  NOTE: qinsga3_archive_final_front DISABLED -- QI-NSGA-III reports its final generation "
+              "instead of its archive, matching NSGA-III's own no-archive default. Not the production "
+              "default for QI-NSGA-III. See module docstring.")
     print(f"  Seeds    : {seeds}")
     print("=" * 92)
 
@@ -604,6 +620,7 @@ def run_comparison(
             compensate_dx_dtheta=compensate_dx_dtheta,
             use_epsilon_archive=use_epsilon_archive,
             epsilon_divisions=epsilon_divisions,
+            archive_final_front=qinsga3_archive_final_front,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
@@ -920,6 +937,14 @@ if __name__ == "__main__":
                         help="Grid resolution for --use-epsilon-archive (default 20 "
                              "boxes per objective's observed range). Only used when "
                              "--use-epsilon-archive 1.")
+    parser.add_argument("--qinsga3-archive-final-front", type=int, choices=[0, 1], default=1,
+                        help="Whether QI-NSGA-III's returned front comes from its external "
+                             "archive (1, production default) or its own last generation "
+                             "(0, matching NSGA-III's no-archive default) -- a like-for-like "
+                             "'neither algorithm uses an archive to report its front' test. "
+                             "Does not touch the archive's role in migration/guide diversity "
+                             "during the search. See the module docstring's "
+                             "qinsga3_archive_final_front note.")
     args = parser.parse_args()
     run_comparison(args.instance, args.seeds, args.gen, args.pop,
                     args.qinsga3_gen, args.noise_scale,
@@ -928,4 +953,5 @@ if __name__ == "__main__":
                     bool(args.use_single_relocation), bool(args.use_two_opt),
                     bool(args.use_inter_route_relocate), bool(args.use_route_swap),
                     bool(args.use_delivery_shift),
-                    bool(args.use_epsilon_archive), args.epsilon_divisions)
+                    bool(args.use_epsilon_archive), args.epsilon_divisions,
+                    bool(args.qinsga3_archive_final_front))
