@@ -144,10 +144,10 @@ def _build_g_constraints(route_result: dict, sets_: dict, params_: dict) -> list
 def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
                            use_or_opt: bool = False,
                            use_single_relocation: bool = False,
-                           use_two_opt: bool = True,
+                           use_two_opt: bool = False,
                            use_inter_route_relocate: bool = False,
                            use_route_swap: bool = False,
-                           use_delivery_shift: bool = False) -> tuple[np.ndarray, np.ndarray]:
+                           use_delivery_shift: bool = True) -> tuple[np.ndarray, np.ndarray]:
     """Remedy G: decode + repair (2-opt, Baldwinian -- see repair.py) +
     evaluate, replacing IRPProblem._evaluate for QINSGA3 only, when
     use_route_repair=True. See
@@ -204,10 +204,10 @@ def _repair_pareto_front(
     pareto_X: np.ndarray, sets_: dict, params_: dict,
     use_or_opt: bool = False,
     use_single_relocation: bool = False,
-    use_two_opt: bool = True,
+    use_two_opt: bool = False,
     use_inter_route_relocate: bool = False,
     use_route_swap: bool = False,
-    use_delivery_shift: bool = False,
+    use_delivery_shift: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Post-processing variant of remedy G, for run_qinsga3's
     repair_final_front parameter: repairs each front chromosome's decoded
@@ -1473,13 +1473,14 @@ def run_qinsga3(
     compensate_dx_dtheta: bool = False,
     use_or_opt:       bool  = False,
     use_single_relocation: bool = False,
-    use_two_opt:      bool  = True,
+    use_two_opt:      bool  = False,
     use_inter_route_relocate: bool = False,
     use_route_swap:   bool  = False,
-    use_delivery_shift: bool = False,
+    use_delivery_shift: bool = True,
     use_epsilon_archive: bool = False,
     epsilon_divisions: int = 20,
     archive_final_front: bool = True,
+    max_evals:        int | None = None,
     callback          = None,
     crowding_saturation_log: list | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1701,6 +1702,46 @@ def run_qinsga3(
     during the search either way (that part is not a reporting artifact,
     it is how QI-NSGA-III's own search works), so this is a narrower,
     more surgical test than disabling the archive mechanism outright.
+
+    max_evals (default None -- ablation-only, for budget-controlled
+    comparisons against NSGA-III): a HARD cap on the real number of
+    objective evaluations, checked at the end of every generation (after
+    that generation's own cost is known) -- the search stops as soon as
+    the running total reaches max_evals, rather than running a
+    pre-calibrated max_gen chosen offline to average out to a target
+    total. This is deliberately NOT the same thing as picking a fixed
+    generation count that happens to average to the right total (e.g. the
+    gen=271 calibration used elsewhere in this project for the 100-client
+    instance): because QI-NSGA-III's real per-generation cost is uneven
+    (~pop_size on a cache-hit generation, ~2*pop_size on a generation
+    where the cache was invalidated by archive migration or niche-
+    recentring reset -- see _prev_cache_valid above), a fixed generation
+    count found by calibration on one instance/config is not guaranteed
+    to land on the same total elsewhere, and worse, comparing two runs at
+    "the same generation count" can silently compare runs at different
+    points in their own migration cycle. A hard evaluation cap sidesteps
+    both problems and needs no recalibration per instance.
+
+    Deliberately does NOT touch migration or niche-recentring themselves
+    (no attempt is made to suppress or reschedule them to hit a round
+    number) -- both are intrinsic parts of QI-NSGA-III's own design, and
+    disabling them just to hit an evaluation target would mean evaluating
+    a different, artificially crippled algorithm instead of the one this
+    project studies. The computational budget is controlled purely at the
+    stopping-criterion level, exactly like the FE_max convention this
+    ablation is designed to match; QI-NSGA-III's own internal mechanisms
+    are left completely untouched.
+
+    Pass a generous max_gen alongside max_evals (large enough that the
+    evaluation cap is what actually stops the run, not max_gen itself --
+    the search still stops at whichever limit is hit first). When
+    max_evals is set, the final post-loop measurement pass also prefers
+    the last generation's own cached survived F/G over a fresh evaluation
+    when the cache is valid (same _prev_cache_valid condition as the
+    in-loop parent-population reuse), so the reported total does not
+    overshoot max_evals by a further pop_size for no reason; this does
+    NOT change behaviour when max_evals is None (default), which always
+    re-evaluates the final population exactly as before.
     """
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
     from Solvers.NSGA3.problem import IRPProblem
@@ -1799,8 +1840,12 @@ def run_qinsga3(
         initargs=(sets_, params_),
     ) as pool:
 
+        _n_eval_used = 0
+
         def _eval_batch(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             """Evaluate all individuals in X in parallel across worker processes."""
+            nonlocal _n_eval_used
+            _n_eval_used += len(X)
             worker_fn = _worker_eval_repaired if use_route_repair else _worker_eval
             results = list(pool.map(worker_fn, list(X), chunksize=chunksize))
             return (
@@ -2029,13 +2074,33 @@ def run_qinsga3(
             if callback is not None and (gen % 10 == 0 or gen == max_gen - 1):
                 callback(gen, F_offspring, G_offspring, off_pareto_idx)
 
+            # Hard evaluation-budget stop (max_evals is not None): checked
+            # here, at the natural end of the generation, once this
+            # generation's own real cost is fully known -- see max_evals's
+            # own docstring above for why this is preferred over a
+            # pre-calibrated max_gen.
+            if max_evals is not None and _n_eval_used >= max_evals:
+                break
+
         # Final measurement after all generations. Archive update must only see
         # this generation's own Pareto front (rank 0), not the whole population —
         # otherwise mutually-dominated individuals from the same batch can both
         # enter the archive, since _archive_update only screens new candidates
         # against each other for exact duplicates, never for dominance.
-        X_final      = qpop.measure()
-        F_final, G_final = _eval_batch(X_final)
+        #
+        # In max_evals mode, reuse the last generation's own cached survived
+        # F/G (same _prev_cache_valid condition the in-loop parent reuse
+        # uses) when valid, instead of an unconditional fresh evaluation --
+        # qpop.theta here is exactly the post-survival theta that cache was
+        # computed from, so re-measuring it would just recompute already-
+        # known numbers and overshoot the budget by another pop_size for no
+        # reason. Default behaviour (max_evals=None) is untouched: always a
+        # fresh evaluation, exactly as before.
+        X_final = qpop.measure()
+        if max_evals is not None and _prev_cache_valid and noise_scale == 0.0:
+            F_final, G_final = _prev_survived_F, _prev_survived_G
+        else:
+            F_final, G_final = _eval_batch(X_final)
         F_pen_final      = _penalised_F(F_final, G_final)
         final_pareto_idx = sorter.do(F_pen_final)[0]
         _do_archive_update(

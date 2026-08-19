@@ -275,7 +275,8 @@ def test_repair_route_result_improves_f1_via_two_opt_swap():
         "tau_return": {1: 12.0},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_)
+    repaired = _repair_route_result(route_result, sets_, params_,
+                                     use_two_opt=True, use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 2, 1, 3, 0]
     assert compute_f1(repaired, sets_, params_) < compute_f1(route_result, sets_, params_)
@@ -313,7 +314,8 @@ def test_repair_route_result_use_two_opt_false_disables_2opt_scan():
         "tau_return": {1: 12.0},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_, use_two_opt=False)
+    repaired = _repair_route_result(route_result, sets_, params_,
+                                     use_two_opt=False, use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 3, 0]
     assert compute_f1(repaired, sets_, params_) == compute_f1(route_result, sets_, params_)
@@ -356,7 +358,8 @@ def test_repair_route_result_rejects_swap_that_would_increase_tau_return():
         "tau_return": {1: 3.0},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_)
+    repaired = _repair_route_result(route_result, sets_, params_,
+                                     use_two_opt=True, use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 0]
 
@@ -387,7 +390,8 @@ def test_repair_route_result_leaves_already_optimal_route_unchanged():
         "tau_return": {1: 3.0},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_)
+    repaired = _repair_route_result(route_result, sets_, params_,
+                                     use_two_opt=True, use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 0]
 
@@ -436,10 +440,12 @@ def test_repair_route_result_or_opt_finds_improvement_two_opt_alone_cannot():
         "tau_return": {1: 32.0},
     }
 
-    repaired_two_opt_only = _repair_route_result(route_result, sets_, params_, use_or_opt=False)
+    repaired_two_opt_only = _repair_route_result(route_result, sets_, params_, use_or_opt=False,
+                                                  use_two_opt=True, use_delivery_shift=False)
     assert repaired_two_opt_only["routes_data"][1][1]["path"] == [0, 1, 2, 3, 4, 0]
 
-    repaired_with_or_opt = _repair_route_result(route_result, sets_, params_, use_or_opt=True)
+    repaired_with_or_opt = _repair_route_result(route_result, sets_, params_, use_or_opt=True,
+                                                 use_two_opt=True, use_delivery_shift=False)
     assert repaired_with_or_opt["routes_data"][1][1]["path"] == [0, 3, 4, 1, 2, 0]
     assert compute_f1(repaired_with_or_opt, sets_, params_) < compute_f1(route_result, sets_, params_)
 
@@ -475,8 +481,10 @@ def test_repair_route_result_or_opt_default_false_matches_two_opt_only():
         "tau_return": {1: 12.0},
     }
 
-    default_call    = _repair_route_result(route_result, sets_, params_)
-    explicit_false  = _repair_route_result(route_result, sets_, params_, use_or_opt=False)
+    default_call    = _repair_route_result(route_result, sets_, params_,
+                                            use_two_opt=True, use_delivery_shift=False)
+    explicit_false  = _repair_route_result(route_result, sets_, params_, use_or_opt=False,
+                                            use_two_opt=True, use_delivery_shift=False)
     assert default_call["routes_data"][1][1]["path"] == explicit_false["routes_data"][1][1]["path"]
 
 
@@ -527,7 +535,8 @@ def test_repair_route_result_single_relocation_finds_valid_improvement():
     }
 
     repaired = _repair_route_result(route_result, sets_, params_,
-                                     use_or_opt=False, use_single_relocation=True)
+                                     use_or_opt=False, use_single_relocation=True,
+                                     use_two_opt=True, use_delivery_shift=False)
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 2, 4, 5, 3, 0]
     assert compute_f1(repaired, sets_, params_) < compute_f1(route_result, sets_, params_)
 
@@ -563,8 +572,10 @@ def test_repair_route_result_single_relocation_default_false_matches_two_opt_onl
         "tau_return": {1: 12.0},
     }
 
-    default_call   = _repair_route_result(route_result, sets_, params_)
-    explicit_false = _repair_route_result(route_result, sets_, params_, use_single_relocation=False)
+    default_call   = _repair_route_result(route_result, sets_, params_,
+                                           use_two_opt=True, use_delivery_shift=False)
+    explicit_false = _repair_route_result(route_result, sets_, params_, use_single_relocation=False,
+                                           use_two_opt=True, use_delivery_shift=False)
     assert default_call["routes_data"][1][1]["path"] == explicit_false["routes_data"][1][1]["path"]
 
 
@@ -627,7 +638,8 @@ def test_route_f1_contribution_delta_matches_compute_f1_delta():
         "tau_return": {1: 12.0},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_)
+    repaired = _repair_route_result(route_result, sets_, params_,
+                                     use_two_opt=True, use_delivery_shift=False)
     assert repaired["routes_data"][1][1]["path"] == [0, 2, 1, 3, 0]   # sanity: repair still fires
     assert repaired["routes_data"][1][2]["path"] == [0, 4, 0]          # sanity: route 2 untouched
 
@@ -921,8 +933,9 @@ def test_repair_route_result_inter_route_relocate_default_false_matches_baseline
         "tau_return": {1: 1e9},
     }
 
-    default_call   = _repair_route_result(route_result, sets_, params_)
-    explicit_false = _repair_route_result(route_result, sets_, params_, use_inter_route_relocate=False)
+    default_call   = _repair_route_result(route_result, sets_, params_, use_delivery_shift=False)
+    explicit_false = _repair_route_result(route_result, sets_, params_, use_inter_route_relocate=False,
+                                           use_delivery_shift=False)
     assert default_call["routes_data"][1] == explicit_false["routes_data"][1]
 
 
@@ -960,7 +973,8 @@ def test_repair_route_result_inter_route_relocate_true_applies_the_move():
         "tau_return": {1: 1e9},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_, use_inter_route_relocate=True)
+    repaired = _repair_route_result(route_result, sets_, params_, use_inter_route_relocate=True,
+                                     use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 0]
     assert repaired["routes_data"][1][2]["path"] == [0, 3, 2, 0]
@@ -1173,8 +1187,9 @@ def test_repair_route_result_route_swap_default_false_matches_baseline():
         "tau_return": {1: 1e9},
     }
 
-    default_call   = _repair_route_result(route_result, sets_, params_)
-    explicit_false = _repair_route_result(route_result, sets_, params_, use_route_swap=False)
+    default_call   = _repair_route_result(route_result, sets_, params_, use_delivery_shift=False)
+    explicit_false = _repair_route_result(route_result, sets_, params_, use_route_swap=False,
+                                           use_delivery_shift=False)
     assert default_call["routes_data"][1] == explicit_false["routes_data"][1]
 
 
@@ -1211,7 +1226,8 @@ def test_repair_route_result_route_swap_true_applies_the_move():
         "tau_return": {1: 1e9},
     }
 
-    repaired = _repair_route_result(route_result, sets_, params_, use_route_swap=True)
+    repaired = _repair_route_result(route_result, sets_, params_, use_route_swap=True,
+                                     use_delivery_shift=False)
 
     assert repaired["routes_data"][1][1]["path"] == [0, 1, 3, 0]
     assert repaired["routes_data"][1][2]["path"] == [0, 2, 0]
@@ -1371,11 +1387,13 @@ def test_repair_delivery_shift_finds_improvement_via_holding_cost():
 
 # ── _repair_route_result(use_delivery_shift=...) ─────────────────────────
 
-def test_repair_route_result_delivery_shift_default_false_matches_baseline():
-    """use_delivery_shift is a keyword-only-by-convention parameter
-    defaulting to False -- calling without it must behave identically to
-    explicitly passing False, on the same rigged route this file's own
-    delivery-shift test uses."""
+def test_repair_route_result_delivery_shift_default_true_matches_explicit():
+    """use_delivery_shift defaults to True (production default, matching
+    the validated delivery-shift-only campaign -- see
+    Livrables_Prof/IRP_100clients_RESULTATS_DELIVERYSHIFT.html) -- calling
+    without it must behave identically to explicitly passing True, on the
+    same rigged route this file's own delivery-shift test uses, and must
+    actually apply the shift (not silently no-op)."""
     sets_ = {"clients": [1], "T": [1, 2]}
     d = defaultdict(lambda: 0.0)
     params_ = {
@@ -1407,11 +1425,12 @@ def test_repair_route_result_delivery_shift_default_false_matches_baseline():
         "tau_return": {1: 0.0, 2: 0.0},
     }
 
-    default_call   = _repair_route_result(route_result, sets_, params_, use_two_opt=False)
-    explicit_false = _repair_route_result(route_result, sets_, params_, use_two_opt=False,
-                                           use_delivery_shift=False)
-    assert default_call["actual_qty"] == explicit_false["actual_qty"]
-    assert default_call["actual_qty"] == route_result["actual_qty"]
+    default_call  = _repair_route_result(route_result, sets_, params_, use_two_opt=False)
+    explicit_true = _repair_route_result(route_result, sets_, params_, use_two_opt=False,
+                                          use_delivery_shift=True)
+    assert default_call["actual_qty"] == explicit_true["actual_qty"]
+    assert default_call["actual_qty"][1, 1] == 7
+    assert default_call["actual_qty"][1, 2] == 1
 
 
 def test_repair_route_result_delivery_shift_true_applies_the_move():

@@ -40,8 +40,8 @@ def _build_delivery_rows(route_result, sets_, params_):
 
 def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
                       use_or_opt: bool = False, use_single_relocation: bool = False,
-                      use_two_opt: bool = True, use_inter_route_relocate: bool = False,
-                      use_route_swap: bool = False, use_delivery_shift: bool = False):
+                      use_two_opt: bool = False, use_inter_route_relocate: bool = False,
+                      use_route_swap: bool = False, use_delivery_shift: bool = True):
     """Evaluate Pareto chromosomes and return the run data dict.
 
     Called after a fresh solver run and on every report refresh

@@ -400,6 +400,7 @@ def run_comparison(
     use_delivery_shift: bool = False,
     use_epsilon_archive: bool = False, epsilon_divisions: int = 20,
     qinsga3_archive_final_front: bool = True,
+    qinsga3_max_evals: int | None = None,
 ) -> None:
     """qinsga3_gen (default None = same as max_gen): lets QI-NSGA-III run at a
     DIFFERENT generation count than NSGA-III, specifically to match real
@@ -529,7 +530,22 @@ def run_comparison(
     --use-epsilon-archive, this does NOT touch the archive's role in
     migration/guide diversity DURING the search (see run_qinsga3's own
     archive_final_front docstring) -- only what gets returned at the end.
-    Pass --qinsga3-archive-final-front 0 to disable it."""
+    Pass --qinsga3-archive-final-front 0 to disable it.
+
+    qinsga3_max_evals (default None): hard evaluation-budget cap for
+    QI-NSGA-III, checked at the end of every generation -- the search
+    stops as soon as its real evaluation count reaches this number, rather
+    than running a pre-calibrated qinsga3_gen chosen to average out to a
+    target total. See Solvers/QINSGA3/algorithm.py's run_qinsga3
+    max_evals docstring for the full rationale (uneven per-generation cost
+    from archive migration makes a fixed generation count fragile across
+    instances; a hard cap needs no recalibration and does not touch
+    migration/niche-recentring themselves). When set, qinsga3_gen is used
+    only as a generous upper bound on generations (the evaluation cap is
+    what actually stops the run) -- pass --qinsga3-gen with a large value
+    (e.g. 1000) alongside --qinsga3-max-evals so max_gen itself is never
+    the binding constraint. Pass --qinsga3-max-evals 60000 to match
+    NSGA-III's own real evaluation count at effective_pop*max_gen."""
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
@@ -549,10 +565,15 @@ def run_comparison(
           f"use_two_opt(both)={use_two_opt} | use_inter_route_relocate(both)={use_inter_route_relocate} | "
           f"use_route_swap(both)={use_route_swap} | use_delivery_shift(both)={use_delivery_shift} | "
           f"use_epsilon_archive(both)={use_epsilon_archive}(div={epsilon_divisions}) | "
-          f"qinsga3_archive_final_front={qinsga3_archive_final_front}")
+          f"qinsga3_archive_final_front={qinsga3_archive_final_front} | "
+          f"qinsga3_max_evals={qinsga3_max_evals}")
     if qinsga3_gen != max_gen:
         print("  NOTE: asymmetric generation counts -- budget-matched run, "
               "not a max_gen-matched run. See module docstring.")
+    if qinsga3_max_evals is not None:
+        print(f"  NOTE: qinsga3_max_evals={qinsga3_max_evals} -- QI-NSGA-III stops as soon as its "
+              "real evaluation count reaches this hard cap, not at a pre-calibrated generation "
+              "count. See module docstring.")
     if noise_scale != 0.0:
         print("  NOTE: noise_scale != production default (0.0) -- measurement-noise "
               "ablation run, not a production-parameter run. See module docstring.")
@@ -621,6 +642,7 @@ def run_comparison(
             use_epsilon_archive=use_epsilon_archive,
             epsilon_divisions=epsilon_divisions,
             archive_final_front=qinsga3_archive_final_front,
+            max_evals=qinsga3_max_evals,
         )
         t_qinsga3 = time.time() - t0
         n_qi = len(X_qinsga3) if X_qinsga3 is not None else 0
@@ -852,7 +874,7 @@ if __name__ == "__main__":
         description="Campagne d'equite 2-opt (4 configurations) -- NSGA-III vs QI-NSGA-III"
     )
     parser.add_argument("--instance", default="100",
-                        choices=["3", "5", "15", "25", "30", "40", "100"])
+                        choices=["3", "5", "15", "25", "30", "40", "100", "150"])
     parser.add_argument("--seeds", type=int, nargs="+", default=DEFAULT_SEEDS)
     parser.add_argument("--gen", type=int, default=300)
     parser.add_argument("--pop", type=int, default=POP_SIZE)
@@ -945,6 +967,13 @@ if __name__ == "__main__":
                              "Does not touch the archive's role in migration/guide diversity "
                              "during the search. See the module docstring's "
                              "qinsga3_archive_final_front note.")
+    parser.add_argument("--qinsga3-max-evals", type=int, default=None,
+                        help="Hard cap on QI-NSGA-III's real evaluation count -- the search "
+                             "stops as soon as it's reached, instead of running a pre-"
+                             "calibrated --qinsga3-gen. Pass a generous --qinsga3-gen "
+                             "alongside this (e.g. 1000) so the evaluation cap, not max_gen, "
+                             "is what actually stops the run. See the module docstring's "
+                             "qinsga3_max_evals note.")
     args = parser.parse_args()
     run_comparison(args.instance, args.seeds, args.gen, args.pop,
                     args.qinsga3_gen, args.noise_scale,
@@ -954,4 +983,4 @@ if __name__ == "__main__":
                     bool(args.use_inter_route_relocate), bool(args.use_route_swap),
                     bool(args.use_delivery_shift),
                     bool(args.use_epsilon_archive), args.epsilon_divisions,
-                    bool(args.qinsga3_archive_final_front))
+                    bool(args.qinsga3_archive_final_front), args.qinsga3_max_evals)

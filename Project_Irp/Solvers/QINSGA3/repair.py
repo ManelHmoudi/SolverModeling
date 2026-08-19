@@ -304,10 +304,10 @@ _OR_OPT_WINDOW = 8   # mirrors _TWO_OPT_WINDOW's own bound and rationale,
 def _repair_route_result(route_result: dict, sets_: dict, params_: dict,
                           use_or_opt: bool = False,
                           use_single_relocation: bool = False,
-                          use_two_opt: bool = True,
+                          use_two_opt: bool = False,
                           use_inter_route_relocate: bool = False,
                           use_route_swap: bool = False,
-                          use_delivery_shift: bool = False) -> dict:
+                          use_delivery_shift: bool = True) -> dict:
     """Best-improvement local search per route: for every truck's path
     longer than 3 nodes (more than 1 client), repeatedly scans every 2-opt
     candidate swap in the window (plus every Or-opt segment-relocation
