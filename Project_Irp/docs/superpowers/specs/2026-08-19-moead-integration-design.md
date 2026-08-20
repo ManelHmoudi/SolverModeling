@@ -309,16 +309,45 @@ the end-to-end smoke test.
 
 ## Comparison script (`sensitivity/`)
 
-New `sensitivity/compare_qinsga3_vs_moead.py`, structurally mirroring
-`sensitivity/compare_2opt_fairness.py`'s statistical machinery (paired
-Wilcoxon primary + effect sizes + bootstrap CI, Mann-Whitney secondary,
-Brown-Forsythe dispersion, Holm-Bonferroni correction across HV/GD/IGD/
-Spacing, empirical LORO reference front) but comparing QI-NSGA-III against
-MOEA/D instead of NSGA-III — a new, independent script rather than a
-generalization of the existing one, consistent with this project's
-existing pattern of one dedicated script per pairwise comparison.
-Exact CLI surface (which ablation flags, if any, get exposed) is left to
-the implementation plan.
+New `sensitivity/compare_qinsga3_vs_moead.py`, statistically closer to
+`sensitivity/compare_qinsga3_vs_nsga3.py` than to
+`compare_2opt_fairness.py` (corrected during plan-writing — see below),
+but running fresh searches for both algorithms in one script rather than
+reading two separately-produced chromosome caches. Reuses
+`compare_2opt_fairness.py`'s pure statistical helper functions by direct
+import (`_stats`, `_wilcoxon_rank_biserial`, `_vargha_delaney_a12`,
+`_bootstrap_median_diff_ci`, `_holm_bonferroni`, `_config_F`) rather than
+duplicating that math — none of them depend on anything NSGA-III-specific,
+so importing is consistent with the Non-goals section's "no changes to
+compare_2opt_fairness.py", and keeps both scripts' statistics in sync
+automatically.
+
+**Primary test: Mann-Whitney U (independent samples), not paired
+Wilcoxon.** `compare_2opt_fairness.py`'s paired Wilcoxon section is valid
+specifically because its two configs decode the *same* chromosome array
+(2-opt applied or not) — a genuine shared artifact. QI-NSGA-III and
+MOEA/D share no such artifact: each seed drives two independent search
+trajectories (different population representations, different
+operators), so pairing runs by seed index would not remove any real
+correlation, only lose power relative to treating them as independent
+samples. `compare_qinsga3_vs_nsga3.py` (the project's existing
+QI-NSGA-III-vs-NSGA-III "engine effect" script) already uses Mann-Whitney
+for exactly this reason — this new script follows that established
+precedent as its primary test, matching Vargha-Delaney A12 as the primary
+effect size. A same-seed-index paired Wilcoxon is still computed and
+reported as a secondary, clearly-labeled view (some published MOEA
+comparisons block by seed for variance reduction even without a literal
+shared artifact), but the write-up must not present it as the headline
+result. Brown-Forsythe dispersion and Holm-Bonferroni correction across
+HV/GD/IGD/Spacing apply to the primary (Mann-Whitney) test, matching
+`compare_qinsga3_vs_nsga3.py`'s own indicator set. Empirical LORO
+reference front for GD/IGD is reused unchanged (`Solvers/NSGA3/metrics.py`
+— every algorithm in this project already shares this).
+
+A new, independent script rather than a generalization of an existing
+one, consistent with this project's existing pattern of one dedicated
+script per pairwise comparison. Exact CLI surface (which ablation flags,
+if any, get exposed) is left to the implementation plan.
 
 ## Benchmark integration (`Validation/Benchmarking/`)
 
