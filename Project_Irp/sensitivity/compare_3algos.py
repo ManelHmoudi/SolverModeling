@@ -60,6 +60,29 @@ NSGA-III's and QI-NSGA-III's own pop_size=200. This is a structural
 property of MOEA/D (pymoo's own MOEAD._setup(): one individual per
 decomposed subproblem), not a tuning choice made here.
 
+DELIBERATE, DOCUMENTED LIMITATION -- evaluation budget is NOT equalized
+across the three algorithms. All three share the same --gen (generation
+count), not the same total evaluation count: NSGA-III and QI-NSGA-III
+evaluate ~pop_size (~200) individuals per generation, while MOEA/D
+evaluates exactly one offspring per subproblem per generation
+(len(ref_dirs) = 165) -- at gen=300 this is roughly 60000 evaluations for
+NSGA-III, ~66000 for QI-NSGA-III (its own external archive adds real
+evaluations beyond the base population -- see Solvers/QINSGA3/README.md),
+but only ~49500 for MOEA/D, about 17.5% fewer than NSGA-III. This mirrors
+the exact same equal-generations-vs-equal-evaluations question already
+investigated for QI-NSGA-III vs NSGA-III on this project's 100-client
+instance (see sensitivity/compare_2opt_fairness.py's own NOTE on
+evaluation budget, and its --qinsga3-gen calibration mechanism) --
+resolved there in favour of measuring both under BOTH conventions. Here,
+the explicit choice (confirmed with the user rather than assumed) is to
+keep generations equal across all three and read results with this bias
+in mind, not to calibrate MOEA/D's own generation count upward to match
+evaluation totals -- report any MOEA/D-unfavourable result from this
+script alongside this caveat, the same way n_neighbors/
+prob_neighbor_mating being left at pymoo's defaults (never IRP-tuned,
+unlike NSGA-III's/QI-NSGA-III's own operators) is already flagged as a
+limitation rather than silently absorbed into the headline numbers.
+
 Usage:
     python -m sensitivity.compare_3algos --gen 5 --seeds 42            # smoke
     python -m sensitivity.compare_3algos --seeds 42 137 271 --gen 300  # real (3-seed)
@@ -190,23 +213,27 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
     print("=" * 88)
 
     per_seed_F = {algo: {} for algo in _ALGOS}
+    runtimes   = {algo: [] for algo in _ALGOS}
     for seed in seeds:
         print(f"\n--- seed={seed} ---")
 
         t0 = time.time()
         n3_X = _run_nsga3_once(sets_, params_, ref_dirs, max_gen, seed)
+        elapsed_n3 = time.time() - t0
         n_n3 = 0 if n3_X is None else len(n3_X)
-        print(f"  NSGA-III   : {n_n3} solutions en {time.time() - t0:.1f}s")
+        print(f"  NSGA-III   : {n_n3} solutions en {elapsed_n3:.1f}s")
 
         t0 = time.time()
         qi_X = _run_qinsga3_once(sets_, params_, ref_dirs, max_gen, seed)
+        elapsed_qi = time.time() - t0
         n_qi = 0 if qi_X is None else len(qi_X)
-        print(f"  QI-NSGA-III: {n_qi} solutions en {time.time() - t0:.1f}s")
+        print(f"  QI-NSGA-III: {n_qi} solutions en {elapsed_qi:.1f}s")
 
         t0 = time.time()
         mo_X = _run_moead_once(problem, ref_dirs, max_gen, seed)
+        elapsed_mo = time.time() - t0
         n_mo = 0 if mo_X is None else len(mo_X)
-        print(f"  MOEA/D     : {n_mo} solutions en {time.time() - t0:.1f}s")
+        print(f"  MOEA/D     : {n_mo} solutions en {elapsed_mo:.1f}s")
 
         # Any of the 3 searches can legitimately return None/empty (zero
         # feasible solutions at this seed, a realistic outcome given the
@@ -231,6 +258,9 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
         per_seed_F["MOEA/D"][seed] = _config_F(
             mo_X, sets_, params_, repair=True, use_two_opt=False, use_delivery_shift=True,
         )
+        runtimes["NSGA-III"].append(elapsed_n3)
+        runtimes["QI-NSGA-III"].append(elapsed_qi)
+        runtimes["MOEA/D"].append(elapsed_mo)
 
     all_F = np.vstack([F for algo in per_seed_F.values() for F in algo.values()])
     g_ideal, g_nadir = all_F.min(axis=0), all_F.max(axis=0)
@@ -248,6 +278,25 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
             q = compute_pareto_metrics(F_run, g_ideal, g_nadir, reference_front=pf_ref)
             for ind in _INDICATORS:
                 quality[algo][ind].append(q[ind])
+
+    print(f"\n{'-' * 88}")
+    print("  TEMPS DE CALCUL -- moyenne +/- ecart-type par algorithme, par run (secondes)")
+    print("  (informatif -- pas un indicateur de qualite de front ; budgets d'evaluations")
+    print("   non egalises entre les 3 algos, voir la NOTE dans l'entete du module)")
+    print(f"{'-' * 88}")
+    for algo in _ALGOS:
+        s = _stats(runtimes[algo])
+        print(f"    {algo:<12} mean={s['mean']:.1f}s  std={s['std']:.1f}s")
+    rt_pvalues = {}
+    for a, b in _PAIRS:
+        a_t, b_t = runtimes[a], runtimes[b]
+        u_stat, p_mw = mannwhitneyu(a_t, b_t, alternative="two-sided")
+        rt_pvalues[f"{a} vs {b}"] = p_mw
+        print(f"    {a:<12} vs {b:<12} : Mann-Whitney U={u_stat:.1f}  p={p_mw:.6f}")
+    rt_holm = _holm_bonferroni(rt_pvalues) if rt_pvalues else {}
+    for name, (p, threshold, sig) in rt_holm.items():
+        tag = "significatif" if sig else "non significatif"
+        print(f"      -> {name:<28} p={p:.6f}  seuil={threshold:.6f}  -> {tag} (Holm, famille de 3)")
 
     print(f"\n{'-' * 88}")
     print("  RESULTATS -- moyennes par algorithme")
@@ -298,7 +347,7 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
         print(f"    {name:<32} p={p:.6f}  seuil={threshold:.6f}  -> {tag} (apres correction)")
 
     print(f"\n{'=' * 88}\n")
-    return {"quality": quality, "holm": holm}
+    return {"quality": quality, "holm": holm, "runtimes": runtimes, "runtime_holm": rt_holm}
 
 
 if __name__ == "__main__":
