@@ -100,7 +100,75 @@ mutation=...)`. Wiring:
   algorithm, not an arbitrary or hidden choice. Rejected alternative:
   tuning a MOEA/D-specific partition count to approach 200 would break
   the shared reference-direction scheme's consistency across all three
-  algorithms — decided against.
+  algorithms — decided against. Re-confirmed during spec review: exact
+  200 is not reachable via Das-Dennis for 4 objectives at any partition
+  count (`n_partitions=8` → 165, `n_partitions=9` → 220, nothing lands on
+  200), so keeping 165 is not just the original but the only option that
+  preserves a shared reference-direction scheme across all three
+  algorithms.
+
+### Objective normalization in decomposition (added after spec review)
+
+The IRP's 4 objectives have heterogeneous raw scales (cost ~15000-25000
+DNT, CO2 ~800-1500 kg, time ~70-110 h, BFR ~3500-7000 DNT). NSGA-III and
+QI-NSGA-III both already normalize by objective range before using
+objectives for niching/guide selection: NSGA-III's environmental
+selection (`ReferenceDirectionSurvival`) tracks both `ideal_point` and
+`nadir_point` internally, updated every generation, and pymoo's own
+NSGA-III implementation normalizes by that range before associating
+individuals to reference directions. QI-NSGA-III's `_normalise_F`
+function in `Solvers/QINSGA3/algorithm.py` does `(F - ideal) / (nadir -
+ideal)` using that *same* tracked ideal/nadir pair (shared with the
+survival step it runs alongside), falling back to a from-scratch
+per-call estimate only on generation 0 before `survival.norm` is
+populated.
+
+Investigation of pymoo's `MOEAD` (`pymoo.algorithms.moo.moead.MOEAD`)
+found no equivalent mechanism: `_replace()` passes only `ideal_point` to
+`self.decomposition.do(...)`, never `nadir_point`. The default
+decomposition for `n_obj > 2` (our case, 4 objectives) is PBI, not
+Tchebycheff — and none of pymoo's built-in decomposition variants
+(`Tchebicheff`, `PBI`, `ASF`) normalize by objective range; all operate
+on raw `F` magnitudes after only subtracting the ideal/utopian point.
+Left as-is, raw cost (scale ~20000) would dominate every replacement
+decision regardless of the reference-direction weights, effectively
+collapsing MOEA/D's decomposition to a cost-only comparison.
+
+**Fix**: a small custom decomposition class,
+`Solvers/MOEAD/_normalized_decomposition.py::NormalizedTchebycheff`,
+subclassing pymoo's `Decomposition`, tracking its own running nadir
+estimate (max `F` seen so far, monotonically expanding, mirroring how
+`ReferenceDirectionSurvival.norm.nadir_point` behaves for the other two
+algorithms) and normalizing `F` by `(nadir - ideal)` range before the
+standard weighted-Tchebycheff formula:
+
+```python
+class NormalizedTchebycheff(Decomposition):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._nadir_running = None
+
+    def _do(self, F, weights, **kwargs):
+        batch_max = F.max(axis=0)
+        self._nadir_running = batch_max if self._nadir_running is None \
+            else np.maximum(self._nadir_running, batch_max)
+        span = np.maximum(self._nadir_running - self.utopian_point, 1e-9)
+        F_norm = (F - self.utopian_point) / span
+        return (np.abs(F_norm) * weights).max(axis=1)
+```
+
+This is passed as `decomposition=NormalizedTchebycheff()` to `MOEAD(...)`
+in `Solvers/MOEAD/main.py`, replacing pymoo's default PBI. Tchebycheff
+(not PBI) is used specifically because it is the variant already
+mentioned in the advisor's own feedback, and because PBI's penalty term
+introduces a second hyperparameter (`theta`) with no existing precedent
+in this project's other two algorithms — Tchebycheff keeps the
+comparison operator-minimal, matching how NSGA-III/QI-NSGA-III's own
+niching has no extra tunables either.
+`Solvers/MOEAD/test_main.py` includes a unit test on
+`NormalizedTchebycheff` directly (synthetic `F`/`weights`/`ideal_point`
+inputs, checked against a hand-computed expected value) in addition to
+the end-to-end smoke test.
 
 ## App integration (`app.py`)
 
