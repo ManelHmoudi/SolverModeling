@@ -19,6 +19,7 @@ from Solvers.FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, ru
 from Solvers.NSGA3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
 from Solvers.NSGA3.report  import render_html as nsga3_render_html
 from Solvers.QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
+from Solvers.MOEAD.main    import DEFAULT_REPORT_PATH as MOEAD_REPORT_PATH, run_moead_report, render_from_instance as moead_render_from_instance
 
 
 # ── Async job tracker ────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ _BENCHMARK_SUITES = {
 _BENCHMARK_M_VALUES = [3, 4]  # Cui et al. (2025), Table 2, only studies M=3 and M=4
 
 
-_BENCHMARK_ALGOS = ["nsga3", "qinsga3"]
+_BENCHMARK_ALGOS = ["nsga3", "qinsga3", "moead"]
 
 
 def _read_igd_runs(results_dir: str, algo: str, problem: str, n_obj: int):
@@ -425,8 +426,9 @@ let currentSuite = 'dtlz';
 const ALGO_LABEL = {
   nsga3:   'NSGA-III (classique)',
   qinsga3: 'QI-NSGA-III (quantum-inspired)',
+  moead:   'MOEA/D (décomposition)',
 };
-const ALGO_ORDER = ['nsga3', 'qinsga3'];
+const ALGO_ORDER = ['nsga3', 'qinsga3', 'moead'];
 
 // Paramètres complets (p/H/N/G/η/...) affichés une seule fois dans le Tableau 2
 // en haut de page — ici on ne rappelle que N et G pour situer la carte sans dupliquer.
@@ -1339,6 +1341,50 @@ body {
       </div>
     </article>
 
+    <!-- ── 05 MOEA/D ── -->
+    <article class="card" style="--card-color:var(--c4);--card-icon-bg:var(--c4-bg)">
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/>
+              <path d="M5 6L12 18M19 6L12 18M5 6L19 6"/>
+            </svg>
+          </div>
+          <div class="card-badges">
+            <span class="badge-num">05</span>
+            <span class="badge-status active">Active</span>
+          </div>
+        </div>
+        <h2 class="card-title">MOEA/D</h2>
+        <p class="card-desc">Decomposition-based many-objective evolutionary algorithm. Splits the front into scalarized subproblems along Das-Dennis reference directions, evolved jointly via neighborhood replacement.</p>
+        <div class="card-tags">
+          <span class="card-tag">Decomposition</span>
+          <span class="card-tag">Neighborhood replacement</span>
+        </div>
+        <div class="runs-row">
+          <span class="runs-label">Runs</span>
+          <div class="runs-group" id="moeadRunsBtns">
+            <button class="runs-btn selected" data-runs="1"  onclick="setMoeadRuns(1)">1×</button>
+            <button class="runs-btn"          data-runs="3"  onclick="setMoeadRuns(3)">3×</button>
+            <button class="runs-btn"          data-runs="5"  onclick="setMoeadRuns(5)">5×</button>
+            <button class="runs-btn"          data-runs="10" onclick="setMoeadRuns(10)">10×</button>
+            <button class="runs-btn"          data-runs="20" onclick="setMoeadRuns(20)">20×</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a class="btn btn-primary" id="moead-run" href="{{ url_for('run_moead_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run
+        </a>
+        <a class="btn btn-secondary" id="moead-report" href="{{ url_for('moead_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Last report
+        </a>
+      </div>
+    </article>
+
   </section>
   </div>
 
@@ -1396,6 +1442,16 @@ function setQi3Runs(n) {
   if (el) el.href = '{{ url_for("run_qinsga3_route") }}?instance=' + selectedInstance + '&runs=' + n;
 }
 
+let moeadRuns = 1;
+function setMoeadRuns(n) {
+  moeadRuns = n;
+  document.querySelectorAll('#moeadRunsBtns .runs-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.runs) === n);
+  });
+  const el = document.getElementById('moead-run');
+  if (el) el.href = '{{ url_for("run_moead_route") }}?instance=' + selectedInstance + '&runs=' + n;
+}
+
 const MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 const SUN_SVG  = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const icon  = document.getElementById('themeIcon');
@@ -1416,6 +1472,7 @@ function selectInstance(key) {
     ['fm-report', '{{ url_for("function_merge_report") }}'],
     ['n3-report', '{{ url_for("nsga3_report") }}'],
     ['qi3-report','{{ url_for("qinsga3_report") }}'],
+    ['moead-report', '{{ url_for("moead_report") }}'],
   ];
   pairs.forEach(([id, base]) => {
     const el = document.getElementById(id);
@@ -1425,6 +1482,8 @@ function selectInstance(key) {
   if (n3run) n3run.href = '{{ url_for("run_nsga3_route") }}?instance=' + key + '&runs=' + n3Runs;
   const qi3run = document.getElementById('qi3-run');
   if (qi3run) qi3run.href = '{{ url_for("run_qinsga3_route") }}?instance=' + key + '&runs=' + qi3Runs;
+  const moeadrun = document.getElementById('moead-run');
+  if (moeadrun) moeadrun.href = '{{ url_for("run_moead_route") }}?instance=' + key + '&runs=' + moeadRuns;
 }
 
 (function() {
@@ -1652,6 +1711,45 @@ def qinsga3_report():
             run_qinsga3_report(output_path=QINSGA3_REPORT_PATH, data_path=data_path)
             data = qinsga3_render_from_instance(data_path)
         return nsga3_render_html(data, algo_label="QI-NSGA-III"), 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception:
+        return render_error(traceback.format_exc()), 500
+
+
+@app.route("/moead/run")
+def run_moead_route():
+    data_path, inst_key = _resolve_instance()
+    n_runs = max(1, min(20, int(request.args.get("runs", 1))))
+    job_id = _new_job("MOEA/D")
+
+    def _run():
+        lock = _get_run_lock("moead", inst_key)
+        if not lock.acquire(blocking=False):
+            _job_error(job_id, f"A MOEA/D run for instance {inst_key} is already in progress -- wait for it to finish.")
+            return
+        try:
+            run_moead_report(output_path=MOEAD_REPORT_PATH, data_path=data_path, n_runs=n_runs)
+            _job_done(job_id, f"/moead/report?instance={inst_key}")
+        except Exception:
+            tb = traceback.format_exc()
+            print(tb, flush=True)
+            _job_error(job_id, tb)
+        finally:
+            lock.release()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return _JOB_PAGE.format(algo="MOEA/D", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/moead/report")
+def moead_report():
+    data_path, _ = _resolve_instance()
+    try:
+        try:
+            data = moead_render_from_instance(data_path)
+        except FileNotFoundError:
+            run_moead_report(output_path=MOEAD_REPORT_PATH, data_path=data_path)
+            data = moead_render_from_instance(data_path)
+        return nsga3_render_html(data, algo_label="MOEA/D"), 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception:
         return render_error(traceback.format_exc()), 500
 
