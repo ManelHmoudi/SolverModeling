@@ -132,8 +132,15 @@ class ConstrainedMOEAD(MOEAD):
         pop = self.pop
         N = self.neighbors[k]
 
+        neighbor_F = pop[N].get("F")
+        # Freeze the normalization span for this replacement step -- see
+        # NormalizedTchebycheff's own update_nadir docstring for why this
+        # must happen once, before either do() call below, not inside _do().
+        if hasattr(self.decomposition, "update_nadir"):
+            self.decomposition.update_nadir(np.vstack([neighbor_F, off.F[None, :]]))
+
         FV = self.decomposition.do(
-            pop[N].get("F"), weights=self.ref_dirs[N, :], ideal_point=self.ideal,
+            neighbor_F, weights=self.ref_dirs[N, :], ideal_point=self.ideal,
         )
         off_FV = self.decomposition.do(
             off.F[None, :], weights=self.ref_dirs[N, :], ideal_point=self.ideal,
@@ -242,7 +249,15 @@ subclassing pymoo's `Decomposition`, tracking its own running nadir
 estimate (max `F` seen so far, monotonically expanding, mirroring how
 `ReferenceDirectionSurvival.norm.nadir_point` behaves for the other two
 algorithms) and normalizing `F` by `(nadir - ideal)` range before the
-standard weighted-Tchebycheff formula:
+standard weighted-Tchebycheff formula. The update is a separate method
+(`update_nadir`), not folded into `_do()` itself: `ConstrainedMOEAD._replace`
+(below) calls `self.decomposition.do(...)` twice per replacement step
+(once for the neighborhood, once for the offspring) — updating the
+running estimate inside `_do()` would let the second call silently use a
+different, more-informed span than the first, biasing the comparison
+between them. `_replace` instead calls `update_nadir()` once, on the
+union of both F sets, before either `do()` call, so both use the same
+frozen snapshot:
 
 ```python
 class NormalizedTchebycheff(Decomposition):
@@ -250,17 +265,21 @@ class NormalizedTchebycheff(Decomposition):
         super().__init__(**kwargs)
         self._nadir_running = None
 
-    def _do(self, F, weights, **kwargs):
-        batch_max = F.max(axis=0)
+    def update_nadir(self, F):
+        batch_max = np.asarray(F).max(axis=0)
         self._nadir_running = batch_max if self._nadir_running is None \
             else np.maximum(self._nadir_running, batch_max)
-        span = np.maximum(self._nadir_running - self.utopian_point, 1e-9)
+
+    def _do(self, F, weights, **kwargs):
+        span = (np.maximum(self._nadir_running - self.utopian_point, 1e-9)
+                if self._nadir_running is not None else np.ones(F.shape[1]))
         F_norm = (F - self.utopian_point) / span
         return (np.abs(F_norm) * weights).max(axis=1)
 ```
 
-This is passed as `decomposition=NormalizedTchebycheff()` to `MOEAD(...)`
-in `Solvers/MOEAD/main.py`, replacing pymoo's default PBI. Tchebycheff
+This is passed as `decomposition=NormalizedTchebycheff()` to
+`ConstrainedMOEAD(...)` in `Solvers/MOEAD/main.py`, replacing pymoo's
+default PBI. Tchebycheff
 (not PBI) is used specifically because it is the variant already
 mentioned in the advisor's own feedback, and because PBI's penalty term
 introduces a second hyperparameter (`theta`) with no existing precedent
