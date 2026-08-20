@@ -41,9 +41,15 @@ benchmarks, with full app integration.
 ## Non-goals
 
 - No changes to NSGA-III's or QI-NSGA-III's own algorithm code.
-- No reimplementation of MOEA/D — use pymoo's own
-  `pymoo.algorithms.moo.moead.MOEAD` exactly as `Solvers/NSGA3/main.py`
-  uses pymoo's own `NSGA3`, not a custom/rewritten variant.
+- No reimplementation of MOEA/D's core algorithm — reuse pymoo's own
+  `pymoo.algorithms.moo.moead.MOEAD` structure (neighborhoods, weight
+  vectors, crossover/mutation, decomposition scalarization) unchanged.
+  The one exception, forced by a constraint-support gap described below,
+  is a subclass overriding only the replacement step's comparison rule
+  — not a rewrite of the algorithm.
+- No changes to `IRPProblem` (`Solvers/NSGA3/problem.py`) — its
+  constraint declaration (`n_ieq_constr`, `out["G"]`) stays exactly as
+  NSGA-III/QI-NSGA-III already use it.
 - No changes to `sensitivity/compare_2opt_fairness.py`'s existing
   2-algorithm structure — a new, separate script handles the 3rd
   algorithm instead of generalizing the existing one.
@@ -59,6 +65,10 @@ New module `Solvers/MOEAD/`:
   `run_moead_report()`, mirroring `Solvers/NSGA3/main.py`'s own three
   entry points exactly (same signature shape, same caching-to-JSON
   pattern for `render_from_instance` refresh support).
+- `_constrained_moead.py` — `ConstrainedMOEAD(MOEAD)`, see Constraint
+  handling below.
+- `_normalized_decomposition.py` — `NormalizedTchebycheff(Decomposition)`,
+  see Objective normalization below.
 - No new `report.py` — reuses `Solvers/NSGA3/report.py` unchanged
   (already reused as-is for QI-NSGA-III; same reuse here).
 - No new `problem.py`/`decoder.py`/`evaluator.py`/`metrics.py` —
@@ -72,11 +82,103 @@ New module `Solvers/MOEAD/`:
   set earlier this session) apply automatically with zero additional
   wiring.
 
+## Constraint handling (added after spec review — blocking issue found)
+
+`IRPProblem` declares real hard inequality constraints
+(`n_ieq_constr = 2·|T| + |clients|·|T| + 2·|T|`: tau_return window,
+per-client delivery-deadline coverage, depot stock ceiling safety net),
+consumed today by pymoo's own feasibility-first constraint-domination in
+NSGA-III's environmental selection. Verified directly against pymoo
+0.6.1.6 source: `MOEAD._setup()` contains `assert not
+problem.has_constraints()` — running pymoo's vanilla `MOEAD` against
+`IRPProblem` unchanged raises `AssertionError` immediately at setup, not
+a soft warning. This was missed in the original Architecture section,
+which assumed `IRPProblem` could be reused completely unmodified (true
+for NSGA-III/QI-NSGA-III, false for MOEA/D specifically).
+
+**Fix (Deb's feasibility rule, chosen over a static penalty-weight
+reformulation to avoid introducing a tuning parameter with no
+counterpart on the NSGA-III/QI-NSGA-III side)**: a subclass,
+`Solvers/MOEAD/_constrained_moead.py::ConstrainedMOEAD(MOEAD)`,
+overriding only `_replace()` — everything else (neighbor structure,
+weight vectors, `_setup`, crossover/mutation, `_infill`) stays pymoo's
+own `MOEAD` unchanged. The override reads each individual's constraint
+violation (`pop.get("CV")`, pymoo's own aggregate violation, already
+computed automatically from `out["G"]` since `IRPProblem` sets
+`n_ieq_constr` > 0) and applies Deb (2000)'s parameter-free feasibility
+comparison in place of the raw decomposition value whenever either side
+is infeasible:
+
+```python
+class ConstrainedMOEAD(MOEAD):
+    def _setup(self, problem, **kwargs):
+        # Bypass MOEAD's own assert -- constraints are handled below via
+        # Deb's feasibility rule instead of being rejected outright.
+        if self.ref_dirs is None:
+            from pymoo.util.ref_dirs import default_ref_dirs
+            self.ref_dirs = default_ref_dirs(problem.n_obj)
+        self.pop_size = len(self.ref_dirs)
+        from scipy.spatial.distance import cdist
+        import numpy as np
+        self.neighbors = np.argsort(
+            cdist(self.ref_dirs, self.ref_dirs), axis=1, kind='quicksort'
+        )[:, :self.n_neighbors]
+        if self.decomposition is None:
+            from pymoo.decomposition.tchebicheff import Tchebicheff
+            self.decomposition = Tchebicheff()
+
+    def _replace(self, k, off):
+        import numpy as np
+        pop = self.pop
+        N = self.neighbors[k]
+
+        FV = self.decomposition.do(
+            pop[N].get("F"), weights=self.ref_dirs[N, :], ideal_point=self.ideal,
+        )
+        off_FV = self.decomposition.do(
+            off.F[None, :], weights=self.ref_dirs[N, :], ideal_point=self.ideal,
+        )
+
+        CV = pop[N].get("CV")[:, 0]
+        off_CV = float(off.CV[0])
+
+        # Deb (2000) feasibility rule, no tuning parameter:
+        #  - both feasible  -> decomposition value decides (unchanged MOEAD)
+        #  - one feasible   -> the feasible one always wins
+        #  - both infeasible -> smaller total violation wins
+        off_wins = np.where(
+            off_CV <= 0,
+            np.where(CV <= 0, off_FV < FV, True),
+            np.where(CV <= 0, False, off_CV < CV),
+        )
+        I = np.where(off_wins)[0]
+        pop[N[I]] = off
+```
+
+`Solvers/MOEAD/main.py` imports `ConstrainedMOEAD` in place of pymoo's
+own `MOEAD` — same constructor signature, same `ref_dirs`/`crossover`/
+`mutation`/`decomposition` kwargs, so the rest of the wiring below is
+unaffected. `Solvers/MOEAD/test_main.py` includes a unit test
+constructing two synthetic populations (feasible vs. infeasible,
+infeasible-vs-infeasible with different CV) and asserting `_replace`
+picks the expected winner in each of the three cases.
+
+This same fix applies to the DTLZ/MaF benchmark runner
+(`Validation/Benchmarking/algorithms/moead/runner.py`) for uniformity,
+even though the standard DTLZ/MaF problems used there are themselves
+unconstrained (`n_ieq_constr=0`) — `ConstrainedMOEAD` behaves identically
+to vanilla `MOEAD` whenever every individual is feasible (`CV <= 0`
+throughout, so `off_wins` reduces to the original `off_FV < FV` decomposition
+comparison), so reusing one class in both places avoids two parallel
+MOEA/D wirings.
+
 ## MOEA/D algorithm wiring
 
-`pymoo.algorithms.moo.moead.MOEAD(ref_dirs, n_neighbors=20,
-decomposition=None, prob_neighbor_mating=0.9, sampling=..., crossover=...,
-mutation=...)`. Wiring:
+`Solvers.MOEAD._constrained_moead.ConstrainedMOEAD(ref_dirs,
+n_neighbors=20, decomposition=None, prob_neighbor_mating=0.9,
+sampling=..., crossover=..., mutation=...)` — same constructor as
+pymoo's own `MOEAD` (see Constraint handling above for why the subclass
+is needed). Wiring:
 - `ref_dirs`: same Das-Dennis scheme already used for NSGA-III and
   QI-NSGA-III (`get_reference_directions("das-dennis", 4,
   n_partitions=8)` → 165 directions for the project's 4 objectives) — kept
@@ -213,7 +315,13 @@ benchmark suite).
 
 - `Solvers/MOEAD/test_main.py` — end-to-end smoke test on a tiny instance,
   mirroring `Solvers/NSGA3/test_main.py`'s / `Solvers/QINSGA3/test_main.py`'s
-  own `repair_final_front` flag test.
+  own `repair_final_front` flag test; plus a unit test on
+  `NormalizedTchebycheff._do` (synthetic F/weights/ideal_point, hand-
+  computed expected value) and a unit test on `ConstrainedMOEAD._replace`
+  covering all three Deb's-rule branches (feasible beats infeasible,
+  feasible-vs-feasible falls back to the plain decomposition comparison,
+  infeasible-vs-infeasible picks the smaller violation) with synthetic
+  populations.
 - `Validation/Benchmarking/algorithms/moead/test_runner.py` — mirrors
   `algorithms/nsga3/test_runner.py` (ref_dirs count, population size
   =165 not 200, output shape, `run_experiment` returns a list,
