@@ -66,3 +66,79 @@ def test_normalized_tchebycheff_nadir_estimate_is_monotonic():
 
     dec.update_nadir(np.array([[500.0, 1.0]]))
     assert dec._nadir_running.tolist() == [500.0, 100.0]
+
+
+from pymoo.core.individual import Individual
+from pymoo.core.population import Population
+
+from Solvers.MOEAD._constrained_moead import ConstrainedMOEAD
+
+
+# ── ConstrainedMOEAD._replace: Deb's feasibility rule ───────────────────
+
+def _make_pop(F_list, CV_list):
+    return Population.new(
+        "F", np.array(F_list, dtype=float),
+        "CV", np.array([[cv] for cv in CV_list], dtype=float),
+    )
+
+
+def _make_ind(F, CV):
+    ind = Individual()
+    ind.set("F", np.array(F, dtype=float))
+    ind.set("CV", np.array([CV], dtype=float))
+    return ind
+
+
+def _bare_moead():
+    """A ConstrainedMOEAD instance with just enough state for _replace --
+    bypasses the full pymoo run loop (which needs a real Problem)."""
+    algo = ConstrainedMOEAD(
+        ref_dirs=np.array([[1.0, 0.0], [0.0, 1.0]]),
+        decomposition=NormalizedTchebycheff(),
+    )
+    algo.neighbors = np.array([[0, 1]])
+    algo.ideal = np.array([0.0, 0.0])
+    return algo
+
+
+def test_replace_feasible_offspring_beats_infeasible_neighbors():
+    algo = _bare_moead()
+    algo.pop = _make_pop([[5.0, 5.0], [5.0, 5.0]], [1.0, 1.0])  # both infeasible
+    off = _make_ind([1.0, 1.0], 0.0)  # feasible
+
+    algo._replace(0, off)
+
+    np.testing.assert_allclose(algo.pop.get("F"), [[1.0, 1.0], [1.0, 1.0]])
+
+
+def test_replace_feasible_vs_feasible_uses_decomposition():
+    algo = _bare_moead()
+    # Neighbor 0/1: F=[1,1] (good under the decomposition). Offspring:
+    # F=[9,9] (worse). Both feasible -> decomposition value decides.
+    algo.pop = _make_pop([[1.0, 1.0], [1.0, 1.0]], [0.0, 0.0])
+    off = _make_ind([9.0, 9.0], 0.0)
+
+    algo._replace(0, off)
+
+    np.testing.assert_allclose(algo.pop.get("F"), [[1.0, 1.0], [1.0, 1.0]])
+
+
+def test_replace_infeasible_vs_infeasible_smaller_violation_wins():
+    algo = _bare_moead()
+    algo.pop = _make_pop([[5.0, 5.0], [5.0, 5.0]], [2.0, 2.0])  # CV=2.0
+    off = _make_ind([9.0, 9.0], 0.5)  # worse F but much smaller CV
+
+    algo._replace(0, off)
+
+    np.testing.assert_allclose(algo.pop.get("F"), [[9.0, 9.0], [9.0, 9.0]])
+
+
+def test_replace_infeasible_offspring_never_beats_feasible_neighbor():
+    algo = _bare_moead()
+    algo.pop = _make_pop([[9.0, 9.0], [9.0, 9.0]], [0.0, 0.0])  # feasible
+    off = _make_ind([1.0, 1.0], 0.5)  # better F but infeasible
+
+    algo._replace(0, off)
+
+    np.testing.assert_allclose(algo.pop.get("F"), [[9.0, 9.0], [9.0, 9.0]])
