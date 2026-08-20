@@ -11,6 +11,7 @@ pymoo) on the same Inventory Routing Problem (IRP) instances.
 - [Concept](#concept)
 - [Modules](#modules)
 - [Algorithm](#algorithm)
+- [Pseudocode](#pseudocode)
 - [Parameters and references](#parameters-and-references)
 - [Design history — what changed and why](#design-history--what-changed-and-why)
 - [Objectives](#objectives)
@@ -66,6 +67,102 @@ Per generation, `run_qinsga3()`:
 Repeat for `max_gen` generations; the trimmed external archive (by NSGA-II
 crowding distance [Deb et al. 2002, §III-B] if larger than `pop_size`) is
 the returned Pareto set.
+
+## Pseudocode
+
+Exactly what `Solvers/QINSGA3/algorithm.py::run_qinsga3()` executes, generation
+by generation — every helper named below (`Measure`, `Rotate`,
+`AssignRefDirs`, `SelectGuides`, `SupplementFromArchive`, `ArchiveUpdate`,
+`Migrate`, `Encode`, `Normalise`) is a real private function in that module,
+not a textbook abstraction:
+
+```
+Input : pop_size N, generation budget max_gen, reference directions Z (shared with NSGA-III),
+        alpha_max, alpha_min, migration_period, n_migrate, rotation_type ("tanh")
+
+θ ← Init(N, n_genes)                          # θ_ij = π/4 ± 0.05 rad  (near-uniform superposition,
+                                               #   perturbed so gen-0 individuals don't all collapse
+                                               #   to the same measured point)
+A ← ∅                                         # external elitist archive (X, F, G, θ), cap 500
+survival ← ReferenceDirectionSurvival(Z)      # pymoo's own NSGA-III niching object — reused, not
+                                               #   reimplemented; its .norm (ideal/nadir) is shared
+                                               #   below, monotonic across the whole run
+cache_valid ← False
+
+for gen = 0 … max_gen-1:
+    θ_parent ← θ ; X_parent ← Measure(θ_parent)        # x = xl + cos²(θ)(xu − xl)
+    if cache_valid and noise_scale = 0:
+        (F_parent, G_parent) ← cached (F, G) from LAST gen's survival.do() result
+                                                         # measure() is deterministic at noise_scale=0,
+                                                         #   so a survivor's F/G from last generation's
+                                                         #   own evaluation is still exactly correct —
+                                                         #   invalidated on gen 0 and right after migration
+    else:
+        (F_parent, G_parent) ← Evaluate(X_parent)       # real objective-function call
+    F_pen_parent ← Penalise(F_parent, G_parent)         # feasibility-first: Σ max(g,0) added per-objective
+
+    pareto_idx ← NonDominatedSort(F_pen_parent)[0]
+    ArchiveUpdate(A, X_parent[pareto_idx], F_parent[pareto_idx], θ_parent[pareto_idx])
+
+    if survival.norm.nadir_point = None:                # not yet populated (only possible on gen 0)
+        F_norm ← Normalise(F_pen_parent)                #   from-scratch ideal/nadir, this generation only
+    else:
+        F_norm ← Normalise(F_pen_parent, survival.norm.ideal_point, survival.norm.nadir_point)
+                                                         # SAME running ideal/nadir the elitist survival
+                                                         #   step below tracks — one normalisation, not two
+    assoc ← AssignRefDirs(F_norm, Z)                    # nearest reference direction per individual
+    guides_θ ← SelectGuides(assoc, pareto_idx, F_norm, Z, θ_parent)
+                                                         # best Pareto member per niche → its θ
+    if |A| ≥ 4:
+        A_norm ← Normalise(A.F, survival.norm.ideal_point, survival.norm.nadir_point)  # or from-scratch on gen 0
+        guides_θ ← SupplementFromArchive(guides_θ, assoc, A.θ, A_norm, Z)
+                                                         # fills niches the CURRENT front doesn't cover,
+                                                         #   from the archive's own best-per-niche member
+
+    α ← alpha_min + (alpha_max − alpha_min) × (1 − gen/max_gen)     # linear decay
+    θ ← Rotate(θ_parent, guides_θ, α)                   # Δθ = α · tanh((θ_guide − θ)/(π/8))  — θ-space,
+                                                         #   the one genuinely quantum-inspired step
+    X_rotated ← Measure(θ)
+
+    X_varied ← PM_η( SBX_η(X_rotated) )                 # X-SPACE, pymoo's own SBX(pc, η) + PM(pm, η) —
+                                                         #   identical operators to Solvers/NSGA3/
+    θ_offspring ← Encode(X_varied)                      # θ = arccos(√((x−xl)/(xu−xl))), re-enters θ-space
+                                                         #   so next generation's Rotate has an angle to use
+
+    X_offspring ← Measure(θ_offspring)
+    (F_offspring, G_offspring) ← Evaluate(X_offspring)
+    F_pen_offspring ← Penalise(F_offspring, G_offspring)
+    off_pareto_idx ← NonDominatedSort(F_pen_offspring)[0]
+    ArchiveUpdate(A, X_offspring[off_pareto_idx], F_offspring[off_pareto_idx], θ_offspring[off_pareto_idx])
+
+    merged ← Population(θ_parent ∪ θ_offspring; F_parent ∪ F_offspring; G_parent ∪ G_offspring)
+    survived ← survival.do(merged, n_survive = N)       # pymoo's own NSGA-III environmental selection
+                                                         #   (non-dominated sort + reference-point niching,
+                                                         #   updates survival.norm's ideal/nadir here)
+    θ ← clip(survived.X, 0, π/2)
+    cache (F, G) ← survived.(F, G) ; cache_valid ← True # feeds next generation's step above
+
+    if migration_period > 0 and gen mod migration_period = 0 and |A| ≥ 4:
+        Migrate(θ, A.θ, A_norm, assoc, Z, n_migrate)    # overwrite n_migrate individuals' θ with the
+                                                         #   archive's best-per-niche θ, recovering niches
+                                                         #   the population has lost
+        cache_valid ← False                             # migration changed θ post-cache — invalidate
+
+X_final ← Measure(θ) ; (F_final, G_final) ← Evaluate(X_final)
+final_pareto_idx ← NonDominatedSort(Penalise(F_final, G_final))[0]
+ArchiveUpdate(A, X_final[final_pareto_idx], …)
+if |A| ≥ 1:
+    return CrowdingTrim(A, N)     # NSGA-II crowding distance (Deb et al. 2002, §III-B) if |A| > N
+else:
+    return X_final[final_pareto_idx]
+```
+
+`repair_final_front` (default on, see [Design history](#design-history--what-changed-and-why))
+is applied AFTER this whole loop returns, by the caller (`Solvers/NSGA3/
+report_builder.py::_evaluate_pareto`, shared with NSGA-III) — it decodes
+each returned chromosome's route and repairs it with a 2-opt local search
+(`Solvers/QINSGA3/repair.py`); Baldwinian, the chromosome itself (and hence
+everything above) is untouched.
 
 ## Parameters and references
 

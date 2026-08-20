@@ -9,6 +9,7 @@ against.
 
 - [Modules](#modules)
 - [Algorithm](#algorithm)
+- [Pseudocode](#pseudocode)
 - [Parameters and references](#parameters-and-references)
 - [Objectives](#objectives)
 - [Usage](#usage)
@@ -36,6 +37,66 @@ Standard NSGA-III (Deb & Jain, 2014), used unmodified from pymoo:
 3. **Survive** — the elitist replacement step that defines NSGA-III: merge parent and offspring populations, non-dominated sort, associate each solution to the nearest reference direction (Das-Dennis simplex-lattice points), and keep the best `pop_size` via niching.
 4. **Vary** — SBX crossover + polynomial mutation (PM) produce the next generation's offspring.
 5. Repeat for `n_gen` generations; the final population's non-dominated front is the returned Pareto set.
+
+The step that makes NSGA-III "many-objective capable" (where NSGA-II's
+crowding distance degrades past ~3 objectives) is step 3's reference-point
+niching: instead of preferring solutions in *sparse regions of the front*
+(crowding distance — a purely relative, pairwise notion that breaks down in
+high dimensions because almost every solution ends up "far" from its
+neighbours), NSGA-III preferds solutions that are *close to a
+pre-distributed set of reference directions* covering the whole objective
+simplex uniformly. This turns diversity preservation into a well-posed
+assignment problem (one reference direction → its niche) regardless of how
+many objectives there are.
+
+## Pseudocode
+
+Deb & Jain (2014), Algorithm 1 (`NSGA-III(P₀, Z, N_gen)`), exactly as pymoo
+implements it — nothing in this project modifies pymoo's own `NSGA3`
+survival or mating:
+
+```
+Input : reference directions Z = {z¹,…,z^H}  (Das–Dennis, N_PARTITIONS=8 → H=165)
+        population size N (bumped to max(N, H) if H > N)
+        generation budget N_gen
+
+P₀ ← RandomInit(N)                       # FloatRandomSampling, uniform in [xl, xu]
+Evaluate(P₀)                             # f1..f4 + constraints G, via IRPProblem._evaluate
+for t = 0 … N_gen-1:
+    Qₜ ← Variation(Pₜ)                   # selection + SBX(pc=0.9, η=20) + PM(pm=1/D, η=20)
+    Evaluate(Qₜ)
+    Rₜ ← Pₜ ∪ Qₜ                         # combined pool, size 2N
+    (F₁, F₂, …) ← NonDominatedSort(Rₜ)   # constraint-domination: feasible always beats infeasible,
+                                          # among infeasible the smaller total violation wins
+    Sₜ ← ∅ ; i ← 1
+    while |Sₜ| + |Fᵢ| ≤ N:
+        Sₜ ← Sₜ ∪ Fᵢ ; i ← i+1
+    if |Sₜ| = N:
+        P_{t+1} ← Sₜ                     # exact fit, no niching needed this generation
+    else:
+        Fₗ ← Fᵢ                          # the last, partially-included front
+        Normalize(Sₜ ∪ Fₗ)               # ideal point z* = componentwise min;
+                                          # extreme points via ASF, nadir from their intercepts
+        for x in Sₜ ∪ Fₗ:
+            Associate(x, Z)              # nearest reference direction, by perpendicular distance
+                                          # in normalized objective space
+        ρⱼ ← niche count of Sₜ on each direction j        # solutions already selected per direction
+        K ← N − |Sₜ|                                      # remaining slots to fill from Fₗ
+        while K > 0:
+            j* ← argmin_j ρⱼ  (ties broken randomly)      # least-crowded direction
+            if ∃ member of Fₗ associated to j*:
+                move its closest-to-j* member from Fₗ into Sₜ ; ρⱼ* += 1 ; K -= 1
+            else:
+                ρⱼ* ← ∞                                   # exclude exhausted direction, retry
+        P_{t+1} ← Sₜ
+return non-dominated front of P_{N_gen}
+```
+
+`Normalize` (extreme-point/intercept method, Deb & Jain 2014, §IV-A) and
+`Associate`/niching together form pymoo's `ReferenceDirectionSurvival` —
+the same object QI-NSGA-III reuses directly for its own environmental
+selection (see `Solvers/QINSGA3/README.md`'s pseudocode) rather than
+reimplementing it.
 
 ## Parameters and references
 
