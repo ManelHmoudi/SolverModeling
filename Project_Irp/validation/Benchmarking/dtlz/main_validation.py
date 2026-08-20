@@ -31,7 +31,7 @@ if __name__ == "__main__":
         help="Number of objectives (default: 4)"
     )
     parser.add_argument(
-        "--algorithm", default="nsga3", choices=["nsga3", "qinsga3"],
+        "--algorithm", default="nsga3", choices=["nsga3", "qinsga3", "moead"],
         help="Which algorithm to validate (default: nsga3)"
     )
     args = parser.parse_args()
@@ -43,6 +43,9 @@ if __name__ == "__main__":
     if args.algorithm == "qinsga3":
         from Validation.Benchmarking.algorithms.qinsga3.runner import run_experiment
         algorithm_label = "QINSGA3"
+    elif args.algorithm == "moead":
+        from Validation.Benchmarking.algorithms.moead.runner import run_experiment
+        algorithm_label = "MOEA/D"
     else:
         from Validation.Benchmarking.algorithms.nsga3.runner import run_experiment
         algorithm_label = "NSGA-III"

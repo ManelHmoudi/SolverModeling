@@ -30,7 +30,7 @@ avoids two parallel MOEA/D wirings.
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from pymoo.algorithms.moo.moead import MOEAD, default_decomp
+from pymoo.algorithms.moo.moead import MOEAD
 from pymoo.util.reference_direction import default_ref_dirs
 
 
@@ -44,7 +44,18 @@ class ConstrainedMOEAD(MOEAD):
             cdist(self.ref_dirs, self.ref_dirs), axis=1, kind="quicksort"
         )[:, : self.n_neighbors]
         if self.decomposition is None:
-            self.decomposition = default_decomp(problem)
+            # NOT pymoo's own default_decomp(problem) -- that returns PBI for
+            # n_obj > 2 (our case, 4 objectives), which the project's own
+            # spec explicitly argues against as a default: PBI's penalty
+            # term introduces a second hyperparameter (theta) with no
+            # existing precedent on the NSGA-III/QI-NSGA-III side. See
+            # docs/superpowers/specs/2026-08-19-moead-integration-design.md,
+            # "Objective normalization in decomposition". Every real call
+            # site in this codebase passes decomposition=NormalizedTchebycheff()
+            # explicitly, so this fallback is a safety net, not a live path --
+            # it must still match the spec's own choice if it ever executes.
+            from pymoo.decomposition.tchebicheff import Tchebicheff
+            self.decomposition = Tchebicheff()
 
     def _replace(self, k, off):
         pop = self.pop

@@ -24,6 +24,26 @@ every other comparison here (Solvers/NSGA3/metrics.py::
 build_empirical_reference_front) -- each run scored against a front built
 from every OTHER run only.
 
+NOTE on statistical power at the default seed count: DEFAULT_SEEDS below is
+a 3-seed smoke count, the same convention sensitivity/compare_2opt_
+fairness.py uses for its own default (an established, deliberate
+convention here -- a smoke-test default meant to be overridden via
+--seeds for a real campaign, not something to change). The exact two-sided
+Mann-Whitney U test used for this script's PRIMARY comparison has a floor
+of p=0.10 at n=3 per group (see Solvers/QINSGA3/README.md's "small-sample
+Mann-Whitney floor" discussion) -- it literally cannot reach p<0.05 no
+matter how large the real effect is. Holm-Bonferroni's own most lenient
+threshold across the 4 indicators tested together (HV/GD/IGD/Spacing) is
+0.05/1=0.05, for whichever indicator has the largest (least significant)
+raw p-value -- still below the n=3 Mann-Whitney floor of 0.10. So at the
+DEFAULT seed count, no indicator can ever be reported significant after
+correction, regardless of true effect size, and a "non significatif"
+verdict from the Holm-Bonferroni table means nothing and should not be
+read as "no difference between the algorithms". Use at least 5 seeds via
+--seeds before trusting a non-significant result (minimum two-sided
+Mann-Whitney p=0.0079 at n=5 per group); this project's own real
+campaigns typically use 7-30 seeds.
+
 MOEA/D's population is fixed at len(ref_dirs) = 165 (Das-Dennis
 N_PARTITIONS=8, 4 objectives) -- NOT independently settable, unlike
 QI-NSGA-III's pop_size=200. This is a structural property of MOEA/D
@@ -134,11 +154,26 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
         print(f"\n--- seed={seed} ---")
         t0 = time.time()
         qi_X = _run_qinsga3_once(sets_, params_, ref_dirs, max_gen, seed)
-        print(f"  QI-NSGA-III: {len(qi_X)} solutions en {time.time() - t0:.1f}s")
+        n_qi = 0 if qi_X is None else len(qi_X)
+        print(f"  QI-NSGA-III: {n_qi} solutions en {time.time() - t0:.1f}s")
 
         t0 = time.time()
         mo_X = _run_moead_once(problem, ref_dirs, max_gen, seed)
-        print(f"  MOEA/D     : {len(mo_X)} solutions en {time.time() - t0:.1f}s")
+        n_mo = 0 if mo_X is None else len(mo_X)
+        print(f"  MOEA/D     : {n_mo} solutions en {time.time() - t0:.1f}s")
+
+        # Either search can legitimately return None/empty (zero feasible
+        # solutions found at this seed, a realistic outcome given the IRP's
+        # hard constraints -- see Solvers/MOEAD/main.py::run_moead's own
+        # identical guard). Skip the WHOLE seed for BOTH algorithms rather
+        # than only the failing one, so per_seed_F["QI-NSGA-III"] and
+        # per_seed_F["MOEA/D"] stay seed-key-aligned for the LORO/quality
+        # loop and the paired-Wilcoxon section below, both of which assume
+        # matching seed sets between the two algorithms.
+        if n_qi == 0 or n_mo == 0:
+            print(f"  -- seed={seed}: aucune solution faisable pour au moins un algorithme, "
+                  "seed ignoree pour les deux --")
+            continue
 
         # Shared repair pipeline, current production defaults.
         per_seed_F["QI-NSGA-III"][seed] = _config_F(
@@ -151,12 +186,22 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
     all_F = np.vstack([F for algo in per_seed_F.values() for F in algo.values()])
     g_ideal, g_nadir = all_F.min(axis=0), all_F.max(axis=0)
 
+    # LORO (leave-one-run-out) reference front, pooled across BOTH algorithms
+    # -- not per-algorithm. Scoring QI-NSGA-III's runs only against other
+    # QI-NSGA-III runs (and MOEA/D's only against other MOEA/D runs) would
+    # measure within-algorithm consistency, not solution quality, and would
+    # put the two algorithms' GD/IGD on non-comparable scales, invalidating
+    # the Mann-Whitney test on those two indicators. Follows the same
+    # pooled-LORO pattern as sensitivity/compare_2opt_fairness.py's own
+    # run_comparison (see its _flat_runs / "other_F" construction): every
+    # run, from either algorithm, is a reference-front candidate for every
+    # OTHER run -- only the exact (algo, seed) pair being scored is excluded.
+    _flat = [(a, s, F) for a, by_seed in per_seed_F.items() for s, F in by_seed.items()]
     quality = {"QI-NSGA-III": {ind: [] for ind in _INDICATORS},
                "MOEA/D":      {ind: [] for ind in _INDICATORS}}
     for algo, by_seed in per_seed_F.items():
-        for seed in seeds:
-            F_run   = by_seed[seed]
-            other_F = [by_seed[s] for s in seeds if s != seed]
+        for seed, F_run in by_seed.items():
+            other_F = [F for a2, s2, F in _flat if not (a2 == algo and s2 == seed)]
             pf_ref  = build_empirical_reference_front(np.vstack(other_F)) if other_F else None
             q = compute_pareto_metrics(F_run, g_ideal, g_nadir, reference_front=pf_ref)
             for ind in _INDICATORS:
@@ -186,6 +231,9 @@ def run_comparison(instance: str, seeds: list[int], max_gen: int) -> dict:
                 r = _wilcoxon_rank_biserial(qi_vals, mo_vals)
                 print(f"    Wilcoxon apparie (seed) = {w_stat:.1f}, p = {p_w:.6f}  "
                       f"(r={r:.3f}) [secondaire, exploratoire]")
+                median_diff, ci_lo, ci_hi = _bootstrap_median_diff_ci(qi_vals, mo_vals)
+                print(f"    Diff median (QI - MOEA/D) = {median_diff:.6f}  "
+                      f"IC95%=[{ci_lo:.6f}, {ci_hi:.6f}]")
             except ValueError as e:
                 print(f"    Wilcoxon apparie (seed): {e}")
 
