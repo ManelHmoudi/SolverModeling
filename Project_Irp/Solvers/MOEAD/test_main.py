@@ -142,3 +142,66 @@ def test_replace_infeasible_offspring_never_beats_feasible_neighbor():
     algo._replace(0, off)
 
     np.testing.assert_allclose(algo.pop.get("F"), [[9.0, 9.0], [9.0, 9.0]])
+
+
+from Solvers.MOEAD import main as moead_main
+
+
+# ── run_moead end-to-end ─────────────────────────────────────────────────
+
+def test_run_moead_repair_final_front_defaults_to_true(tmp_path, monkeypatch):
+    monkeypatch.setattr(moead_main, "_CHROM_CACHE_PATH", str(tmp_path / "moead_chromosomes.json"))
+
+    data = moead_main.run_moead(data_path=_TINY_INSTANCE, n_gen=2, n_runs=1)
+
+    assert data["runs"][0]["meta"]["repair_final_front"] is True
+
+
+def test_run_moead_repair_final_front_false_is_recorded(tmp_path, monkeypatch):
+    cache_path = tmp_path / "moead_chromosomes.json"
+    monkeypatch.setattr(moead_main, "_CHROM_CACHE_PATH", str(cache_path))
+
+    data = moead_main.run_moead(
+        data_path=_TINY_INSTANCE, n_gen=2, n_runs=1, repair_final_front=False,
+    )
+
+    assert data["runs"][0]["meta"]["repair_final_front"] is False
+    with open(cache_path, encoding="utf-8") as f:
+        cache = json.load(f)
+    assert cache["runs"][0]["meta_base"]["repair_final_front"] is False
+
+
+def test_render_from_instance_reapplies_stored_repair_flag(tmp_path, monkeypatch):
+    cache_path = tmp_path / "moead_chromosomes.json"
+    monkeypatch.setattr(moead_main, "_CHROM_CACHE_PATH", str(cache_path))
+
+    moead_main.run_moead(
+        data_path=_TINY_INSTANCE, n_gen=2, n_runs=1, repair_final_front=True,
+    )
+    refreshed = moead_main.render_from_instance(_TINY_INSTANCE)
+
+    assert refreshed["runs"][0]["meta"]["repair_final_front"] is True
+
+
+def test_run_moead_population_equals_ref_dirs_count_not_200(tmp_path, monkeypatch):
+    """MOEA/D's population is len(ref_dirs), not independently settable --
+    see the population-size discussion in docs/superpowers/specs/
+    2026-08-19-moead-integration-design.md. N_PARTITIONS=8, n_obj=4 -> 165,
+    regardless of instance size."""
+    monkeypatch.setattr(moead_main, "_CHROM_CACHE_PATH", str(tmp_path / "moead_chromosomes.json"))
+
+    data = moead_main.run_moead(data_path=_TINY_INSTANCE, n_gen=2, n_runs=1)
+
+    assert data["meta"]["pop_size"] == 165
+
+
+def test_run_moead_report_writes_html_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(moead_main, "_CHROM_CACHE_PATH", str(tmp_path / "moead_chromosomes.json"))
+    out_path = str(tmp_path / "moead_report.html")
+
+    path = moead_main.run_moead_report(output_path=out_path, data_path=_TINY_INSTANCE, n_gen=2, n_runs=1)
+
+    assert os.path.exists(path)
+    with open(path, encoding="utf-8") as f:
+        html = f.read()
+    assert "MOEA/D" in html
