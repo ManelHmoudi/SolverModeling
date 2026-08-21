@@ -159,8 +159,9 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
     use_single_relocation (default False): forwarded to
     _repair_route_result -- see its own use_single_relocation docstring.
 
-    use_two_opt (default True): forwarded to _repair_route_result -- see
-    its own use_two_opt docstring.
+    use_two_opt (default False -- production default, see _repair_route_result's
+    own docstring for the delivery-shift-replaces-2-opt rationale): forwarded
+    to _repair_route_result -- see its own use_two_opt docstring.
 
     use_inter_route_relocate (default False): forwarded to
     _repair_route_result -- see its own use_inter_route_relocate docstring.
@@ -168,8 +169,8 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
     use_route_swap (default False): forwarded to _repair_route_result --
     see its own use_route_swap docstring.
 
-    use_delivery_shift (default False): forwarded to _repair_route_result
-    -- see its own use_delivery_shift docstring.
+    use_delivery_shift (default True -- production default): forwarded to
+    _repair_route_result -- see its own use_delivery_shift docstring.
     """
     from Solvers.NSGA3.decoder import decode_chromosome, build_routes
     from Solvers.NSGA3.evaluator import compute_f1, compute_f2, compute_f3, compute_f4
@@ -228,8 +229,9 @@ def _repair_pareto_front(
     _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
     _repair_route_result use_single_relocation docstring.
 
-    use_two_opt (default True): forwarded to _evaluate_with_repair -- see
-    Solvers/QINSGA3/repair.py's _repair_route_result use_two_opt docstring.
+    use_two_opt (default False -- production default): forwarded to
+    _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
+    _repair_route_result use_two_opt docstring.
 
     use_inter_route_relocate (default False): forwarded to
     _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
@@ -239,9 +241,9 @@ def _repair_pareto_front(
     see Solvers/QINSGA3/repair.py's _repair_route_result use_route_swap
     docstring.
 
-    use_delivery_shift (default False): forwarded to _evaluate_with_repair
-    -- see Solvers/QINSGA3/repair.py's _repair_route_result
-    use_delivery_shift docstring.
+    use_delivery_shift (default True -- production default): forwarded to
+    _evaluate_with_repair -- see Solvers/QINSGA3/repair.py's
+    _repair_route_result use_delivery_shift docstring.
     """
     F_list = []
     G_list = []
@@ -1640,11 +1642,12 @@ def run_qinsga3(
     a SINGLE client -- see _repair_route_result's own
     use_single_relocation docstring.
 
-    use_two_opt (default True -- production behaviour unchanged, applies
-    only when repair_final_front=True): forwarded the same way, letting
-    the 2-opt scan be disabled entirely to isolate use_or_opt /
-    use_single_relocation as the ONLY final-front neighbourhood searched
-    -- see _repair_route_result's own use_two_opt docstring.
+    use_two_opt (default False -- production default, applies only when
+    repair_final_front=True; see _repair_route_result's own use_two_opt
+    docstring for the delivery-shift-replaces-2-opt rationale): forwarded
+    the same way, letting the 2-opt scan be enabled to isolate use_or_opt /
+    use_single_relocation as an ADDITIONAL final-front neighbourhood
+    searched -- see _repair_route_result's own use_two_opt docstring.
 
     use_inter_route_relocate (default False -- ablation-only, applies only
     when repair_final_front=True): forwarded the same way, running the
@@ -1658,8 +1661,8 @@ def run_qinsga3(
     Niveau-2 route-swap pass (exchanging two clients between different
     routes) -- see _repair_route_result's own use_route_swap docstring.
 
-    use_delivery_shift (default False -- ablation-only, applies only when
-    repair_final_front=True): forwarded the same way, running the
+    use_delivery_shift (default True -- production default, applies only
+    when repair_final_front=True): forwarded the same way, running the
     Niveau-3 partial delivery-timing shift pass -- see
     _repair_route_result's own use_delivery_shift docstring.
 
