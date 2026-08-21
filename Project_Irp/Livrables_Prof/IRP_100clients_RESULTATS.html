@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IRP 100 clients &mdash; NSGA-III vs QI-NSGA-III</title>
+<style>
+:root {
+  --bg:      #f4f4f2;
+  --surface: #ffffff;
+  --border:  #e5e5e3;
+  --text:    #1a1a18;
+  --text-2:  #888;
+  --accent:  #534ab7;
+  --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
+  --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
+  --sig-fg:  #a32d2d;
+  --nonsig-fg: #888;
+  --code-bg: #1e1e1e; --code-fg:#d4d4d4;
+  --warn-bg: #fdecea; --warn-fg:#a32d2d;
+}
+[data-dark] {
+  --bg:      #111113;
+  --surface: #1c1c20;
+  --border:  #2c2c34;
+  --text:    #ededed;
+  --text-2:  #888;
+  --accent:  #9f9cf5;
+  --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
+  --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
+  --sig-fg:  #e06060;
+  --nonsig-fg: #888;
+  --code-bg: #16161a; --code-fg:#c9c9c9;
+  --warn-bg: #2e1a1a; --warn-fg:#e06060;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  padding:1.5rem 2rem 3rem;font-size:16px;line-height:1.6;
+  transition:background .2s,color .2s;
+}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.3rem;gap:1rem}
+.hdr h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+.hdr .meta{color:var(--text-2);font-size:15px;margin-top:5px;max-width:75ch}
+.back{display:inline-block;color:var(--accent);font-size:14.5px;font-weight:600;text-decoration:none;margin-bottom:.6rem}
+.back:hover{text-decoration:underline}
+#tbtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:17px;color:var(--text);flex-shrink:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.25rem;margin-bottom:1.1rem}
+.ct{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-2);margin-bottom:.5rem}
+.explain{font-size:15.5px;color:var(--text);margin-bottom:.9rem}
+.warn{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:1rem 1.2rem;
+  font-size:15px;margin-bottom:1.1rem;border:1px solid var(--border)}
+.warn b{display:block;margin-bottom:.4rem;font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);
+  font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:nth-child(even) td{background:var(--bg)}
+.std{color:var(--text-2);font-size:14px}
+.tag{color:var(--text-2);font-size:14px;font-weight:400}
+td.win-n{color:var(--win-n-fg);font-weight:700}
+td.win-q{color:var(--win-q-fg);font-weight:700}
+td.sig{color:var(--sig-fg);font-weight:600}
+td.nonsig{color:var(--nonsig-fg)}
+.hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:.8rem 1.1rem;margin-bottom:.7rem}
+summary{cursor:pointer;font-weight:600;font-size:14.5px;list-style:none;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'\25B8 ';display:inline-block;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:1rem;
+  overflow-x:auto;font-size:13.5px;line-height:1.5;margin-top:.9rem;max-height:65vh;overflow-y:auto}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace}
+.codelink p{color:var(--text-2);margin-bottom:.8rem}
+.colab-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;
+  text-decoration:none;font-weight:600;font-size:15px;padding:9px 16px;border-radius:8px}
+.colab-btn:hover{opacity:.9}
+.results-grid{display:flex;gap:1rem;flex-wrap:wrap}
+.result-btn{flex:1;min-width:220px;display:block;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:1.1rem 1.25rem;text-decoration:none;color:var(--text);transition:border-color .15s}
+.result-btn:hover{border-color:var(--accent)}
+.result-btn .rb-title{font-size:17px;font-weight:700;margin-bottom:.3rem}
+.result-btn .rb-sub{font-size:14px;color:var(--text-2)}
+.result-btn .rb-arrow{color:var(--accent);font-weight:700;margin-top:.6rem;font-size:14.5px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div>
+    <h1>IRP &mdash; 100 clients &mdash; NSGA-III vs QI-NSGA-III</h1>
+    <div class="meta">Instance 100 clients, 5 periodes, 6 vehicules &middot; pop=200, gen=300 &middot;
+    4 configurations : NSGA-III / QI-NSGA-III &times; sans / avec reparation 2-opt.</div>
+  </div>
+  <button id="tbtn" onclick="toggleDark()">&#9680;</button>
+</div>
+
+<div class="card">
+  <div class="ct">Corrections apportees avant cette campagne</div>
+  <ul style="padding-left:1.2em;font-size:15.5px;line-height:1.85">
+    <li>Croisement / mutation inertes (mauvais parametrage) &mdash; corrige</li>
+    <li>QI-NSGA-III : effondrement de diversite des guides &mdash; corrige</li>
+    <li>QI-NSGA-III : sa propre reparation 2-opt jamais appliquee a son rapport &mdash; corrige</li>
+    <li>2-opt applique a un seul algorithme &mdash; desormais applique aux deux partout, y compris en
+    production</li>
+    <li>Reparation 2-opt pouvait laisser une solution dominee dans le front &mdash; filtre de
+    non-domination ajoute</li>
+    <li>Selection des parents asymetrique (tournoi vs. hasard) &mdash; meme mecanisme pour les deux</li>
+    <li>Bruit de mesure QI-NSGA-III (<code>noise_scale</code>) &mdash; desactive par defaut (0 au lieu
+    de 0.02), favorable a QI-NSGA-III en Spacing</li>
+  </ul>
+  <div class="ct" style="margin-top:1.1rem">Corrections methodologiques (mesure, pas equite entre algorithmes)</div>
+  <ul style="padding-left:1.2em;font-size:15.5px;line-height:1.85">
+    <li>GD/IGD mesures contre une grille theorique (Das-Dennis) &mdash; remplacee par un front de
+    reference empirique (solutions reelles des 4 configurations x tous les seeds)</li>
+    <li>Stabilite affirmee sans test formel &mdash; test de Brown-Forsythe ajoute</li>
+    <li>Leave-one-run-out incomplet (fuite entre configurations soeurs du meme seed) &mdash; exclusion
+    corrigee par (algorithme, seed)</li>
+    <li>Comparaison NSGA-III / QI-NSGA-III basee sur Mann-Whitney seul &mdash; Wilcoxon apparie devient le
+    test principal, avec tailles d'effet et correction de Holm-Bonferroni</li>
+    <li>QI-NSGA-III reevaluait inutilement sa population parente a chaque generation &mdash; corrige (mise
+    en cache), budget d'evaluations reel : ~2x celui de NSGA-III &rarr; ~1.1x a generations nominales
+    egales</li>
+    <li>Verification finale a budget d'evaluations strictement identique (60000 des deux cotes, trouve par
+    instrumentation directe, pas une formule) &mdash; l'avantage HV de NSGA-III persiste et s'elargit meme
+    a IGD, refutant l'hypothese d'un artefact de budget (voir page 30 seeds)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="ct">Resultats detailles</div>
+  <div class="explain">Meme protocole exact (2-opt applique aux deux algorithmes, memes correctifs d'equite,
+  <code>noise_scale=0</code>, defaut de production actuel) mene sur deux tailles d'echantillon : 20
+  executions, puis une extension a 30 pour plus de stabilite statistique.</div>
+  <div class="results-grid">
+    <a class="result-btn" href="IRP_100clients_RESULTATS_20seeds.html">
+      <div class="rb-title">Resultats sur 20 executions</div>
+      <div class="rb-sub">Comparatif complet, effet du 2-opt, effet moteur evolutionnaire</div>
+      <div class="rb-arrow">Voir les resultats &rarr;</div>
+    </a>
+    <a class="result-btn" href="IRP_100clients_RESULTATS_30seeds.html">
+      <div class="rb-title">Resultats sur 30 executions</div>
+      <div class="rb-sub">Extension pour plus de stabilite statistique</div>
+      <div class="rb-arrow">Voir les resultats &rarr;</div>
+    </a>
+    <a class="result-btn" href="IRP_100clients_RESULTATS_DELIVERYSHIFT.html">
+      <div class="rb-title">Levier delivery-shift (Niveau 3)</div>
+      <div class="rb-sub">30 executions, nouveau levier de repair isole (sans 2-opt)</div>
+      <div class="rb-arrow">Voir les resultats &rarr;</div>
+    </a>
+  </div>
+</div>
+
+<script>
+function toggleDark(){
+  const on = document.documentElement.toggleAttribute('data-dark');
+  localStorage.setItem('irp-dark', on ? '1' : '');
+}
+(function(){ if(localStorage.getItem('irp-dark')==='1') document.documentElement.setAttribute('data-dark',''); })();
+</script>
+</body>
+</html>
