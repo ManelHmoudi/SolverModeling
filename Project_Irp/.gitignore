@@ -6,6 +6,7 @@ __pycache__/
 
 # Generated reports (re-created on each run)
 *.html
+!Livrables_Prof/**/*.html
 *_chromosomes.json
 
 # Runtime logs and outputs
