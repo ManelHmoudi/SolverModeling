@@ -11,6 +11,7 @@
   --border:  #e5e5e3;
   --text:    #1a1a18;
   --text-2:  #888;
+  --text-3:  #aaa;
   --accent:  #534ab7;
   --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
   --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
@@ -22,6 +23,7 @@
   --border:  #2c2c34;
   --text:    #ededed;
   --text-2:  #888;
+  --text-3:  #5a5a5a;
   --accent:  #9f9cf5;
   --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
   --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
@@ -83,6 +85,20 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 .rank-axis-lbl{font-size:10.5px;fill:var(--text-2);text-anchor:middle;font-weight:600}
 .rank-grid-lbl{font-size:9.5px;fill:var(--text-2);text-anchor:end}
 .rank-y-title{font-size:9.5px;font-weight:700;fill:var(--text-2);text-anchor:middle}
+.lit-table-block { margin-bottom:28px; }
+.lit-table-caption { font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:2px; }
+.lit-table-cite { font-size:11px;color:var(--text-3);margin-bottom:10px; }
+.lit-table-scroll { overflow-x:auto; }
+.lit-table { width:100%;min-width:520px;border-collapse:collapse;font-size:13px; }
+.lit-table thead tr { border-top:2px solid var(--text);border-bottom:1.5px solid var(--text); }
+.lit-table th { padding:8px 14px;text-align:center;font-weight:700;color:var(--text);white-space:nowrap; }
+.lit-table th:first-child { text-align:left; }
+.lit-table td { padding:7px 14px;text-align:center;color:var(--text);font-variant-numeric:tabular-nums;font-family:monospace; }
+.lit-table td:first-child { text-align:left;font-weight:700;font-family:inherit; }
+.lit-table tbody tr.grp-end td { border-bottom:1px solid var(--border); }
+.lit-table tbody tr:last-child td { border-bottom:2px solid var(--text); }
+.lit-table-note { font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.65; }
+.lit-table-note b { color:var(--text-2); }
 </style>
 </head>
 <body>
@@ -95,6 +111,27 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
     aucune execution necessaire &mdash; code source en bas de page.</div>
   </div>
   <button id="tbtn" onclick="toggleDark()">&#9680;</button>
+</div>
+
+<div class="lit-table-block">
+    <div class="lit-table-caption">Tableau 2 &mdash; Param&egrave;tres exp&eacute;rimentaux reproduits</div>
+    <div class="lit-table-scroll">
+      <table class="lit-table">
+        <thead>
+          <tr><th>Suite</th><th>M</th><th>p</th><th>H</th><th>N</th><th>G</th><th>T<sub>max</sub></th></tr>
+        </thead>
+        <tbody>
+          <tr><td>DTLZ 1&ndash;7</td><td>3</td><td>12</td><td>91</td><td>92</td><td>326</td><td>30 000</td></tr>
+          <tr class="grp-end"><td></td><td>4</td><td>7</td><td>120</td><td>120</td><td>250</td><td></td></tr>
+          <tr><td>MaF 1&ndash;7</td><td>3</td><td>12</td><td>91</td><td>92</td><td>326</td><td>30 000</td></tr>
+          <tr><td></td><td>4</td><td>7</td><td>120</td><td>120</td><td>250</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="lit-table-note">
+      <b>p</b> = divisions Das-Dennis &middot; <b>H</b> = points de r&eacute;f&eacute;rence &middot; <b>N</b> = taille de population (plus petit multiple de 4 &ge; H) &middot; <b>G</b> = g&eacute;n&eacute;rations (T<sub>max</sub>&nbsp;&divide;&nbsp;N) &middot; SBX &eta;=20, PM &eta;=20, p<sub>c</sub>=1.0, p<sub>m</sub>=1/D &middot; 30 runs ind&eacute;pendants, IGD sur P*&asymp;10&thinsp;000 points de r&eacute;f&eacute;rence.<br>
+      <b>D</b> (variables de d&eacute;cision) suit ici la convention standard de la litt&eacute;rature, D = M + k &minus; 1 (k=5/10/20 selon le probl&egrave;me DTLZ, k=10 pour MaF1&ndash;6, k=20 pour MaF7), et non la valeur fixe D=54 de l'article
+    </div>
 </div>
 
 <div class="card">
