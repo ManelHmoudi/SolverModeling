@@ -156,20 +156,25 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 <div class="scoreboard">
   <div class="score n">
     <div class="sl">NSGA-III meilleur (IGD moyen)</div>
-    <div class="sv">8 / 25</div>
-    <div class="su">combinaisons probleme &times; M (32%)</div>
+    <div class="sv">7 / 25</div>
+    <div class="su">combinaisons probleme &times; M (28%)</div>
   </div>
   <div class="score q">
     <div class="sl">QI-NSGA-III meilleur (IGD moyen)</div>
     <div class="sv">17 / 25</div>
-    <div class="su">combinaisons probleme &times; M (68%)</div>
+    <div class="su">combinaisons probleme &times; M (68%) &mdash; inchange depuis l'ajout de MOEA/D</div>
+  </div>
+  <div class="score n" style="background:var(--bg)">
+    <div class="sl" style="color:var(--text-2)">MOEA/D meilleur (IGD moyen)</div>
+    <div class="sv">1 / 25</div>
+    <div class="su">combinaisons probleme &times; M (4%) &mdash; vole 1 victoire a NSGA-III (DTLZ6, M=3)</div>
   </div>
 </div>
 
 <div class="card">
   <div class="ct">Classement moyen (rang IGD) &mdash; DTLZ1-7 + MaF1-7 combines</div>
-  <p class="hint" style="margin-top:0;margin-bottom:.8rem">Methode de Cui et al. (2025), Fig. 1/2 &mdash; pour chaque probleme, les deux
-  algorithmes sont classes par IGD moyen (rang 1 = meilleur), puis le rang est moyenne sur les 14 problemes
+  <p class="hint" style="margin-top:0;margin-bottom:.8rem">Methode de Cui et al. (2025), Fig. 1/2 &mdash; pour chaque probleme, les trois
+  algorithmes sont classes par IGD moyen (rang 1 = meilleur, ex aequo a rang moyen), puis le rang est moyenne sur les 14 problemes
   disponibles a M=3 et les 11 a M=4 (DTLZ5-7 n'ont pas de front de reference pymoo au-dela de M=3). Plus bas =
   meilleur.</p>
   <div class="rank-charts">
@@ -179,15 +184,19 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
       <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
         <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
         <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
-        <line x1="26" y1="83.3" x2="286" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="86.3">1</text>
-        <line x1="26" y1="46.7" x2="286" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="49.7">2</text>
-        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">3</text>
-        <rect x="26.0" y="54.5" width="123.0" height="65.5" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.79 (sur 14 problèmes, M=3)</title></rect>
-        <text class="rank-bar-lbl" x="87.5" y="49.5">1.79</text>
-        <text class="rank-axis-lbl" x="87.5" y="134.0">NSGA-III</text>
-        <rect x="163.0" y="75.5" width="123.0" height="44.5" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.21 (sur 14 problèmes, M=3)</title></rect>
-        <text class="rank-bar-lbl" x="224.5" y="70.5">1.21</text>
-        <text class="rank-axis-lbl" x="224.5" y="134.0">QI-NSGA-III</text>
+        <line x1="26" y1="92.5" x2="286" y2="92.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="95.5">1</text>
+        <line x1="26" y1="65.0" x2="286" y2="65.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="68.0">2</text>
+        <line x1="26" y1="37.5" x2="286" y2="37.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="40.5">3</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">4</text>
+        <rect x="26.0" y="65.0" width="77.3" height="55.0" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 2.00 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="64.7" y="60.0">2.00</text>
+        <text class="rank-axis-lbl" x="64.7" y="134.0">NSGA-III</text>
+        <rect x="117.3" y="82.7" width="77.3" height="37.3" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.36 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="156.0" y="77.7">1.36</text>
+        <text class="rank-axis-lbl" x="156.0" y="134.0">QI-NSGA-III</text>
+        <rect x="208.7" y="47.3" width="77.3" height="72.7" rx="4" fill="var(--accent)" opacity=".92"><title>MOEA/D — rang moyen 2.64 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="247.3" y="42.3">2.64</text>
+        <text class="rank-axis-lbl" x="247.3" y="134.0">MOEA/D</text>
       </svg>
     </div>
     <div class="rank-card">
@@ -196,15 +205,19 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
       <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
         <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
         <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
-        <line x1="26" y1="83.3" x2="286" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="86.3">1</text>
-        <line x1="26" y1="46.7" x2="286" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="49.7">2</text>
-        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">3</text>
-        <rect x="26.0" y="63.3" width="123.0" height="56.7" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.55 (sur 11 problèmes, M=4)</title></rect>
-        <text class="rank-bar-lbl" x="87.5" y="58.3">1.55</text>
-        <text class="rank-axis-lbl" x="87.5" y="134.0">NSGA-III</text>
-        <rect x="163.0" y="66.7" width="123.0" height="53.3" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.45 (sur 11 problèmes, M=4)</title></rect>
-        <text class="rank-bar-lbl" x="224.5" y="61.7">1.45</text>
-        <text class="rank-axis-lbl" x="224.5" y="134.0">QI-NSGA-III</text>
+        <line x1="26" y1="92.5" x2="286" y2="92.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="95.5">1</text>
+        <line x1="26" y1="65.0" x2="286" y2="65.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="68.0">2</text>
+        <line x1="26" y1="37.5" x2="286" y2="37.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="40.5">3</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">4</text>
+        <rect x="26.0" y="72.5" width="77.3" height="47.5" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.73 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="64.7" y="67.5">1.73</text>
+        <text class="rank-axis-lbl" x="64.7" y="134.0">NSGA-III</text>
+        <rect x="117.3" y="77.5" width="77.3" height="42.5" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.55 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="156.0" y="72.5">1.55</text>
+        <text class="rank-axis-lbl" x="156.0" y="134.0">QI-NSGA-III</text>
+        <rect x="208.7" y="45.0" width="77.3" height="75.0" rx="4" fill="var(--accent)" opacity=".92"><title>MOEA/D — rang moyen 2.73 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="247.3" y="40.0">2.73</text>
+        <text class="rank-axis-lbl" x="247.3" y="134.0">MOEA/D</text>
       </svg>
     </div>
   </div>
