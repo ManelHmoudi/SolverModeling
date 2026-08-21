@@ -330,6 +330,17 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
 .lit-table-note { font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.65; }
 .lit-table-note b { color:var(--text-2); }
 
+/* ── Mean-rank bar charts (Cui et al. 2025, Fig. 1/2 style) ── */
+.rank-block { margin-bottom:28px; }
+.rank-charts { display:flex;flex-wrap:wrap;gap:16px;margin-top:12px; }
+.rank-card { flex:1 1 260px;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:14px 18px 10px; }
+.rank-card-title { font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:2px; }
+.rank-card-sub { font-size:10.5px;color:var(--text-3);margin-bottom:8px; }
+.rank-svg { width:100%;overflow:visible; }
+.rank-bar-lbl { font-size:9.5px;font-weight:700;fill:var(--text);text-anchor:middle; }
+.rank-axis-lbl { font-size:9px;fill:var(--text-2);text-anchor:middle;font-weight:600; }
+.rank-grid-lbl { font-size:8px;fill:var(--text-3);text-anchor:end; }
+
 @media (max-width:680px) { .grid2 { grid-template-columns:1fr; } .page { padding:16px 12px 40px; } .header { flex-direction:column;align-items:flex-start; } }
 </style>
 </head>
@@ -385,6 +396,12 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
     </div>
   </div>
 
+  <div class="rank-block">
+    <div class="lit-table-caption">Classement moyen (rang IGD) &mdash; DTLZ1&ndash;7 + MaF1&ndash;7 combin&eacute;s</div>
+    <div class="lit-table-cite">M&eacute;thode de Cui et al. (2025), Fig. 1/2 &mdash; pour chaque probl&egrave;me disponible, les algorithmes sont class&eacute;s par IGD moyenne (rang 1 = meilleur ; ex aequo &agrave; rang moyen), puis le rang est moyenn&eacute; sur tous les probl&egrave;mes. Plus bas = meilleur.</div>
+    <div class="rank-charts" id="rankCharts"></div>
+  </div>
+
   <div class="suite-bar" role="tablist">
     <button class="suite-tab active" data-suite="dtlz" onclick="selectSuite('dtlz')">DTLZ1&ndash;7</button>
     <button class="suite-tab"        data-suite="maf"  onclick="selectSuite('maf')">MaF1&ndash;7</button>
@@ -433,6 +450,86 @@ const ALGO_ORDER = ['nsga3', 'qinsga3', 'moead'];
 // Paramètres complets (p/H/N/G/η/...) affichés une seule fois dans le Tableau 2
 // en haut de page — ici on ne rappelle que N et G pour situer la carte sans dupliquer.
 const M_META = { M3: { N: 92, G: 326 }, M4: { N: 120, G: 250 } };
+
+// ── Mean-rank bar charts (Cui et al. 2025, Fig. 1/2 style) ──────────────
+// For a given M, rank the available algorithms by mean IGD on EACH problem
+// (DTLZ1-7 + MaF1-7 combined, whichever have data for that M — DTLZ5/6/7
+// are M=3-only, see DEGENERATE_PROBLEMS below), then average each
+// algorithm's rank across every problem it was ranked on. Ties (equal mean
+// IGD) share the average of the tied rank positions, the standard
+// competition-ranking convention. Driven entirely by ALGO_ORDER.filter(a
+// => mData[a]), so this extends to a 3rd algorithm automatically once its
+// benchmark results exist -- no changes needed here when that happens.
+function computeMeanRanks(mKey) {
+  const problems = [
+    ...SUITE_PROBLEMS.dtlz.map(name => ({ suite: 'dtlz', name })),
+    ...SUITE_PROBLEMS.maf.map(name => ({ suite: 'maf', name })),
+  ];
+  const rankSums = {}, rankCounts = {};
+  problems.forEach(({ suite, name }) => {
+    const mData = ((DATA[suite] || {})[name] || {})[mKey];
+    if (!mData) return;
+    const present = ALGO_ORDER.filter(a => mData[a]);
+    if (present.length < 2) return;
+    const sorted = [...present].sort((a, b) => mData[a].mean - mData[b].mean);
+    let i = 0;
+    while (i < sorted.length) {
+      let j = i;
+      while (j + 1 < sorted.length && mData[sorted[j + 1]].mean === mData[sorted[i]].mean) j++;
+      const avgRank = (i + 1 + j + 1) / 2;
+      for (let k = i; k <= j; k++) {
+        const a = sorted[k];
+        rankSums[a] = (rankSums[a] || 0) + avgRank;
+        rankCounts[a] = (rankCounts[a] || 0) + 1;
+      }
+      i = j + 1;
+    }
+  });
+  const meanRanks = {};
+  ALGO_ORDER.forEach(a => { if (rankCounts[a]) meanRanks[a] = { rank: rankSums[a] / rankCounts[a], n: rankCounts[a] }; });
+  return meanRanks;
+}
+
+function renderRankChart(mKey) {
+  const n = mKey === 'M3' ? 3 : 4;
+  const meanRanks = computeMeanRanks(mKey);
+  const algos = ALGO_ORDER.filter(a => meanRanks[a]);
+  if (!algos.length) {
+    return `<div class="rank-card"><div class="rank-card-title">M = ${n}</div><div class="nodata" style="padding:14px">Pas assez de r&eacute;sultats pour classer (au moins 2 algorithmes requis sur un m&ecirc;me probl&egrave;me).</div></div>`;
+  }
+  const maxRank = algos.length + 1; // headroom above the worst possible rank
+  const W = 280, PLOT_H = 110, PX = 10, PY_TOP = 10, BAR_GAP = 14;
+  const barW = (W - 2 * PX - BAR_GAP * (algos.length - 1)) / algos.length;
+  const yOf = v => PY_TOP + (1 - v / maxRank) * PLOT_H;
+  const gridLines = [];
+  for (let g = 0; g <= maxRank; g++) {
+    const y = yOf(g);
+    gridLines.push(`<line x1="${PX}" y1="${y.toFixed(1)}" x2="${W - PX}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`);
+    gridLines.push(`<text class="rank-grid-lbl" x="${PX - 3}" y="${(y + 3).toFixed(1)}">${g}</text>`);
+  }
+  const bars = algos.map((a, i) => {
+    const r = meanRanks[a].rank;
+    const x = PX + i * (barW + BAR_GAP);
+    const yTop = yOf(r);
+    const h = yOf(0) - yTop;
+    const cx = x + barW / 2;
+    return `
+      <rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h, 0).toFixed(1)}" rx="4" fill="var(--accent)" opacity=".92">
+        <title>${ALGO_LABEL[a]} — rang moyen ${r.toFixed(2)} (sur ${meanRanks[a].n} problèmes, M=${n})</title>
+      </rect>
+      <text class="rank-bar-lbl" x="${cx.toFixed(1)}" y="${(yTop - 5).toFixed(1)}">${r.toFixed(2)}</text>
+      <text class="rank-axis-lbl" x="${cx.toFixed(1)}" y="${(yOf(0) + 14).toFixed(1)}">${ALGO_LABEL[a].split(' (')[0]}</text>`;
+  }).join('');
+  return `<div class="rank-card">
+    <div class="rank-card-title">M = ${n}</div>
+    <div class="rank-card-sub">rang moyen IGD, ${algos.length} algorithme${algos.length > 1 ? 's' : ''} &mdash; plus bas = meilleur</div>
+    <svg class="rank-svg" viewBox="0 0 ${W} ${PLOT_H + 24}" style="height:${PLOT_H + 24}px">${gridLines.join('')}${bars}</svg>
+  </div>`;
+}
+
+function renderRankCharts() {
+  document.getElementById('rankCharts').innerHTML = ['M3', 'M4'].map(renderRankChart).join('');
+}
 
 // Format décimal court, en complément de la notation scientifique.
 function fmtDec(v) {
@@ -623,6 +720,7 @@ function applyTheme(t) {
 function toggleTheme() { applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
 (function () { applyTheme(localStorage.getItem('irp-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')); })();
 
+renderRankCharts();
 renderProbTabs();
 selectProb(SUITE_PROBLEMS[currentSuite][0]);
 </script>
