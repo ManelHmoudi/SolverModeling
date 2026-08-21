@@ -340,6 +340,7 @@ h3 .param-lbl { font-size:10px;text-transform:none;letter-spacing:0; }
 .rank-bar-lbl { font-size:9.5px;font-weight:700;fill:var(--text);text-anchor:middle; }
 .rank-axis-lbl { font-size:9px;fill:var(--text-2);text-anchor:middle;font-weight:600; }
 .rank-grid-lbl { font-size:8px;fill:var(--text-3);text-anchor:end; }
+.rank-y-title { font-size:9px;font-weight:700;fill:var(--text-2);text-anchor:middle; }
 
 @media (max-width:680px) { .grid2 { grid-template-columns:1fr; } .page { padding:16px 12px 40px; } .header { flex-direction:column;align-items:flex-start; } }
 </style>
@@ -498,18 +499,19 @@ function renderRankChart(mKey) {
     return `<div class="rank-card"><div class="rank-card-title">M = ${n}</div><div class="nodata" style="padding:14px">Pas assez de r&eacute;sultats pour classer (au moins 2 algorithmes requis sur un m&ecirc;me probl&egrave;me).</div></div>`;
   }
   const maxRank = algos.length + 1; // headroom above the worst possible rank
-  const W = 280, PLOT_H = 110, PX = 10, PY_TOP = 10, BAR_GAP = 14;
-  const barW = (W - 2 * PX - BAR_GAP * (algos.length - 1)) / algos.length;
+  const OX = 16, PLOT_W = 280, PLOT_H = 110, PX = 10, PY_TOP = 10, BAR_GAP = 14;
+  const W = OX + PLOT_W;
+  const barW = (PLOT_W - 2 * PX - BAR_GAP * (algos.length - 1)) / algos.length;
   const yOf = v => PY_TOP + (1 - v / maxRank) * PLOT_H;
   const gridLines = [];
   for (let g = 0; g <= maxRank; g++) {
     const y = yOf(g);
-    gridLines.push(`<line x1="${PX}" y1="${y.toFixed(1)}" x2="${W - PX}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`);
-    gridLines.push(`<text class="rank-grid-lbl" x="${PX - 3}" y="${(y + 3).toFixed(1)}">${g}</text>`);
+    gridLines.push(`<line x1="${OX + PX}" y1="${y.toFixed(1)}" x2="${OX + PLOT_W - PX}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`);
+    gridLines.push(`<text class="rank-grid-lbl" x="${OX + PX - 3}" y="${(y + 3).toFixed(1)}">${g}</text>`);
   }
   const bars = algos.map((a, i) => {
     const r = meanRanks[a].rank;
-    const x = PX + i * (barW + BAR_GAP);
+    const x = OX + PX + i * (barW + BAR_GAP);
     const yTop = yOf(r);
     const h = yOf(0) - yTop;
     const cx = x + barW / 2;
@@ -520,10 +522,12 @@ function renderRankChart(mKey) {
       <text class="rank-bar-lbl" x="${cx.toFixed(1)}" y="${(yTop - 5).toFixed(1)}">${r.toFixed(2)}</text>
       <text class="rank-axis-lbl" x="${cx.toFixed(1)}" y="${(yOf(0) + 14).toFixed(1)}">${ALGO_LABEL[a].split(' (')[0]}</text>`;
   }).join('');
+  const titleX = (OX / 2 - 2).toFixed(1), titleY = (PY_TOP + PLOT_H / 2).toFixed(1);
+  const axisTitle = `<text class="rank-y-title" x="${titleX}" y="${titleY}" transform="rotate(-90 ${titleX} ${titleY})">Mean rank</text>`;
   return `<div class="rank-card">
     <div class="rank-card-title">M = ${n}</div>
     <div class="rank-card-sub">rang moyen IGD, ${algos.length} algorithme${algos.length > 1 ? 's' : ''} &mdash; plus bas = meilleur</div>
-    <svg class="rank-svg" viewBox="0 0 ${W} ${PLOT_H + 24}" style="height:${PLOT_H + 24}px">${gridLines.join('')}${bars}</svg>
+    <svg class="rank-svg" viewBox="0 0 ${W} ${PLOT_H + 24}" style="height:${PLOT_H + 24}px">${axisTitle}${gridLines.join('')}${bars}</svg>
   </div>`;
 }
 

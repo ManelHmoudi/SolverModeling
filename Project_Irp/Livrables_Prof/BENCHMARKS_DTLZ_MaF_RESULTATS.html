@@ -82,6 +82,7 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 .rank-bar-lbl{font-size:11px;font-weight:700;fill:var(--text);text-anchor:middle}
 .rank-axis-lbl{font-size:10.5px;fill:var(--text-2);text-anchor:middle;font-weight:600}
 .rank-grid-lbl{font-size:9.5px;fill:var(--text-2);text-anchor:end}
+.rank-y-title{font-size:9.5px;font-weight:700;fill:var(--text-2);text-anchor:middle}
 </style>
 </head>
 <body>
@@ -138,33 +139,35 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
     <div class="rank-card">
       <div class="rank-card-title">M = 3</div>
       <div class="rank-card-sub">rang moyen IGD, 14 problemes &mdash; plus bas = meilleur</div>
-      <svg class="rank-svg" viewBox="0 0 280 134" style="height:134px">
-        <line x1="10" y1="120.0" x2="270" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="123.0">0</text>
-        <line x1="10" y1="83.3" x2="270" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="86.3">1</text>
-        <line x1="10" y1="46.7" x2="270" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="49.7">2</text>
-        <line x1="10" y1="10.0" x2="270" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="13.0">3</text>
-        <rect x="10.0" y="54.5" width="123.0" height="65.5" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.79 (sur 14 problèmes, M=3)</title></rect>
-        <text class="rank-bar-lbl" x="71.5" y="49.5">1.79</text>
-        <text class="rank-axis-lbl" x="71.5" y="134.0">NSGA-III</text>
-        <rect x="147.0" y="75.5" width="123.0" height="44.5" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.21 (sur 14 problèmes, M=3)</title></rect>
-        <text class="rank-bar-lbl" x="208.5" y="70.5">1.21</text>
-        <text class="rank-axis-lbl" x="208.5" y="134.0">QI-NSGA-III</text>
+      <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
+        <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
+        <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
+        <line x1="26" y1="83.3" x2="286" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="86.3">1</text>
+        <line x1="26" y1="46.7" x2="286" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="49.7">2</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">3</text>
+        <rect x="26.0" y="54.5" width="123.0" height="65.5" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.79 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="87.5" y="49.5">1.79</text>
+        <text class="rank-axis-lbl" x="87.5" y="134.0">NSGA-III</text>
+        <rect x="163.0" y="75.5" width="123.0" height="44.5" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.21 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="224.5" y="70.5">1.21</text>
+        <text class="rank-axis-lbl" x="224.5" y="134.0">QI-NSGA-III</text>
       </svg>
     </div>
     <div class="rank-card">
       <div class="rank-card-title">M = 4</div>
       <div class="rank-card-sub">rang moyen IGD, 11 problemes &mdash; plus bas = meilleur</div>
-      <svg class="rank-svg" viewBox="0 0 280 134" style="height:134px">
-        <line x1="10" y1="120.0" x2="270" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="123.0">0</text>
-        <line x1="10" y1="83.3" x2="270" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="86.3">1</text>
-        <line x1="10" y1="46.7" x2="270" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="49.7">2</text>
-        <line x1="10" y1="10.0" x2="270" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="7" y="13.0">3</text>
-        <rect x="10.0" y="63.3" width="123.0" height="56.7" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.55 (sur 11 problèmes, M=4)</title></rect>
-        <text class="rank-bar-lbl" x="71.5" y="58.3">1.55</text>
-        <text class="rank-axis-lbl" x="71.5" y="134.0">NSGA-III</text>
-        <rect x="147.0" y="66.7" width="123.0" height="53.3" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.45 (sur 11 problèmes, M=4)</title></rect>
-        <text class="rank-bar-lbl" x="208.5" y="61.7">1.45</text>
-        <text class="rank-axis-lbl" x="208.5" y="134.0">QI-NSGA-III</text>
+      <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
+        <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
+        <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
+        <line x1="26" y1="83.3" x2="286" y2="83.3" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="86.3">1</text>
+        <line x1="26" y1="46.7" x2="286" y2="46.7" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="49.7">2</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">3</text>
+        <rect x="26.0" y="63.3" width="123.0" height="56.7" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III — rang moyen 1.55 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="87.5" y="58.3">1.55</text>
+        <text class="rank-axis-lbl" x="87.5" y="134.0">NSGA-III</text>
+        <rect x="163.0" y="66.7" width="123.0" height="53.3" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.45 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="224.5" y="61.7">1.45</text>
+        <text class="rank-axis-lbl" x="224.5" y="134.0">QI-NSGA-III</text>
       </svg>
     </div>
   </div>
