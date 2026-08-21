@@ -290,12 +290,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 <div class="card">
   <div class="ct">Conclusion</div>
   <p style="font-size:15.5px;line-height:1.7">Sur les 25 combinaisons probleme &times; M testees, <b>QI-NSGA-III
-  obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>. Aucun
-  algorithme ne domine systematiquement, mais QI-NSGA-III l'emporte nettement, surtout sur les problemes
-  multimodaux difficiles (DTLZ1, DTLZ3, MaF3, MaF4), ou il reste a la fois meilleur en moyenne et plus regulier
-  d'un run a l'autre. MOEA/D est le plus faible des trois sur l'ensemble de la suite, souvent par un a deux
-  ordres de grandeur (ex. MaF3 M=3 : IGD moyen 1182.0 contre 1.59 pour QI-NSGA-III) &mdash; un retard coherent
-  avec celui observe sur l'instance MPIRP reelle (page IRP 100 clients).</p>
+  obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>. Meme si
+  QI-NSGA-III gagne le plus souvent, il ne gagne pas toujours &mdash; NSGA-III l'emporte sur des problemes
+  precis (DTLZ2, DTLZ4 a M=4, MaF2, MaF5 et MaF7 a M=4), et MOEA/D une fois (DTLZ6, M=3). QI-NSGA-III reste
+  neanmoins nettement devant, surtout sur les problemes multimodaux difficiles (DTLZ1, DTLZ3, MaF3, MaF4), ou
+  il est a la fois meilleur en moyenne et plus regulier d'un run a l'autre. MOEA/D est le plus faible des trois
+  sur l'ensemble de la suite, souvent par un a deux ordres de grandeur (ex. MaF3 M=3 : IGD moyen 1182.0 contre
+  1.59 pour QI-NSGA-III).</p>
 </div>
 
 <div class="card codelink">
