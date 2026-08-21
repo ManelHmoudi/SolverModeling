@@ -111,8 +111,22 @@ def run_qinsga3_generic(
     rotation_type: str = "tanh",
     noise_scale: float = 0.02,
     escape_prob: float = 0.0,
+    callback=None,
 ) -> np.ndarray:
     """Run one QINSGA-III instance on a pymoo Problem. Returns the final Pareto front's F.
+
+    callback (default None): if given, called once per generation as
+    callback(gen, n_eval, F_survived) -- gen is 0-indexed, n_eval is the
+    REAL cumulative evaluation count so far (counted directly, mirroring
+    Solvers/QINSGA3/algorithm.py::run_qinsga3's own _n_eval_used counter,
+    not a formula -- respects this loop's own eval-caching, see below),
+    F_survived is the current generation's elitist-survived population's
+    objective matrix (pop_size x n_obj), the same population qpop.theta
+    holds after this generation's survival step. Exists so a convergence
+    trajectory (e.g. IGD vs evaluations, matching Cui et al. 2025's Fig. 3)
+    can be tracked without pymoo's own save_history= (which this loop,
+    being a separate copy of algorithm.py's generational structure rather
+    than a pymoo Algorithm subclass, has no access to).
 
     noise_scale controls QuantumPopulation's measurement diversity noise
     (default 0.02, the IRP-tuned value — see Solvers/QINSGA3/chromosome.py).
@@ -150,10 +164,14 @@ def run_qinsga3_generic(
     arch_theta: list[np.ndarray] = []
     _MAX_ARCHIVE = 500
 
+    _n_eval_used = 0
+
     def _eval_batch(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        nonlocal _n_eval_used
         F, G = problem.evaluate(X, return_values_of=["F", "G"])
         if G is None or (hasattr(G, "size") and G.size == 0):
             G = np.zeros((X.shape[0], 0))
+        _n_eval_used += len(X)
         return np.asarray(F), np.asarray(G)
 
     # Cache of the previous generation's survived F/G, mirroring
@@ -278,6 +296,13 @@ def run_qinsga3_generic(
         _prev_survived_F  = np.asarray(survived.get("F"), dtype=float)
         _prev_survived_G  = np.asarray(survived.get("G"), dtype=float)
         _prev_cache_valid = True
+
+        if callback is not None:
+            # Non-dominated subset only, matching pymoo's own res.history[i].opt
+            # convention (NSGA-III/MOEA-D's own save_history= snapshots) so a
+            # cross-algorithm convergence comparison is apples-to-apples.
+            gen_nd_idx = sorter.do(_prev_survived_F, only_non_dominated_front=True)
+            callback(gen, _n_eval_used, _prev_survived_F[gen_nd_idx])
 
         if (arch_F_norm is not None
                 and migration_period > 0
