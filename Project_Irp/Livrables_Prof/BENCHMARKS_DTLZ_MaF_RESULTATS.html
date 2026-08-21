@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Benchmarks DTLZ / MaF &mdash; NSGA-III vs QI-NSGA-III</title>
+<title>Benchmarks DTLZ / MaF &mdash; NSGA-III vs QI-NSGA-III vs MOEA/D</title>
 <style>
 :root {
   --bg:      #f4f4f2;
@@ -15,6 +15,7 @@
   --accent:  #534ab7;
   --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
   --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
+  --win-m-bg:#fdf3e3; --win-m-fg:#9a6a00;
   --code-bg: #1e1e1e; --code-fg:#d4d4d4;
 }
 [data-dark] {
@@ -27,6 +28,7 @@
   --accent:  #9f9cf5;
   --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
   --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
+  --win-m-bg:#332a12; --win-m-fg:#e0ab4a;
   --code-bg: #16161a; --code-fg:#c9c9c9;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -63,6 +65,7 @@ td.mean{font-weight:700;color:var(--text)}
 td.na{color:var(--text-2);font-style:italic;text-align:center}
 td.win-n{color:var(--win-n-fg);font-weight:700}
 td.win-q{color:var(--win-q-fg);font-weight:700}
+td.win-m{color:var(--win-m-fg);font-weight:700}
 .hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
 details{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem}
 summary{cursor:pointer;font-weight:700;font-size:15.5px;list-style:none}
@@ -104,7 +107,7 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 <body>
 <div class="hdr">
   <div>
-    <h1>Benchmarks DTLZ1-7 / MaF1-7 &mdash; NSGA-III vs QI-NSGA-III</h1>
+    <h1>Benchmarks DTLZ1-7 / MaF1-7 &mdash; NSGA-III vs QI-NSGA-III vs MOEA/D</h1>
     <div class="meta">Protocole Cui, Shi, Wang, Ding, Li &amp; Li (2025), <i>Complex &amp; Intelligent Systems</i> 11:136
     &mdash; 30 runs independants par probleme (seeds fixes), SBX &eta;=20 p<sub>c</sub>=1.0, PM &eta;=20 p<sub>m</sub>=1/D,
     directions de reference Das-Dennis, budget fixe de 30000 evaluations par run. Resultats deja calcules,
@@ -227,12 +230,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">DTLZ1-7 &mdash; M=3 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th rowspan="2">Gagnant</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
       <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
+          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
           <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-      <tr><td>DTLZ1</td><td>0.020532</td><td>0.292087</td><td>0.645413</td><td class='mean'>0.228815</td><td>0.215363</td><td>0.027533</td><td>0.032347</td><td>0.060678</td><td class='mean'>0.035625</td><td>0.009070</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.054459</td><td>0.054466</td><td>0.054488</td><td class='mean'>0.054468</td><td>0.000007</td><td>0.065895</td><td>0.071677</td><td>0.081608</td><td class='mean'>0.072326</td><td>0.004049</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>2.004426</td><td>6.271486</td><td>15.453127</td><td class='mean'>7.853266</td><td>3.844266</td><td>0.072882</td><td>0.122813</td><td>1.068804</td><td class='mean'>0.181430</td><td>0.188917</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.054462</td><td>0.054472</td><td>0.544326</td><td class='mean'>0.152405</td><td>0.195863</td><td>0.065729</td><td>0.072636</td><td>0.082466</td><td class='mean'>0.073323</td><td>0.004551</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ5</td><td>0.033811</td><td>0.038444</td><td>0.043229</td><td class='mean'>0.037518</td><td>0.002150</td><td>0.007557</td><td>0.008997</td><td>0.013561</td><td class='mean'>0.009401</td><td>0.001268</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ6</td><td>0.465591</td><td>0.727042</td><td>1.072340</td><td class='mean'>0.716894</td><td>0.135307</td><td>1.564528</td><td>1.840963</td><td>2.171592</td><td class='mean'>1.841740</td><td>0.125524</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ7</td><td>0.097563</td><td>0.103020</td><td>0.371852</td><td class='mean'>0.113257</td><td>0.048315</td><td>0.092715</td><td>0.105321</td><td>0.125244</td><td class='mean'>0.107515</td><td>0.007799</td><td class='win-q'>QI-NSGA-III</td></tr>
+<tr><td>DTLZ1</td><td>0.020532</td><td>0.292087</td><td>0.645413</td><td class='mean'>0.228815</td><td>0.215363</td><td>0.027533</td><td>0.032347</td><td>0.060678</td><td class='mean'>0.035625</td><td>0.009070</td><td>0.031129</td><td>0.607828</td><td>3.197094</td><td class='mean'>1.058044</td><td>0.991829</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.054459</td><td>0.054466</td><td>0.054488</td><td class='mean'>0.054468</td><td>0.000007</td><td>0.065895</td><td>0.071677</td><td>0.081608</td><td class='mean'>0.072326</td><td>0.004049</td><td>0.075023</td><td>0.076103</td><td>0.077361</td><td class='mean'>0.076054</td><td>0.000516</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>2.004426</td><td>6.271486</td><td>15.453127</td><td class='mean'>7.853266</td><td>3.844266</td><td>0.072882</td><td>0.122813</td><td>1.068804</td><td class='mean'>0.181430</td><td>0.188917</td><td>7.509574</td><td>28.343742</td><td>56.528217</td><td class='mean'>30.082606</td><td>13.982489</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.054462</td><td>0.054472</td><td>0.544326</td><td class='mean'>0.152405</td><td>0.195863</td><td>0.065729</td><td>0.072636</td><td>0.082466</td><td class='mean'>0.073323</td><td>0.004551</td><td>0.077819</td><td>0.744122</td><td>0.945924</td><td class='mean'>0.682847</td><td>0.299506</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ5</td><td>0.033811</td><td>0.038444</td><td>0.043229</td><td class='mean'>0.037518</td><td>0.002150</td><td>0.007557</td><td>0.008997</td><td>0.013561</td><td class='mean'>0.009401</td><td>0.001268</td><td>0.008363</td><td>0.009806</td><td>0.012698</td><td class='mean'>0.009975</td><td>0.001168</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ6</td><td>0.465591</td><td>0.727042</td><td>1.072340</td><td class='mean'>0.716894</td><td>0.135307</td><td>1.564528</td><td>1.840963</td><td>2.171592</td><td class='mean'>1.841740</td><td>0.125524</td><td>0.289038</td><td>0.399160</td><td>1.008670</td><td class='mean'>0.479313</td><td>0.181702</td><td class='win-m'>MOEA/D</td></tr><tr><td>DTLZ7</td><td>0.097563</td><td>0.103020</td><td>0.371852</td><td class='mean'>0.113257</td><td>0.048315</td><td>0.092715</td><td>0.105321</td><td>0.125244</td><td class='mean'>0.107515</td><td>0.007799</td><td>0.431286</td><td>0.819970</td><td>1.651532</td><td class='mean'>0.789524</td><td>0.260918</td><td class='win-q'>QI-NSGA-III</td></tr>
     </tbody>
   </table></div>
   <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
@@ -241,12 +245,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">DTLZ1-7 &mdash; M=4 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th rowspan="2">Gagnant</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
       <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
+          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
           <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-      <tr><td>DTLZ1</td><td>0.041135</td><td>0.263234</td><td>0.776712</td><td class='mean'>0.214947</td><td>0.185515</td><td>0.055618</td><td>0.067584</td><td>0.095714</td><td class='mean'>0.069680</td><td>0.008502</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.121039</td><td>0.121124</td><td>0.121318</td><td class='mean'>0.121128</td><td>0.000048</td><td>0.136593</td><td>0.147211</td><td>0.154437</td><td class='mean'>0.147147</td><td>0.004781</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>0.195184</td><td>5.138665</td><td>14.394569</td><td class='mean'>5.785954</td><td>3.541791</td><td>0.192736</td><td>0.261414</td><td>1.393011</td><td class='mean'>0.322345</td><td>0.217214</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.121092</td><td>0.121152</td><td>0.751686</td><td class='mean'>0.142183</td><td>0.113182</td><td>0.147725</td><td>0.156125</td><td>0.167251</td><td class='mean'>0.156704</td><td>0.004975</td><td class='win-n'>NSGA-III</td></tr>
+<tr><td>DTLZ1</td><td>0.041135</td><td>0.263234</td><td>0.776712</td><td class='mean'>0.214947</td><td>0.185515</td><td>0.055618</td><td>0.067584</td><td>0.095714</td><td class='mean'>0.069680</td><td>0.008502</td><td>0.093418</td><td>1.820678</td><td>7.842830</td><td class='mean'>2.401696</td><td>1.929810</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.121039</td><td>0.121124</td><td>0.121318</td><td class='mean'>0.121128</td><td>0.000048</td><td>0.136593</td><td>0.147211</td><td>0.154437</td><td class='mean'>0.147147</td><td>0.004781</td><td>0.242935</td><td>0.252223</td><td>0.261427</td><td class='mean'>0.252040</td><td>0.004604</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>0.195184</td><td>5.138665</td><td>14.394569</td><td class='mean'>5.785954</td><td>3.541791</td><td>0.192736</td><td>0.261414</td><td>1.393011</td><td class='mean'>0.322345</td><td>0.217214</td><td>11.159391</td><td>33.845572</td><td>69.498681</td><td class='mean'>37.571724</td><td>15.787481</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.121092</td><td>0.121152</td><td>0.751686</td><td class='mean'>0.142183</td><td>0.113182</td><td>0.147725</td><td>0.156125</td><td>0.167251</td><td class='mean'>0.156704</td><td>0.004975</td><td>0.258510</td><td>0.750968</td><td>1.045503</td><td class='mean'>0.737793</td><td>0.263162</td><td class='win-n'>NSGA-III</td></tr>
     </tbody>
   </table></div>
   <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
@@ -255,12 +260,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">MaF1-7 &mdash; M=3 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th rowspan="2">Gagnant</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
       <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
+          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
           <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-      <tr><td>MaF1</td><td>0.081735</td><td>0.082160</td><td>0.082220</td><td class='mean'>0.082138</td><td>0.000104</td><td>0.053686</td><td>0.056570</td><td>0.059026</td><td class='mean'>0.056398</td><td>0.001417</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.037403</td><td>0.037933</td><td>0.038420</td><td class='mean'>0.037914</td><td>0.000298</td><td>0.047295</td><td>0.055906</td><td>0.067825</td><td class='mean'>0.055703</td><td>0.004816</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>2.384074</td><td>50.128927</td><td>493.682788</td><td class='mean'>102.134438</td><td>109.911589</td><td>0.133214</td><td>0.214174</td><td>34.480705</td><td class='mean'>1.589936</td><td>6.154247</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>2.528886</td><td>18.976032</td><td>45.384569</td><td class='mean'>18.869260</td><td>9.842892</td><td>0.337382</td><td>0.441434</td><td>1.614409</td><td class='mean'>0.493141</td><td>0.228072</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.259495</td><td>0.259765</td><td>2.048734</td><td class='mean'>0.625457</td><td>0.674124</td><td>0.301346</td><td>0.324209</td><td>0.369813</td><td class='mean'>0.324294</td><td>0.014491</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF6</td><td>0.037782</td><td>0.037935</td><td>0.040137</td><td class='mean'>0.038127</td><td>0.000487</td><td>0.008051</td><td>0.010493</td><td>0.014822</td><td class='mean'>0.010763</td><td>0.001916</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.097996</td><td>0.103503</td><td>0.372381</td><td class='mean'>0.113598</td><td>0.048332</td><td>0.092380</td><td>0.105122</td><td>0.125951</td><td class='mean'>0.107521</td><td>0.007935</td><td class='win-q'>QI-NSGA-III</td></tr>
+<tr><td>MaF1</td><td>0.081735</td><td>0.082160</td><td>0.082220</td><td class='mean'>0.082138</td><td>0.000104</td><td>0.053686</td><td>0.056570</td><td>0.059026</td><td class='mean'>0.056398</td><td>0.001417</td><td>0.066003</td><td>0.066947</td><td>0.068903</td><td class='mean'>0.067136</td><td>0.000832</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.037403</td><td>0.037933</td><td>0.038420</td><td class='mean'>0.037914</td><td>0.000298</td><td>0.047295</td><td>0.055906</td><td>0.067825</td><td class='mean'>0.055703</td><td>0.004816</td><td>0.040448</td><td>0.041008</td><td>0.041311</td><td class='mean'>0.041021</td><td>0.000156</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>2.384074</td><td>50.128927</td><td>493.682788</td><td class='mean'>102.134438</td><td>109.911589</td><td>0.133214</td><td>0.214174</td><td>34.480705</td><td class='mean'>1.589936</td><td>6.154247</td><td>61.609202</td><td>741.333539</td><td>4378.026555</td><td class='mean'>1182.014000</td><td>1041.838418</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>2.528886</td><td>18.976032</td><td>45.384569</td><td class='mean'>18.869260</td><td>9.842892</td><td>0.337382</td><td>0.441434</td><td>1.614409</td><td class='mean'>0.493141</td><td>0.228072</td><td>42.978305</td><td>100.927728</td><td>204.970469</td><td class='mean'>105.982927</td><td>39.988975</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.259495</td><td>0.259765</td><td>2.048734</td><td class='mean'>0.625457</td><td>0.674124</td><td>0.301346</td><td>0.324209</td><td>0.369813</td><td class='mean'>0.324294</td><td>0.014491</td><td>0.354273</td><td>3.464185</td><td>4.888461</td><td class='mean'>3.171281</td><td>1.782864</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF6</td><td>0.037782</td><td>0.037935</td><td>0.040137</td><td class='mean'>0.038127</td><td>0.000487</td><td>0.008051</td><td>0.010493</td><td>0.014822</td><td class='mean'>0.010763</td><td>0.001916</td><td>0.008978</td><td>0.010917</td><td>0.432014</td><td class='mean'>0.048611</td><td>0.104216</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.097996</td><td>0.103503</td><td>0.372381</td><td class='mean'>0.113598</td><td>0.048332</td><td>0.092380</td><td>0.105122</td><td>0.125951</td><td class='mean'>0.107521</td><td>0.007935</td><td>0.432870</td><td>0.820586</td><td>1.649873</td><td class='mean'>0.789997</td><td>0.260140</td><td class='win-q'>QI-NSGA-III</td></tr>
     </tbody>
   </table></div>
   <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
@@ -269,12 +275,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">MaF1-7 &mdash; M=4 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th rowspan="2">Gagnant</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
       <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
+          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
           <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-      <tr><td>MaF1</td><td>0.169999</td><td>0.177070</td><td>0.195570</td><td class='mean'>0.177754</td><td>0.006869</td><td>0.100003</td><td>0.105469</td><td>0.112377</td><td class='mean'>0.105875</td><td>0.002945</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.092649</td><td>0.093732</td><td>0.094590</td><td class='mean'>0.093731</td><td>0.000456</td><td>0.090606</td><td>0.098990</td><td>0.104465</td><td class='mean'>0.098727</td><td>0.003650</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>4.241491</td><td>49.017541</td><td>536.796184</td><td class='mean'>75.636251</td><td>96.090240</td><td>0.220238</td><td>0.549797</td><td>1687.712993</td><td class='mean'>57.164134</td><td>302.787899</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>1.390527</td><td>22.970317</td><td>62.102729</td><td class='mean'>26.242364</td><td>16.415227</td><td>1.255270</td><td>1.785694</td><td>2.845838</td><td class='mean'>1.882547</td><td>0.420162</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.900465</td><td>0.905489</td><td>3.404066</td><td class='mean'>0.988590</td><td>0.448545</td><td>0.921932</td><td>0.994928</td><td>1.090050</td><td class='mean'>1.000998</td><td>0.034815</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF6</td><td>0.061708</td><td>0.080064</td><td>0.080237</td><td class='mean'>0.079412</td><td>0.003291</td><td>0.005874</td><td>0.007965</td><td>0.014304</td><td class='mean'>0.008491</td><td>0.001729</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.219966</td><td>0.250488</td><td>0.470881</td><td class='mean'>0.269907</td><td>0.057918</td><td>0.372389</td><td>0.451090</td><td>0.511664</td><td class='mean'>0.445820</td><td>0.038573</td><td class='win-n'>NSGA-III</td></tr>
+<tr><td>MaF1</td><td>0.169999</td><td>0.177070</td><td>0.195570</td><td class='mean'>0.177754</td><td>0.006869</td><td>0.100003</td><td>0.105469</td><td>0.112377</td><td class='mean'>0.105875</td><td>0.002945</td><td>0.127668</td><td>0.129358</td><td>0.135854</td><td class='mean'>0.130192</td><td>0.002167</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.092649</td><td>0.093732</td><td>0.094590</td><td class='mean'>0.093731</td><td>0.000456</td><td>0.090606</td><td>0.098990</td><td>0.104465</td><td class='mean'>0.098727</td><td>0.003650</td><td>0.093415</td><td>0.094745</td><td>0.096409</td><td class='mean'>0.094796</td><td>0.000845</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>4.241491</td><td>49.017541</td><td>536.796184</td><td class='mean'>75.636251</td><td>96.090240</td><td>0.220238</td><td>0.549797</td><td>1687.712993</td><td class='mean'>57.164134</td><td>302.787899</td><td>605.547226</td><td>2247.713597</td><td>4929.730889</td><td class='mean'>2407.541060</td><td>1230.285816</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>1.390527</td><td>22.970317</td><td>62.102729</td><td class='mean'>26.242364</td><td>16.415227</td><td>1.255270</td><td>1.785694</td><td>2.845838</td><td class='mean'>1.882547</td><td>0.420162</td><td>20.322518</td><td>233.824941</td><td>414.060478</td><td class='mean'>222.185109</td><td>108.395440</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.900465</td><td>0.905489</td><td>3.404066</td><td class='mean'>0.988590</td><td>0.448545</td><td>0.921932</td><td>0.994928</td><td>1.090050</td><td class='mean'>1.000998</td><td>0.034815</td><td>1.733535</td><td>4.081733</td><td>10.690663</td><td class='mean'>5.646330</td><td>3.665312</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF6</td><td>0.061708</td><td>0.080064</td><td>0.080237</td><td class='mean'>0.079412</td><td>0.003291</td><td>0.005874</td><td>0.007965</td><td>0.014304</td><td class='mean'>0.008491</td><td>0.001729</td><td>0.015943</td><td>0.020045</td><td>0.605369</td><td class='mean'>0.068831</td><td>0.131781</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.219966</td><td>0.250488</td><td>0.470881</td><td class='mean'>0.269907</td><td>0.057918</td><td>0.372389</td><td>0.451090</td><td>0.511664</td><td class='mean'>0.445820</td><td>0.038573</td><td>0.485957</td><td>1.432991</td><td>2.181413</td><td class='mean'>1.399449</td><td>0.410555</td><td class='win-n'>NSGA-III</td></tr>
     </tbody>
   </table></div>
   <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
@@ -283,18 +290,27 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 <div class="card">
   <div class="ct">Conclusion</div>
   <p style="font-size:15.5px;line-height:1.7">Sur les 25 combinaisons probleme &times; M testees, <b>QI-NSGA-III
-  obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 8 (32%)</b>. Aucun des deux algorithmes ne
-  domine systematiquement : NSGA-III l'emporte sur DTLZ2 (M=3 et M=4), DTLZ6 (M=3), DTLZ4 (M=4), MaF2 (M=3
-  et M=4), MaF5 (M=4) et MaF7 (M=4) &mdash; des problemes ou sa distribution reste resserree (ecart-type
-  faible). QI-NSGA-III l'emporte
+  obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>. Aucun
+  des trois algorithmes ne domine systematiquement : NSGA-III l'emporte sur DTLZ2 (M=3 et M=4), DTLZ4 (M=4),
+  MaF2 (M=3 et M=4), MaF5 (M=4) et MaF7 (M=4) &mdash; des problemes ou sa distribution reste resserree
+  (ecart-type faible). QI-NSGA-III l'emporte
   largement sur DTLZ1, DTLZ3, MaF3 et MaF4, ou NSGA-III affiche au contraire un ecart-type et un pire cas tres
   eleves (ex. DTLZ3 M=3 : pire cas NSGA-III=15.45 contre 1.07 pour QI-NSGA-III ; MaF3 M=3 : pire cas
   NSGA-III=493.7 contre 34.5) &mdash; QI-NSGA-III y est a la fois meilleur en moyenne et plus regulier d'un
-  run a l'autre.</p>
+  run a l'autre. MOEA/D ne gagne qu'une seule combinaison, DTLZ6 (M=3) &mdash; un front degenere ou NSGA-III
+  et QI-NSGA-III peinent tous les deux (IGD moyen 0.72 et 1.84 respectivement).</p>
+  <p style="font-size:15.5px;line-height:1.7;margin-top:.6rem">MOEA/D est nettement le plus faible des trois
+  sur l'ensemble de la suite, souvent par un a deux ordres de grandeur : DTLZ1 (M=4) IGD moyen 2.40 contre
+  0.07 pour QI-NSGA-III (&times;34) ; MaF3 (M=3) 1182.0 contre 1.59 (&times;744) ; MaF3 (M=4) 2407.5 contre
+  57.2 (&times;42). Ce meme retard net de MOEA/D face aux deux autres algorithmes se retrouve sur l'instance
+  MPIRP reelle (page IRP 100 clients, comparaison a 3 algorithmes) &mdash; un schema coherent, pas un artefact
+  isole a un seul jeu de problemes.</p>
   <p style="font-size:15.5px;line-height:1.7;margin-top:.6rem">NSGA-III est ici compare sans archive externe
   (son comportement standard, derniere generation seulement), QI-NSGA-III garde la sienne (l'un de ses
   propres choix de conception) &mdash; chaque algorithme tel qu'il est concu, pas une variante
-  artificiellement symetrisee. C'est pour cette raison que DTLZ7 et MaF7 (M=3) basculent en faveur de
+  artificiellement symetrisee. MOEA/D n'a pas d'equivalent d'archive externe dans ce projet (sa population
+  correspond directement a ses sous-problemes de decomposition, un individu par direction de reference).
+  C'est pour cette raison que DTLZ7 et MaF7 (M=3) basculent en faveur de
   QI-NSGA-III : sans son archive, NSGA-III perd l'acces aux bonnes solutions trouvees plus tot dans le run
   sur ces deux problemes precis.</p>
 </div>
