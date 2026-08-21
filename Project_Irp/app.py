@@ -67,11 +67,11 @@ def _job_error(job_id: str, error: str) -> None:
 
 
 _JOB_PAGE = """<!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="fr" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Running — {algo}</title>
+<title>En cours — {algo}</title>
 <style>
 :root{{--bg:#f2f5f9;--surface:#fff;--border:#dce3ec;--text:#0f1923;--text-2:#4e6070;
   --accent:#0f6a87;--accent-dim:#e6f3f8;--green:#0d7a55;--green-bg:#e6f5ee;}}
@@ -96,11 +96,11 @@ p{{font-size:13.5px;color:var(--text-2);line-height:1.6;}}
 <body>
 <div class="card">
   <div class="spinner"></div>
-  <h1>Solver running…</h1>
-  <p>The optimisation is running in the background.<br>
-     This page refreshes automatically — you can open another module in a new tab.</p>
+  <h1>Solveur en cours…</h1>
+  <p>L'optimisation s'exécute en arrière-plan.<br>
+     Cette page se rafraîchit automatiquement — vous pouvez ouvrir un autre module dans un nouvel onglet.</p>
   <span class="algo">{algo}</span>
-  <p class="back"><a href="/">← Back to menu</a> &nbsp;|&nbsp; results open here when ready</p>
+  <p class="back"><a href="/">← Retour au menu</a> &nbsp;|&nbsp; les résultats s'ouvrent ici une fois prêts</p>
 </div>
 <script>
 (function poll(){{
@@ -733,11 +733,11 @@ selectProb(SUITE_PROBLEMS[currentSuite][0]);
 
 
 MENU_TEMPLATE = """<!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="fr" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IRP — Solver Suite</title>
+<title>IRP — Suite de résolution</title>
 <style>
 :root {
   --bg:            #f2f5f9;
@@ -1247,12 +1247,12 @@ body {
         </svg>
       </div>
       <div>
-        <div class="brand-name">IRP Solver Suite</div>
-        <div class="brand-sub">Inventory Routing Problem — multi-objective optimisation</div>
+        <div class="brand-name">Suite de résolution IRP</div>
+        <div class="brand-sub">Problème de tournées avec gestion des stocks — optimisation multi-objectif</div>
       </div>
     </div>
     <div class="header-right">
-      <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <button class="btn-theme" id="themeToggle" onclick="toggleTheme()" aria-label="Changer le thème">
         <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="5"/>
           <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
@@ -1260,7 +1260,7 @@ body {
           <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
-        <span id="themeLabel">Light</span>
+        <span id="themeLabel">Clair</span>
       </button>
     </div>
   </header>
@@ -1290,12 +1290,12 @@ body {
   </div>
 
   <div class="section-hdr">
-    <span class="section-hdr-label">Available modules</span>
+    <span class="section-hdr-label">Modules disponibles</span>
     <div class="section-hdr-line"></div>
-    <span class="section-hdr-label">4 active</span>
+    <span class="section-hdr-label">5 actifs</span>
   </div>
 
-  <section class="modules" aria-label="Solver modules">
+  <section class="modules" aria-label="Modules du solveur">
 
     <!-- ── 01 Objective Calibration ── -->
     <article class="card" style="--card-color:var(--c1);--card-icon-bg:var(--c1-bg)">
@@ -1308,20 +1308,20 @@ body {
           </div>
           <div class="card-badges">
             <span class="badge-num">01</span>
-            <span class="badge-status active">Active</span>
+            <span class="badge-status active">Actif</span>
           </div>
         </div>
-        <h2 class="card-title">Objective Calibration</h2>
-        <p class="card-desc">Calibrate and solve the many-objective MIP individually — derives budget bounds C_max, E_max, T_max, B for all four objectives.</p>
+        <h2 class="card-title">Calibration des objectifs</h2>
+        <p class="card-desc">Calibre et résout le MIP many-objectifs individuellement — dérive les bornes budgétaires C_max, E_max, T_max, B pour les quatre objectifs.</p>
       </div>
       <div class="card-footer">
         <a class="btn btn-primary" id="oc-run" href="{{ url_for('run_objective_calibration_route') }}?instance=15" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          Lancer
         </a>
         <a class="btn btn-secondary" id="oc-report" href="{{ url_for('objective_calibration_report') }}?instance=15" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Last report
+          Dernier rapport
         </a>
       </div>
     </article>
@@ -1337,20 +1337,20 @@ body {
           </div>
           <div class="card-badges">
             <span class="badge-num">02</span>
-            <span class="badge-status active">Active</span>
+            <span class="badge-status active">Actif</span>
           </div>
         </div>
-        <h2 class="card-title">Function Merge</h2>
-        <p class="card-desc">Scalarised single-run CPLEX solve — minimises f1 + f2 + f3 + f4 simultaneously across cost, CO₂, time and working capital.</p>
+        <h2 class="card-title">Fusion des fonctions</h2>
+        <p class="card-desc">Résolution CPLEX scalarisée en une seule exécution — minimise simultanément f1 + f2 + f3 + f4 (coût, CO₂, temps et fonds de roulement).</p>
       </div>
       <div class="card-footer">
         <a class="btn btn-primary" id="fm-run" href="{{ url_for('run_function_merge_route') }}?instance=15" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          Lancer
         </a>
         <a class="btn btn-secondary" id="fm-report" href="{{ url_for('function_merge_report') }}?instance=15" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Last report
+          Dernier rapport
         </a>
       </div>
     </article>
@@ -1366,19 +1366,19 @@ body {
           </div>
           <div class="card-badges">
             <span class="badge-num">03</span>
-            <span class="badge-status active">Active</span>
+            <span class="badge-status active">Actif</span>
           </div>
         </div>
         <h2 class="card-title">NSGA-III</h2>
-        <p class="card-desc">Many-objective genetic algorithm. Builds a dense Pareto front across all four IRP objectives.</p>
+        <p class="card-desc">Algorithme génétique many-objectifs. Construit un front de Pareto dense sur les quatre objectifs de l'IRP.</p>
         <div class="card-tags">
-          <span class="card-tag">Pareto front</span>
-          <span class="card-tag">Ref. directions</span>
-          <span class="card-tag">4 objectives</span>
+          <span class="card-tag">Front de Pareto</span>
+          <span class="card-tag">Directions de référence</span>
+          <span class="card-tag">4 objectifs</span>
 
         </div>
         <div class="runs-row">
-          <span class="runs-label">Runs</span>
+          <span class="runs-label">Exécutions</span>
           <div class="runs-group" id="n3RunsBtns">
             <button class="runs-btn selected" data-runs="1"  onclick="setN3Runs(1)">1×</button>
             <button class="runs-btn"          data-runs="3"  onclick="setN3Runs(3)">3×</button>
@@ -1391,11 +1391,11 @@ body {
       <div class="card-footer">
         <a class="btn btn-primary" id="n3-run" href="{{ url_for('run_nsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          Lancer
         </a>
         <a class="btn btn-secondary" id="n3-report" href="{{ url_for('nsga3_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Last report
+          Dernier rapport
         </a>
       </div>
     </article>
@@ -1411,17 +1411,17 @@ body {
           </div>
           <div class="card-badges">
             <span class="badge-num">04</span>
-            <span class="badge-status active">Active</span>
+            <span class="badge-status active">Actif</span>
           </div>
         </div>
         <h2 class="card-title">QI-NSGA-III</h2>
-        <p class="card-desc">Quantum-inspired variant of NSGA-III. Chromosomes are encoded as rotation angles θ; convergence is driven by adaptive rotation gates instead of crossover </p>
+        <p class="card-desc">Variante quantique-inspirée de NSGA-III. Les chromosomes sont encodés sous forme d'angles de rotation θ ; la convergence est pilotée par des portes de rotation adaptatives plutôt que par le croisement </p>
         <div class="card-tags">
-          <span class="card-tag">Quantum encoding</span>
-          <span class="card-tag">Rotation gate θ</span>
+          <span class="card-tag">Encodage quantique</span>
+          <span class="card-tag">Porte de rotation θ</span>
         </div>
         <div class="runs-row">
-          <span class="runs-label">Runs</span>
+          <span class="runs-label">Exécutions</span>
           <div class="runs-group" id="qi3RunsBtns">
             <button class="runs-btn selected" data-runs="1"  onclick="setQi3Runs(1)">1×</button>
             <button class="runs-btn"          data-runs="3"  onclick="setQi3Runs(3)">3×</button>
@@ -1434,11 +1434,11 @@ body {
       <div class="card-footer">
         <a class="btn btn-primary" id="qi3-run" href="{{ url_for('run_qinsga3_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          Lancer
         </a>
         <a class="btn btn-secondary" id="qi3-report" href="{{ url_for('qinsga3_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Last report
+          Dernier rapport
         </a>
       </div>
     </article>
@@ -1455,17 +1455,17 @@ body {
           </div>
           <div class="card-badges">
             <span class="badge-num">05</span>
-            <span class="badge-status active">Active</span>
+            <span class="badge-status active">Actif</span>
           </div>
         </div>
         <h2 class="card-title">MOEA/D</h2>
-        <p class="card-desc">Decomposition-based many-objective evolutionary algorithm. Splits the front into scalarized subproblems along Das-Dennis reference directions, evolved jointly via neighborhood replacement.</p>
+        <p class="card-desc">Algorithme évolutionnaire many-objectifs basé sur la décomposition. Divise le front en sous-problèmes scalarisés selon les directions de référence de Das-Dennis, évolués conjointement par remplacement de voisinage.</p>
         <div class="card-tags">
-          <span class="card-tag">Decomposition</span>
-          <span class="card-tag">Neighborhood replacement</span>
+          <span class="card-tag">Décomposition</span>
+          <span class="card-tag">Remplacement de voisinage</span>
         </div>
         <div class="runs-row">
-          <span class="runs-label">Runs</span>
+          <span class="runs-label">Exécutions</span>
           <div class="runs-group" id="moeadRunsBtns">
             <button class="runs-btn selected" data-runs="1"  onclick="setMoeadRuns(1)">1×</button>
             <button class="runs-btn"          data-runs="3"  onclick="setMoeadRuns(3)">3×</button>
@@ -1478,11 +1478,11 @@ body {
       <div class="card-footer">
         <a class="btn btn-primary" id="moead-run" href="{{ url_for('run_moead_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          Lancer
         </a>
         <a class="btn btn-secondary" id="moead-report" href="{{ url_for('moead_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Last report
+          Dernier rapport
         </a>
       </div>
     </article>
@@ -1505,8 +1505,8 @@ body {
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     </div>
     <div>
-      <div class="blink-title">DTLZ / MaF Benchmarking</div>
-      <div class="blink-sub">NSGA-III on DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; IGD results &mdash; 30 runs &mdash; M=3/4 objectives</div>
+      <div class="blink-title">Benchmarking DTLZ / MaF</div>
+      <div class="blink-sub">NSGA-III sur DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; résultats IGD &mdash; 30 exécutions &mdash; M=3/4 objectifs</div>
     </div>
     <svg class="blink-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </a>
@@ -1514,9 +1514,9 @@ body {
 
   <footer class="page-footer">
     <div class="footer-pills">
-      <span class="footer-pill">f1 Cost</span>
+      <span class="footer-pill">f1 Coût</span>
       <span class="footer-pill">f2 CO₂</span>
-      <span class="footer-pill">f3 Time</span>
+      <span class="footer-pill">f3 Temps</span>
       <span class="footer-pill">f4 BFR</span>
     </div>
   </footer>
@@ -1600,12 +1600,12 @@ function applyTheme(theme) {
     icon.innerHTML = MOON_SVG;
     icon.setAttribute('fill', 'currentColor');
     icon.removeAttribute('stroke');
-    label.textContent = 'Dark';
+    label.textContent = 'Sombre';
   } else {
     icon.innerHTML = SUN_SVG;
     icon.setAttribute('stroke', 'currentColor');
     icon.setAttribute('fill', 'none');
-    label.textContent = 'Light';
+    label.textContent = 'Clair';
   }
   localStorage.setItem('irp-theme', theme);
 }
@@ -1656,7 +1656,7 @@ def job_error():
     job_id = request.args.get("job", "")
     with _jobs_lock:
         job = _jobs.get(job_id, {}).copy()
-    err = job.get("error") or "Unknown error."
+    err = job.get("error") or "Erreur inconnue."
     return render_error(err), 500
 
 
@@ -1664,12 +1664,12 @@ def job_error():
 def run_objective_calibration_route():
     data_path, inst_key = _resolve_instance()
     report_path = _instance_report_path(DEFAULT_REPORT_PATH, inst_key)
-    job_id = _new_job("Objective Calibration")
+    job_id = _new_job("Calibration des objectifs")
 
     def _run():
         lock = _get_run_lock("objective-calibration", inst_key)
         if not lock.acquire(blocking=False):
-            _job_error(job_id, f"An Objective Calibration run for instance {inst_key} is already in progress -- wait for it to finish.")
+            _job_error(job_id, f"Une exécution de Calibration des objectifs pour l'instance {inst_key} est déjà en cours -- attendez qu'elle se termine.")
             return
         try:
             run_objective_calibration(output_path=report_path, data_path=data_path)
@@ -1682,7 +1682,7 @@ def run_objective_calibration_route():
             lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
-    return _JOB_PAGE.format(algo="Objective Calibration", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return _JOB_PAGE.format(algo="Calibration des objectifs", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/objective-calibration/report")
@@ -1701,12 +1701,12 @@ def objective_calibration_report():
 def run_function_merge_route():
     data_path, inst_key = _resolve_instance()
     report_path = _instance_report_path(FM_REPORT_PATH, inst_key)
-    job_id = _new_job("Function Merge")
+    job_id = _new_job("Fusion des fonctions")
 
     def _run():
         lock = _get_run_lock("function-merge", inst_key)
         if not lock.acquire(blocking=False):
-            _job_error(job_id, f"A Function Merge run for instance {inst_key} is already in progress -- wait for it to finish.")
+            _job_error(job_id, f"Une exécution de Fusion des fonctions pour l'instance {inst_key} est déjà en cours -- attendez qu'elle se termine.")
             return
         try:
             result = run_function_merge(output_path=report_path, data_path=data_path)
@@ -1724,7 +1724,7 @@ def run_function_merge_route():
             lock.release()
 
     threading.Thread(target=_run, daemon=True).start()
-    return _JOB_PAGE.format(algo="Function Merge", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return _JOB_PAGE.format(algo="Fusion des fonctions", job_id=job_id), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/function-merge/report")
@@ -1748,7 +1748,7 @@ def run_nsga3_route():
     def _run():
         lock = _get_run_lock("nsga3", inst_key)
         if not lock.acquire(blocking=False):
-            _job_error(job_id, f"An NSGA-III run for instance {inst_key} is already in progress -- wait for it to finish.")
+            _job_error(job_id, f"Une exécution de NSGA-III pour l'instance {inst_key} est déjà en cours -- attendez qu'elle se termine.")
             return
         try:
             run_nsga3_report(output_path=NSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
@@ -1787,7 +1787,7 @@ def run_qinsga3_route():
     def _run():
         lock = _get_run_lock("qinsga3", inst_key)
         if not lock.acquire(blocking=False):
-            _job_error(job_id, f"A QI-NSGA-III run for instance {inst_key} is already in progress -- wait for it to finish.")
+            _job_error(job_id, f"Une exécution de QI-NSGA-III pour l'instance {inst_key} est déjà en cours -- attendez qu'elle se termine.")
             return
         try:
             run_qinsga3_report(output_path=QINSGA3_REPORT_PATH, data_path=data_path, n_runs=n_runs)
@@ -1826,7 +1826,7 @@ def run_moead_route():
     def _run():
         lock = _get_run_lock("moead", inst_key)
         if not lock.acquire(blocking=False):
-            _job_error(job_id, f"A MOEA/D run for instance {inst_key} is already in progress -- wait for it to finish.")
+            _job_error(job_id, f"Une exécution de MOEA/D pour l'instance {inst_key} est déjà en cours -- attendez qu'elle se termine.")
             return
         try:
             run_moead_report(output_path=MOEAD_REPORT_PATH, data_path=data_path, n_runs=n_runs)
@@ -1859,11 +1859,11 @@ def moead_report():
 def render_error(details):
     details = escape(details)
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Module Error</title>
+<title>Erreur du module</title>
 <style>
 body {{
   margin: 0;
@@ -1895,10 +1895,10 @@ a {{ color: #256f83; font-weight: 700; }}
 </head>
 <body>
   <main class="box">
-    <h1>Module error</h1>
-    <p>The solver route raised this Python error. Copy the traceback below if you need help debugging it.</p>
+    <h1>Erreur du module</h1>
+    <p>La route du solveur a levé cette erreur Python. Copiez la trace ci-dessous si vous avez besoin d'aide pour la déboguer.</p>
     <pre>{details}</pre>
-    <p><a href="{url_for('menu')}">Back to menu</a></p>
+    <p><a href="{url_for('menu')}">Retour au menu</a></p>
   </main>
 </body>
 </html>"""
