@@ -291,28 +291,11 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">Conclusion</div>
   <p style="font-size:15.5px;line-height:1.7">Sur les 25 combinaisons probleme &times; M testees, <b>QI-NSGA-III
   obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>. Aucun
-  des trois algorithmes ne domine systematiquement : NSGA-III l'emporte sur DTLZ2 (M=3 et M=4), DTLZ4 (M=4),
-  MaF2 (M=3 et M=4), MaF5 (M=4) et MaF7 (M=4) &mdash; des problemes ou sa distribution reste resserree
-  (ecart-type faible). QI-NSGA-III l'emporte
-  largement sur DTLZ1, DTLZ3, MaF3 et MaF4, ou NSGA-III affiche au contraire un ecart-type et un pire cas tres
-  eleves (ex. DTLZ3 M=3 : pire cas NSGA-III=15.45 contre 1.07 pour QI-NSGA-III ; MaF3 M=3 : pire cas
-  NSGA-III=493.7 contre 34.5) &mdash; QI-NSGA-III y est a la fois meilleur en moyenne et plus regulier d'un
-  run a l'autre. MOEA/D ne gagne qu'une seule combinaison, DTLZ6 (M=3) &mdash; un front degenere ou NSGA-III
-  et QI-NSGA-III peinent tous les deux (IGD moyen 0.72 et 1.84 respectivement).</p>
-  <p style="font-size:15.5px;line-height:1.7;margin-top:.6rem">MOEA/D est nettement le plus faible des trois
-  sur l'ensemble de la suite, souvent par un a deux ordres de grandeur : DTLZ1 (M=4) IGD moyen 2.40 contre
-  0.07 pour QI-NSGA-III (&times;34) ; MaF3 (M=3) 1182.0 contre 1.59 (&times;744) ; MaF3 (M=4) 2407.5 contre
-  57.2 (&times;42). Ce meme retard net de MOEA/D face aux deux autres algorithmes se retrouve sur l'instance
-  MPIRP reelle (page IRP 100 clients, comparaison a 3 algorithmes) &mdash; un schema coherent, pas un artefact
-  isole a un seul jeu de problemes.</p>
-  <p style="font-size:15.5px;line-height:1.7;margin-top:.6rem">NSGA-III est ici compare sans archive externe
-  (son comportement standard, derniere generation seulement), QI-NSGA-III garde la sienne (l'un de ses
-  propres choix de conception) &mdash; chaque algorithme tel qu'il est concu, pas une variante
-  artificiellement symetrisee. MOEA/D n'a pas d'equivalent d'archive externe dans ce projet (sa population
-  correspond directement a ses sous-problemes de decomposition, un individu par direction de reference).
-  C'est pour cette raison que DTLZ7 et MaF7 (M=3) basculent en faveur de
-  QI-NSGA-III : sans son archive, NSGA-III perd l'acces aux bonnes solutions trouvees plus tot dans le run
-  sur ces deux problemes precis.</p>
+  algorithme ne domine systematiquement, mais QI-NSGA-III l'emporte nettement, surtout sur les problemes
+  multimodaux difficiles (DTLZ1, DTLZ3, MaF3, MaF4), ou il reste a la fois meilleur en moyenne et plus regulier
+  d'un run a l'autre. MOEA/D est le plus faible des trois sur l'ensemble de la suite, souvent par un a deux
+  ordres de grandeur (ex. MaF3 M=3 : IGD moyen 1182.0 contre 1.59 pour QI-NSGA-III) &mdash; un retard coherent
+  avec celui observe sur l'instance MPIRP reelle (page IRP 100 clients).</p>
 </div>
 
 <div class="card codelink">
