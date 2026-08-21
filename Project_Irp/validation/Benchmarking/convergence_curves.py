@@ -54,13 +54,12 @@ from pymoo.operators.mutation.pm   import PM
 from pymoo.operators.sampling.rnd  import FloatRandomSampling
 from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
-from pymoo.util.ref_dirs           import get_reference_directions
 from pymoo.indicators.igd          import IGD
 
 from Validation.Benchmarking.dtlz.dtlz_problems import get_problem
-from Validation.Benchmarking.algorithms.nsga3.runner import get_run_config, _N_OBJ_TO_P
+from Validation.Benchmarking.algorithms.nsga3.runner import get_run_config
 from Validation.Benchmarking.algorithms.qinsga3.core import run_qinsga3_generic
-from Validation.Benchmarking.metrics.igd_metric import _get_true_front, _P_STAR_PARTITIONS
+from Validation.Benchmarking.metrics.igd_metric import _get_true_front
 from Solvers.MOEAD._constrained_moead        import ConstrainedMOEAD
 from Solvers.MOEAD._normalized_decomposition import NormalizedTchebycheff
 

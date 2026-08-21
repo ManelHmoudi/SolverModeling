@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IRP 100 clients &mdash; Resultats 20 executions</title>
+<style>
+:root {
+  --bg:      #f4f4f2;
+  --surface: #ffffff;
+  --border:  #e5e5e3;
+  --text:    #1a1a18;
+  --text-2:  #888;
+  --accent:  #534ab7;
+  --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
+  --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
+  --sig-fg:  #a32d2d;
+  --nonsig-fg: #888;
+  --code-bg: #1e1e1e; --code-fg:#d4d4d4;
+  --warn-bg: #fdecea; --warn-fg:#a32d2d;
+}
+[data-dark] {
+  --bg:      #111113;
+  --surface: #1c1c20;
+  --border:  #2c2c34;
+  --text:    #ededed;
+  --text-2:  #888;
+  --accent:  #9f9cf5;
+  --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
+  --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
+  --sig-fg:  #e06060;
+  --nonsig-fg: #888;
+  --code-bg: #16161a; --code-fg:#c9c9c9;
+  --warn-bg: #2e1a1a; --warn-fg:#e06060;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  padding:1.5rem 2rem 3rem;font-size:16px;line-height:1.6;
+  transition:background .2s,color .2s;
+}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.3rem;gap:1rem}
+.hdr h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+.hdr .meta{color:var(--text-2);font-size:15px;margin-top:5px;max-width:75ch}
+.back{display:inline-block;color:var(--accent);font-size:14.5px;font-weight:600;text-decoration:none;margin-bottom:.6rem}
+.back:hover{text-decoration:underline}
+#tbtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:17px;color:var(--text);flex-shrink:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.25rem;margin-bottom:1.1rem}
+.ct{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-2);margin-bottom:.5rem}
+.explain{font-size:15.5px;color:var(--text);margin-bottom:.9rem}
+.warn{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:1rem 1.2rem;
+  font-size:15px;margin-bottom:1.1rem;border:1px solid var(--border)}
+.warn b{display:block;margin-bottom:.4rem;font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);
+  font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:nth-child(even) td{background:var(--bg)}
+.std{color:var(--text-2);font-size:14px}
+.tag{color:var(--text-2);font-size:14px;font-weight:400}
+td.win-n{color:var(--win-n-fg);font-weight:700}
+td.win-q{color:var(--win-q-fg);font-weight:700}
+td.sig{color:var(--sig-fg);font-weight:600}
+td.nonsig{color:var(--nonsig-fg)}
+.hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
+</style>
+</head>
+<body>
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+<div class="hdr">
+  <div>
+    <h1>Resultats &mdash; 20 executions</h1>
+    <div class="meta">Instance 100 clients, pop=200, gen=300 des deux cotes, <code>noise_scale=0</code>
+    (defaut de production actuel) &middot; 2-opt applique aux deux algorithmes.</div>
+  </div>
+  <button id="tbtn" onclick="toggleDark()">&#9680;</button>
+</div>
+
+<div class="card">
+  <div class="ct">Comparatif final &mdash; 4 configurations, 20 runs chacune (instance 100 clients, pop=200, gen=300)</div>
+  <div class="explain">Moyenne (&plusmn; ecart-type) de chaque indicateur de qualite, pour les 4 combinaisons
+  algorithme &times; avec/sans 2-opt, avec le protocole de production actuel. C'est une photo des resultats
+  bruts ; voir le tableau statistique ci-dessous pour savoir quels ecarts sont fiables.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>NSGA-III sans 2-opt</th><th>NSGA-III avec 2-opt</th><th>QI-NSGA-III sans 2-opt</th><th>QI-NSGA-III avec 2-opt</th></tr></thead>
+    <tbody>
+<tr>
+  <td>HV <span class="tag">(plus grand = mieux)</span></td>
+  <td>0.372033 <span class="std">&plusmn;0.140056</span></td>
+  <td>0.482039 <span class="std">&plusmn;0.156693</span></td>
+  <td>0.378046 <span class="std">&plusmn;0.062778</span></td>
+  <td>0.417699 <span class="std">&plusmn;0.068520</span></td>
+</tr>
+<tr>
+  <td>GD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.276513 <span class="std">&plusmn;0.152737</span></td>
+  <td>0.183471 <span class="std">&plusmn;0.112857</span></td>
+  <td>0.179871 <span class="std">&plusmn;0.071300</span></td>
+  <td>0.134715 <span class="std">&plusmn;0.055015</span></td>
+</tr>
+<tr>
+  <td>IGD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.413477 <span class="std">&plusmn;0.086509</span></td>
+  <td class="win-n">0.376567 <span class="std">&plusmn;0.052760</span></td>
+  <td>0.425931 <span class="std">&plusmn;0.040688</span></td>
+  <td>0.429297 <span class="std">&plusmn;0.035288</span></td>
+</tr>
+<tr>
+  <td>Spacing <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.052956 <span class="std">&plusmn;0.057115</span></td>
+  <td>0.049100 <span class="std">&plusmn;0.037723</span></td>
+  <td>0.013576 <span class="std">&plusmn;0.004114</span></td>
+  <td class="win-q">0.019715 <span class="std">&plusmn;0.004936</span></td>
+</tr></tbody>
+  </table></div>
+  <p class="hint">HV : plus haut = mieux. GD/IGD/Spacing : plus bas = mieux. Colonne coloree = ecart
+  statistiquement significatif (voir tableau ci-dessous).</p>
+</div>
+
+<div class="card">
+  <div class="ct">Effet du 2-opt et effet moteur evolutionnaire &mdash; Wilcoxon et Mann-Whitney</div>
+  <div class="explain">Colonnes 1-2 (Wilcoxon apparie) : le 2-opt ameliore-t-il <b>chaque algorithme par
+  rapport a lui-meme</b> (meme seed, meme front de depart) ? Colonnes 3-4 (Mann-Whitney, fronts independants) :
+  <b>NSGA-III et QI-NSGA-III sont-ils reellement differents</b> l'un de l'autre, sans 2-opt puis avec 2-opt
+  (comparaison equitable) ?</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Effet 2-opt NSGA-III (Wilcoxon)</th><th>Effet 2-opt QI-NSGA-III (Wilcoxon)</th><th>Effet moteur sans 2-opt (Mann-Whitney)</th><th>Effet moteur avec 2-opt (Mann-Whitney)</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p=0.000002 (significatif)</td><td class="sig">p=0.000010 (significatif)</td><td class="nonsig">p=0.560852 (non significatif)</td><td class="nonsig">p=0.140420 (non significatif)</td></tr>
+<tr><td>GD</td><td class="sig">p=0.000708 (significatif)</td><td class="sig">p=0.000168 (significatif)</td><td class="sig">p=0.043880 (significatif)</td><td class="nonsig">p=0.310402 (non significatif)</td></tr>
+<tr><td>IGD</td><td class="sig">p=0.004860 (significatif)</td><td class="nonsig">p=0.189348 (non significatif)</td><td class="nonsig">p=0.147847 (non significatif)</td><td class="sig">p=0.000129 (significatif)</td></tr>
+<tr><td>Spacing</td><td class="nonsig">p=0.812355 (non significatif)</td><td class="sig">p=0.000019 (significatif)</td><td class="sig">p=0.000000 (significatif)</td><td class="sig">p=0.000008 (significatif)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint">Une fois compare equitablement (2-opt des deux cotes) : <b>IGD significatif en faveur de
+  NSGA-III</b>, <b>Spacing significatif en faveur de QI-NSGA-III</b> (front plus regulier), HV et GD non
+  significatifs a cette taille d'echantillon.</p>
+</div>
+
+<div class="warn">
+  <b>HV : effet pas encore detectable a 20 seeds</b>
+  A 20 seeds, l'ecart de HV avec 2-opt (0.482 vs 0.418, NSGA-III plus haut) n'est <b>pas</b> statistiquement
+  significatif (p=0.140) &mdash; l'ecart-type de NSGA-III (&plusmn;0.157) est presque le double de l'ecart entre
+  les deux moyennes (0.064). Sur la campagne <b>30 seeds</b> (memes seeds + 10 de plus, meme protocole), ce
+  meme ecart devient significatif (p=0.004, voir page "Resultats 30 executions") &mdash; comportement attendu
+  d'un effet reel mais modeste : il faut plus d'echantillons pour le detecter de maniere fiable. IGD, GD et
+  Spacing sont deja stables entre 20 et 30 seeds.
+</div>
+
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+
+<script>
+function toggleDark(){
+  const on = document.documentElement.toggleAttribute('data-dark');
+  localStorage.setItem('irp-dark', on ? '1' : '');
+}
+(function(){ if(localStorage.getItem('irp-dark')==='1') document.documentElement.setAttribute('data-dark',''); })();
+</script>
+</body>
+</html>

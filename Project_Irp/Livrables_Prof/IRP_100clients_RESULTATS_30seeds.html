@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IRP 100 clients &mdash; Resultats 30 executions</title>
+<style>
+:root {
+  --bg:      #f4f4f2;
+  --surface: #ffffff;
+  --border:  #e5e5e3;
+  --text:    #1a1a18;
+  --text-2:  #888;
+  --accent:  #534ab7;
+  --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
+  --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
+  --sig-fg:  #a32d2d;
+  --nonsig-fg: #888;
+  --code-bg: #1e1e1e; --code-fg:#d4d4d4;
+  --warn-bg: #fdecea; --warn-fg:#a32d2d;
+}
+[data-dark] {
+  --bg:      #111113;
+  --surface: #1c1c20;
+  --border:  #2c2c34;
+  --text:    #ededed;
+  --text-2:  #888;
+  --accent:  #9f9cf5;
+  --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
+  --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
+  --sig-fg:  #e06060;
+  --nonsig-fg: #888;
+  --code-bg: #16161a; --code-fg:#c9c9c9;
+  --warn-bg: #2e1a1a; --warn-fg:#e06060;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  padding:1.5rem 2rem 3rem;font-size:16px;line-height:1.6;
+  transition:background .2s,color .2s;
+}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.3rem;gap:1rem}
+.hdr h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+.hdr .meta{color:var(--text-2);font-size:15px;margin-top:5px;max-width:75ch}
+.back{display:inline-block;color:var(--accent);font-size:14.5px;font-weight:600;text-decoration:none;margin-bottom:.6rem}
+.back:hover{text-decoration:underline}
+#tbtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:17px;color:var(--text);flex-shrink:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.25rem;margin-bottom:1.1rem}
+.ct{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-2);margin-bottom:.5rem}
+.explain{font-size:15.5px;color:var(--text);margin-bottom:.9rem}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);
+  font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:nth-child(even) td{background:var(--bg)}
+.std{color:var(--text-2);font-size:14px}
+.tag{color:var(--text-2);font-size:14px;font-weight:400}
+td.win-n{color:var(--win-n-fg);font-weight:700}
+td.win-q{color:var(--win-q-fg);font-weight:700}
+td.sig{color:var(--sig-fg);font-weight:600}
+td.nonsig{color:var(--nonsig-fg)}
+.hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
+</style>
+</head>
+<body>
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+<div class="hdr">
+  <div>
+    <h1>Resultats &mdash; 30 executions</h1>
+    <div class="meta">100 clients, pop=200, gen=300, 30 seeds, <code>noise_scale=0</code> &middot; 2-opt
+    applique aux deux algorithmes &middot; GD/IGD contre un front de reference empirique (leave-one-run-out)
+    &middot; test principal : Wilcoxon apparie + tailles d'effet + correction de Holm.</div>
+  </div>
+  <button id="tbtn" onclick="toggleDark()">&#9680;</button>
+</div>
+
+<div class="card">
+  <div class="ct">Resultats bruts &mdash; HV / GD / IGD / Spacing</div>
+  <div class="explain">Moyenne &plusmn; ecart-type sur les 30 seeds, pour chacune des 4 configurations.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>NSGA-III sans 2-opt</th><th>NSGA-III avec 2-opt</th><th>QI-NSGA-III sans 2-opt</th><th>QI-NSGA-III avec 2-opt</th></tr></thead>
+    <tbody>
+<tr>
+  <td>HV <span class="tag">(plus grand = mieux)</span></td>
+  <td>0.350210 <span class="std">&plusmn;0.141800</span></td>
+  <td class="win-n">0.464106 <span class="std">&plusmn;0.141413</span></td>
+  <td>0.328564 <span class="std">&plusmn;0.063997</span></td>
+  <td>0.375590 <span class="std">&plusmn;0.080202</span></td>
+</tr>
+<tr>
+  <td>GD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.298809 <span class="std">&plusmn;0.118377</span></td>
+  <td>0.206817 <span class="std">&plusmn;0.087906</span></td>
+  <td>0.302797 <span class="std">&plusmn;0.068219</span></td>
+  <td>0.240692 <span class="std">&plusmn;0.073436</span></td>
+</tr>
+<tr>
+  <td>IGD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.386059 <span class="std">&plusmn;0.138934</span></td>
+  <td>0.279476 <span class="std">&plusmn;0.093507</span></td>
+  <td>0.349167 <span class="std">&plusmn;0.071668</span></td>
+  <td>0.301165 <span class="std">&plusmn;0.075288</span></td>
+</tr>
+<tr>
+  <td>Spacing <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.049302 <span class="std">&plusmn;0.021406</span></td>
+  <td>0.045411 <span class="std">&plusmn;0.021447</span></td>
+  <td>0.014477 <span class="std">&plusmn;0.005594</span></td>
+  <td class="win-q">0.021035 <span class="std">&plusmn;0.007569</span></td>
+</tr></tbody>
+  </table></div>
+  <p class="hint">NSGA-III devance QI-NSGA-III sur HV (avec 2-opt), QI-NSGA-III devance NSGA-III sur
+  Spacing (front plus regulier). Chiffres bruts seulement &mdash; voir tableaux suivants pour la
+  significativite.</p>
+
+  <div class="ct" style="margin-top:1.1rem">Effet du 2-opt (Wilcoxon apparie, par algorithme)</div>
+  <div class="explain">Compare chaque algorithme a lui-meme, sans/avec reparation 2-opt (meme seed).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>NSGA-III</th><th>QI-NSGA-III</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p&lt;0.000001 (significatif)</td><td class="sig">p&lt;0.000001 (significatif)</td></tr>
+<tr><td>GD</td><td class="sig">p&lt;0.000001 (significatif)</td><td class="sig">p&lt;0.000001 (significatif)</td></tr>
+<tr><td>IGD</td><td class="sig">p&lt;0.000001 (significatif)</td><td class="sig">p&lt;0.000001 (significatif)</td></tr>
+<tr><td>Spacing</td><td class="nonsig">p=0.253 (non significatif)</td><td class="sig">p&lt;0.0001 (significatif)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint">Le 2-opt ameliore significativement HV/GD/IGD pour les deux algorithmes. Il degrade en
+  revanche la regularite du front QI-NSGA-III selon Spacing (0.014477 &rarr; 0.021035, p&lt;0.0001) &mdash;
+  effet significatif chez QI-NSGA-III, non significatif chez NSGA-III &mdash; bien que le Spacing de
+  QI-NSGA-III reste significativement meilleur que celui de NSGA-III meme apres cette degradation.</p>
+
+  <div class="ct" style="margin-top:1.1rem">NSGA-III vs QI-NSGA-III &mdash; Wilcoxon apparie (test principal)</div>
+  <div class="explain">Seeds partagees entre les deux algorithmes &mdash; donnees appariees. r = taille
+  d'effet (correlation biserielle). Mediane = NSGA-III &minus; QI-NSGA-III, IC95% bootstrap. Holm =
+  verdict apres correction pour les 4 indicateurs testes ensemble.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Sans 2-opt : p (r, mediane)</th><th>Holm</th><th>Avec 2-opt : p (r, mediane)</th><th>Holm</th></tr></thead>
+    <tbody>
+<tr>
+  <td>HV</td>
+  <td class="nonsig">p=0.824 <span class="std">(r=+0.05, med=&minus;0.032)</span></td>
+  <td class="nonsig">non sig.</td>
+  <td class="sig">p=0.0164 <span class="std">(r=+0.50, med=+0.053)</span></td>
+  <td class="sig">signif.</td>
+</tr>
+<tr>
+  <td>GD</td>
+  <td class="nonsig">p=0.855 <span class="std">(r=&minus;0.04, med=&minus;0.002)</span></td>
+  <td class="nonsig">non sig.</td>
+  <td class="nonsig">p=0.146 <span class="std">(r=&minus;0.31, med=&minus;0.032)</span></td>
+  <td class="nonsig">non sig.</td>
+</tr>
+<tr>
+  <td>IGD</td>
+  <td class="nonsig">p=0.237 <span class="std">(r=+0.25, med=+0.050)</span></td>
+  <td class="nonsig">non sig.</td>
+  <td class="nonsig">p=0.490 <span class="std">(r=&minus;0.15, med=&minus;0.016)</span></td>
+  <td class="nonsig">non sig.</td>
+</tr>
+<tr>
+  <td>Spacing</td>
+  <td class="sig">p&lt;0.000001 <span class="std">(r=+1.00, med=+0.029)</span></td>
+  <td class="sig">signif.</td>
+  <td class="sig">p&lt;0.000001 <span class="std">(r=+0.92, med=+0.020)</span></td>
+  <td class="sig">signif.</td>
+</tr>
+</tbody>
+  </table></div>
+  <p class="hint">Apres correction de Holm (comparaison equitable, avec 2-opt) : seuls <b>HV</b> (en
+  faveur de NSGA-III) et <b>Spacing</b> (en faveur de QI-NSGA-III) restent significatifs. GD et IGD ne
+  montrent pas de difference fiable.</p>
+
+  <div class="ct" style="margin-top:1.1rem">NSGA-III vs QI-NSGA-III &mdash; Mann-Whitney (verification de robustesse)</div>
+  <div class="explain">Test alternatif, ignore l'appariement des seeds &mdash; sert a verifier que le
+  Wilcoxon n'est pas un artefact. A12 = probabilite de superiorite.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Sans 2-opt (A12)</th><th>Avec 2-opt (A12)</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="nonsig">p=0.706 (A12=0.47)</td><td class="sig">p=0.027 (A12=0.67)</td></tr>
+<tr><td>GD</td><td class="nonsig">p=0.728 (A12=0.47)</td><td class="nonsig">p=0.149 (A12=0.39)</td></tr>
+<tr><td>IGD</td><td class="nonsig">p=0.196 (A12=0.60)</td><td class="nonsig">p=0.492 (A12=0.45)</td></tr>
+<tr><td>Spacing</td><td class="sig">p&lt;0.000001 (A12=0.99)</td><td class="sig">p&lt;0.000001 (A12=0.89)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint">Meme tendance que Wilcoxon : HV et Spacing significatifs avec 2-opt, GD/IGD non
+  significatifs &mdash; le resultat principal est confirme.</p>
+
+  <div class="ct" style="margin-top:1.1rem">Stabilite (Brown-Forsythe)</div>
+  <div class="explain">Un ecart-type plus petit ne prouve pas, a lui seul, une stabilite statistiquement
+  differente. Ce test compare directement la variance entre les deux algorithmes (pas la moyenne).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Dispersion sans 2-opt</th><th>Dispersion avec 2-opt (comparaison equitable)</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p=0.001 (significatif)</td><td class="sig">p=0.017 (significatif)</td></tr>
+<tr><td>GD</td><td class="sig">p=0.012 (significatif)</td><td class="nonsig">p=0.323 (non significatif)</td></tr>
+<tr><td>IGD</td><td class="sig">p&lt;0.001 (significatif)</td><td class="nonsig">p=0.129 (non significatif)</td></tr>
+<tr><td>Spacing</td><td class="sig">p&lt;0.001 (significatif)</td><td class="sig">p&lt;0.001 (significatif)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint">QI-NSGA-III est significativement plus stable d'un run a l'autre sur HV et Spacing ;
+  aucune difference de stabilite demontree sur GD ni IGD.</p>
+</div>
+
+<div class="card">
+  <div class="ct">Verification finale &mdash; budget d'evaluations strictement identique</div>
+  <div class="explain">Meme protocole (30 seeds, 2-opt, LORO, Wilcoxon+Holm), mais QI-NSGA-III tourne a
+  <code>gen=271</code> au lieu de 300 &mdash; valeur trouvee par instrumentation directe du code (pas une
+  formule) pour egaliser exactement le nombre reel d'evaluations avec NSGA-III : 60000 des deux cotes
+  (ratio 1.00x). Objectif : verifier que l'avantage HV de NSGA-III n'est pas un artefact du leger surplus
+  de budget de QI-NSGA-III (~1.1x a generations nominales egales).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>p (Wilcoxon)</th><th>Apres Holm</th><th>Favorise</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p=0.000018</td><td class="sig">significatif</td><td class="win-n">NSGA-III</td></tr>
+<tr><td>IGD</td><td class="sig">p=0.012048</td><td class="sig">significatif</td><td class="win-n">NSGA-III</td></tr>
+<tr><td>GD</td><td class="nonsig">p=0.529</td><td class="nonsig">non significatif</td><td>&mdash;</td></tr>
+<tr><td>Spacing</td><td class="sig">p=0.000027</td><td class="sig">significatif</td><td class="win-q">QI-NSGA-III</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>L'avantage HV de NSGA-III ne disparait pas a budget egal &mdash; il s'elargit.</b>
+  IGD devient meme significatif en faveur de NSGA-III (il ne l'etait pas a generations nominales egales).
+  QI-NSGA-III conserve seulement son avantage Spacing. Ce resultat refute l'hypothese que l'avantage de
+  NSGA-III serait du au surplus d'evaluations de QI-NSGA-III &mdash; a budget strictement identique,
+  l'ecart persiste et se renforce meme sur IGD. Cote stabilite (Brown-Forsythe, avec 2-opt), HV n'est plus
+  significatif a ce budget (p=0.063, contre p=0.017 a generations nominales egales) ; Spacing reste
+  significatif (p=0.034).</p>
+</div>
+
+<div class="card">
+  <div class="ct">Verification complementaire &mdash; levier delivery-shift ajoute au 2-opt</div>
+  <div class="explain">Meme protocole (30 seeds, 2-opt, LORO, Wilcoxon+Holm, generations nominales egales
+  gen=300/300), mais avec le nouveau levier <b>delivery-shift</b> (Niveau 3 &mdash; deplacement partiel
+  d'une livraison vers une periode adjacente ou le client est deja servi) ajoute par-dessus le 2-opt
+  existant, pour les deux algorithmes. Objectif : verifier si ce levier change le verdict NSGA-III vs
+  QI-NSGA-III une fois teste dans la config de production reelle (2-opt actif), et non plus isole.
+  Effet du levier seul (2-opt desactive) : <a href="IRP_100clients_RESULTATS_DELIVERYSHIFT.html">page
+  dediee au levier delivery-shift &rarr;</a></div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>p (Wilcoxon)</th><th>Apres Holm</th><th>Favorise</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p=0.007612</td><td class="sig">significatif</td><td class="win-n">NSGA-III</td></tr>
+<tr><td>GD</td><td class="nonsig">p=0.190930</td><td class="nonsig">non significatif</td><td>&mdash;</td></tr>
+<tr><td>IGD</td><td class="nonsig">p=0.359878</td><td class="nonsig">non significatif</td><td>&mdash;</td></tr>
+<tr><td>Spacing</td><td class="sig">p=0.000002</td><td class="sig">significatif</td><td class="win-q">QI-NSGA-III</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>Le verdict ne change pas.</b> NSGA-III garde son avantage HV, QI-NSGA-III garde son
+  avantage Spacing, GD et IGD restent non significatifs &mdash; exactement le meme profil qu'avec le 2-opt
+  seul (tableau plus haut). Compare a la meme config sans delivery-shift, HV et GD des deux algorithmes
+  evoluent meme legerement dans le mauvais sens (comparaison de moyennes seulement, pas testee
+  statistiquement entre campagnes), et le cout de calcul augmente fortement (decode+repair de QI-NSGA-III :
+  ~1-3s &rarr; ~9-13s). <b>Decision : le delivery-shift n'est pas adopte comme levier de production
+  supplementaire</b> &mdash; son benefice, reel quand il est le seul levier disponible (2-opt desactive,
+  voir la page dediee), s'avere largement redondant avec ce que le 2-opt capture deja une fois combine a
+  lui.</p>
+</div>
+
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+
+<script>
+function toggleDark(){
+  const on = document.documentElement.toggleAttribute('data-dark');
+  localStorage.setItem('irp-dark', on ? '1' : '');
+}
+(function(){ if(localStorage.getItem('irp-dark')==='1') document.documentElement.setAttribute('data-dark',''); })();
+</script>
+</body>
+</html>

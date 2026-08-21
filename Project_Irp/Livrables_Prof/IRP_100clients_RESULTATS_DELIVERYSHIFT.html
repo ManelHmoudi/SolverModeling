@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IRP 100 clients &mdash; Resultats Delivery-shift</title>
+<style>
+:root {
+  --bg:      #f4f4f2;
+  --surface: #ffffff;
+  --border:  #e5e5e3;
+  --text:    #1a1a18;
+  --text-2:  #888;
+  --accent:  #534ab7;
+  --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
+  --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
+  --sig-fg:  #a32d2d;
+  --nonsig-fg: #888;
+  --code-bg: #1e1e1e; --code-fg:#d4d4d4;
+  --warn-bg: #fdecea; --warn-fg:#a32d2d;
+}
+[data-dark] {
+  --bg:      #111113;
+  --surface: #1c1c20;
+  --border:  #2c2c34;
+  --text:    #ededed;
+  --text-2:  #888;
+  --accent:  #9f9cf5;
+  --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
+  --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
+  --sig-fg:  #e06060;
+  --nonsig-fg: #888;
+  --code-bg: #16161a; --code-fg:#c9c9c9;
+  --warn-bg: #2e1a1a; --warn-fg:#e06060;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  padding:1.5rem 2rem 3rem;font-size:16px;line-height:1.6;
+  transition:background .2s,color .2s;
+}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.3rem;gap:1rem}
+.hdr h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+.hdr .meta{color:var(--text-2);font-size:15px;margin-top:5px;max-width:75ch}
+.back{display:inline-block;color:var(--accent);font-size:14.5px;font-weight:600;text-decoration:none;margin-bottom:.6rem}
+.back:hover{text-decoration:underline}
+#tbtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:17px;color:var(--text);flex-shrink:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.25rem;margin-bottom:1.1rem}
+.ct{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-2);margin-bottom:.5rem}
+.explain{font-size:15.5px;color:var(--text);margin-bottom:.9rem}
+.warn{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:1rem 1.2rem;
+  font-size:15px;margin-bottom:1.1rem;border:1px solid var(--border)}
+.warn b{display:block;margin-bottom:.4rem;font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);
+  font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:nth-child(even) td{background:var(--bg)}
+.std{color:var(--text-2);font-size:14px}
+.tag{color:var(--text-2);font-size:14px;font-weight:400}
+td.win-n{color:var(--win-n-fg);font-weight:700}
+td.win-q{color:var(--win-q-fg);font-weight:700}
+td.sig{color:var(--sig-fg);font-weight:600}
+td.nonsig{color:var(--nonsig-fg)}
+.hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
+ul.light{padding-left:1.2em;font-size:15.5px;line-height:1.85}
+</style>
+</head>
+<body>
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+<div class="hdr">
+  <div>
+    <h1>Resultats &mdash; Levier delivery-shift (Niveau 3, 30 executions)</h1>
+    <div class="meta">100 clients, pop=200, gen=300, 30 seeds, <code>noise_scale=0</code> &middot; 2-opt
+    <b>desactive</b> des deux cotes pour isoler ce nouveau levier &middot; delivery-shift applique
+    symetriquement aux deux algorithmes &middot; GD/IGD contre un front de reference empirique
+    (leave-one-run-out) &middot; test principal : Wilcoxon apparie + tailles d'effet + correction de Holm.</div>
+  </div>
+  <button id="tbtn" onclick="toggleDark()">&#9680;</button>
+</div>
+
+<div class="card">
+  <div class="ct">Principe</div>
+  <div class="explain">
+  Le delivery-shift redistribue la quantite livree a un client entre <b>deux jours consecutifs ou il est
+  deja prevu d'etre livre</b> &mdash; par exemple un peu moins lundi, un peu plus mardi. La tournee ne
+  change pas : meme camion, meme ordre de passage, memes jours de visite.
+  <br><br>
+  Ce transfert modifie legerement le niveau de stock au depot a ce moment-la, ce qui peut reduire le cout
+  de stockage sans rien changer d'autre. Un garde-fou empeche toute rupture : le client garde toujours
+  assez de stock cumule pour couvrir sa demande.
+  <br><br>
+  C'est donc un levier de <b>timing d'inventaire</b> (quand livrer), different des leviers de
+  <b>topologie de tournee</b> testes avant lui (2-opt, Or-opt, relocation, swap &mdash; qui changent l'ordre
+  ou l'affectation des visites).
+  </div>
+
+  <div class="ct" style="margin-top:1.1rem">Equite du protocole</div>
+  <div class="explain">Meme nombre de generations (gen=300 des deux cotes), memes operateurs de croisement
+  et de mutation (SBX/PM, memes taux et memes parametres eta), meme selection de parents par tournoi,
+  delivery-shift applique symetriquement aux deux algorithmes, memes 30 seeds partagees.</div>
+
+  <div class="ct" style="margin-top:1.1rem">Ce qui est commun aux deux algorithmes</div>
+  <ul class="light">
+    <li>Le delivery-shift ameliore significativement <b>HV</b> pour NSGA-III <i>et</i> QI-NSGA-III
+    (p&lt;0.000001 les deux)</li>
+    <li>Le delivery-shift ameliore significativement <b>GD</b> pour les deux algorithmes
+    (p&lt;0.000001 les deux)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="ct">Resultats bruts &mdash; HV / GD / IGD / Spacing</div>
+  <div class="explain">Moyenne &plusmn; ecart-type sur les 30 seeds. &laquo;&nbsp;avec&nbsp;&raquo; = delivery-shift
+  applique (2-opt reste desactive des deux cotes).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>NSGA-III sans</th><th>NSGA-III avec</th><th>QI-NSGA-III sans</th><th>QI-NSGA-III avec</th></tr></thead>
+    <tbody>
+<tr>
+  <td>HV <span class="tag">(plus grand = mieux)</span></td>
+  <td>0.427287 <span class="std">&plusmn;0.139076</span></td>
+  <td>0.438025 <span class="std">&plusmn;0.139115</span></td>
+  <td>0.401734 <span class="std">&plusmn;0.072867</span></td>
+  <td>0.413445 <span class="std">&plusmn;0.069445</span></td>
+</tr>
+<tr>
+  <td>GD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.334327 <span class="std">&plusmn;0.151349</span></td>
+  <td>0.315731 <span class="std">&plusmn;0.148914</span></td>
+  <td>0.248974 <span class="std">&plusmn;0.086167</span></td>
+  <td class="win-q">0.234121 <span class="std">&plusmn;0.079467</span></td>
+</tr>
+<tr>
+  <td>IGD <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.325518 <span class="std">&plusmn;0.133040</span></td>
+  <td>0.320368 <span class="std">&plusmn;0.126808</span></td>
+  <td>0.248588 <span class="std">&plusmn;0.073065</span></td>
+  <td class="win-q">0.235528 <span class="std">&plusmn;0.062481</span></td>
+</tr>
+<tr>
+  <td>Spacing <span class="tag">(plus petit = mieux)</span></td>
+  <td>0.064687 <span class="std">&plusmn;0.053573</span></td>
+  <td>0.050922 <span class="std">&plusmn;0.031396</span></td>
+  <td>0.013970 <span class="std">&plusmn;0.005322</span></td>
+  <td class="win-q">0.014817 <span class="std">&plusmn;0.005692</span></td>
+</tr></tbody>
+  </table></div>
+  <p class="hint"><b>Valeurs brutes seulement, pas encore un test statistique</b> &mdash; cellules vertes =
+  QI-NSGA-III a la meilleure valeur moyenne (GD, IGD, Spacing). Sur HV, les deux algorithmes sont proches.
+  Voir le tableau "Wilcoxon apparie" plus bas pour savoir lesquels de ces ecarts sont fiables
+  (statistiquement significatifs) et lesquels ne le sont pas.</p>
+
+  <div class="ct" style="margin-top:1.1rem">Effet du delivery-shift (Wilcoxon apparie, par algorithme)</div>
+  <div class="explain">Compare chaque algorithme a lui-meme, sans/avec delivery-shift (meme seed, meme front
+  initial).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>NSGA-III</th><th>QI-NSGA-III</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p&lt;0.000001 (significatif)</td><td class="sig">p&lt;0.000001 (significatif)</td></tr>
+<tr><td>GD</td><td class="sig">p&lt;0.000001 (significatif)</td><td class="sig">p&lt;0.000001 (significatif)</td></tr>
+<tr><td>IGD</td><td class="nonsig">p=0.171 (non significatif)</td><td class="sig">p=0.000001 (significatif)</td></tr>
+<tr><td>Spacing</td><td class="nonsig">p=0.318 (non significatif)</td><td class="sig">p=0.0221 (significatif)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>Resultat</b> : le delivery-shift ameliore significativement <b>HV et GD chez les deux
+  algorithmes</b>. Il ameliore en plus significativement <b>IGD chez QI-NSGA-III specifiquement</b>
+  (NSGA-III ne bouge pas de facon significative dessus). <b>Spacing se degrade significativement chez
+  QI-NSGA-III</b> (0.013970&rarr;0.014817, plus petit = mieux, donc une hausse est une degradation) &mdash;
+  chez NSGA-III, Spacing ne bouge pas de facon significative. Au total pour QI-NSGA-III : 3 indicateurs
+  ameliores (HV, GD, IGD), 1 degrade (Spacing). Pour NSGA-III : 2 ameliores (HV, GD), aucun degrade.</p>
+
+  <div class="ct" style="margin-top:1.1rem">NSGA-III vs QI-NSGA-III &mdash; Wilcoxon apparie (test principal)</div>
+  <div class="explain">Seeds partagees entre les deux algorithmes. r = taille d'effet (correlation
+  biserielle). Mediane = NSGA-III &minus; QI-NSGA-III, IC95% bootstrap. Holm = verdict apres correction pour
+  les 4 indicateurs testes ensemble.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Sans delivery-shift : p (r, mediane)</th><th>Holm</th><th>Avec delivery-shift : p (r, mediane)</th><th>Holm</th></tr></thead>
+    <tbody>
+<tr>
+  <td>HV</td>
+  <td class="nonsig">p=0.452 <span class="std">(r=+0.16, med=+0.020)</span></td>
+  <td class="nonsig">non sig.</td>
+  <td class="nonsig">p=0.570 <span class="std">(r=+0.12, med=+0.014)</span></td>
+  <td class="nonsig">non sig.</td>
+</tr>
+<tr>
+  <td>GD</td>
+  <td class="sig">p=0.00993 <span class="std">(r=+0.53, med=+0.061)</span></td>
+  <td class="sig">signif. (QI)</td>
+  <td class="sig">p=0.01853 <span class="std">(r=+0.49, med=+0.071)</span></td>
+  <td class="sig">signif. (QI)</td>
+</tr>
+<tr>
+  <td>IGD</td>
+  <td class="sig">p=0.01060 <span class="std">(r=+0.53, med=+0.032)</span></td>
+  <td class="sig">signif. (QI)</td>
+  <td class="sig">p=0.00202 <span class="std">(r=+0.63, med=+0.055)</span></td>
+  <td class="sig">signif. (QI)</td>
+</tr>
+<tr>
+  <td>Spacing</td>
+  <td class="sig">p&lt;0.000001 <span class="std">(r=+1.00, med=+0.036)</span></td>
+  <td class="sig">signif. (QI)</td>
+  <td class="sig">p&lt;0.000001 <span class="std">(r=+1.00, med=+0.030)</span></td>
+  <td class="sig">signif. (QI)</td>
+</tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>Qui domine qui (avec delivery-shift, comparaison equitable)</b> : <b>QI-NSGA-III domine
+  significativement sur GD, IGD et Spacing</b> (les 3 survivent la correction de Holm). Sur <b>HV, aucun
+  vainqueur</b> &mdash; pas de difference significative. Donc QI-NSGA-III meilleur sur 3 indicateurs / 4 dans
+  cette config precise.</p>
+
+  <div class="ct" style="margin-top:1.1rem">NSGA-III vs QI-NSGA-III &mdash; Mann-Whitney (verification de robustesse)</div>
+  <div class="explain">Test alternatif, ignore l'appariement des seeds. A12 = probabilite de superiorite.</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Sans delivery-shift (A12)</th><th>Avec delivery-shift (A12)</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="nonsig">p=0.530 (A12=0.55)</td><td class="nonsig">p=0.520 (A12=0.55)</td></tr>
+<tr><td>GD</td><td class="sig">p=0.0191 (A12=0.68)</td><td class="sig">p=0.0176 (A12=0.68)</td></tr>
+<tr><td>IGD</td><td class="sig">p=0.0150 (A12=0.68)</td><td class="sig">p=0.0037 (A12=0.72)</td></tr>
+<tr><td>Spacing</td><td class="sig">p&lt;0.000001 (A12=0.98)</td><td class="sig">p&lt;0.000001 (A12=0.96)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>Meme verdict</b> : QI-NSGA-III domine significativement sur GD, IGD et Spacing ; egalite
+  (non significatif) sur HV. Confirme le tableau Wilcoxon ci-dessus par une methode independante.</p>
+
+  <div class="ct" style="margin-top:1.1rem">Stabilite (Brown-Forsythe)</div>
+  <div class="explain">Compare directement la variance entre les deux algorithmes (pas la moyenne).</div>
+  <div class="twrap"><table>
+    <thead><tr><th>Indicateur</th><th>Dispersion sans delivery-shift</th><th>Dispersion avec delivery-shift</th></tr></thead>
+    <tbody>
+<tr><td>HV</td><td class="sig">p=0.002 (significatif)</td><td class="sig">p=0.002 (significatif)</td></tr>
+<tr><td>GD</td><td class="nonsig">p=0.056 (non significatif)</td><td class="sig">p=0.040 (significatif)</td></tr>
+<tr><td>IGD</td><td class="sig">p=0.018 (significatif)</td><td class="sig">p=0.005 (significatif)</td></tr>
+<tr><td>Spacing</td><td class="sig">p=0.002 (significatif)</td><td class="sig">p&lt;0.001 (significatif)</td></tr>
+</tbody>
+  </table></div>
+  <p class="hint"><b>Qui est le plus stable</b> : <b>QI-NSGA-III</b>, sur HV et IGD dans les deux cas (avec et
+  sans delivery-shift), significativement ; sur Spacing egalement dans les deux cas ; sur GD seulement une
+  fois le delivery-shift applique (pas significatif avant). NSGA-III varie beaucoup plus d'un seed a l'autre
+  dans cette configuration sans 2-opt.</p>
+</div>
+
+<div class="card">
+  <div class="ct">Conclusion &mdash; le levier delivery-shift lui-meme</div>
+  <ul class="light">
+    <li>Delivery-shift <b>seul</b> (2-opt desactive) : <b>ameliore significativement HV et GD pour NSGA-III
+    ET QI-NSGA-III</b> &mdash; un gain reel et robuste, present chez les deux algorithmes. Il ameliore en
+    plus significativement IGD chez QI-NSGA-III specifiquement (NSGA-III n'y gagne rien de significatif
+    dessus). Il rapproche donc les solutions du front de reference et reduit le cout de stockage &mdash;
+    mais <b>degrade significativement le Spacing de QI-NSGA-III</b> (front moins regulier), sans effet
+    significatif sur celui de NSGA-III. Ce n'est donc pas un gain sans contrepartie</li>
+    <li>Delivery-shift <b>combine</b> au 2-opt (les deux actifs, voir la page "30 executions", carte "levier
+    delivery-shift ajoute au 2-opt") : plus de gain net demontrable, et le temps de calcul augmente
+    fortement &mdash; <b>decision : non adopte comme levier de production supplementaire</b>, son effet
+    etant largement redondant avec ce que le 2-opt capture deja</li>
+  </ul>
+</div>
+
+<a class="back" href="IRP_100clients_RESULTATS.html">&larr; Retour</a>
+
+<script>
+function toggleDark(){
+  const on = document.documentElement.toggleAttribute('data-dark');
+  localStorage.setItem('irp-dark', on ? '1' : '');
+}
+(function(){ if(localStorage.getItem('irp-dark')==='1') document.documentElement.setAttribute('data-dark',''); })();
+</script>
+</body>
+</html>
