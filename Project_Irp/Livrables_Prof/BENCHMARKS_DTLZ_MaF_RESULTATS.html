@@ -16,6 +16,8 @@
   --win-n-bg:#e6f1fb; --win-n-fg:#185fa5;
   --win-q-bg:#e8f5e2; --win-q-fg:#3b6d11;
   --win-m-bg:#fdf3e3; --win-m-fg:#9a6a00;
+  --sig-fg:  #a32d2d;
+  --nonsig-fg: #888;
   --code-bg: #1e1e1e; --code-fg:#d4d4d4;
 }
 [data-dark] {
@@ -29,6 +31,8 @@
   --win-n-bg:#1a2a3d; --win-n-fg:#6aaae8;
   --win-q-bg:#1a2e1a; --win-q-fg:#6abd52;
   --win-m-bg:#332a12; --win-m-fg:#e0ab4a;
+  --sig-fg:  #e06060;
+  --nonsig-fg: #888;
   --code-bg: #16161a; --code-fg:#c9c9c9;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -63,9 +67,17 @@ td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:right;font-
 tr:nth-child(even) td{background:var(--bg)}
 td.mean{font-weight:700;color:var(--text)}
 td.na{color:var(--text-2);font-style:italic;text-align:center}
+.twrap table thead tr:first-child th:nth-child(3),
+.twrap table thead tr:first-child th:nth-child(4),
+.twrap table thead tr:nth-child(2) th:nth-child(3),
+.twrap table thead tr:nth-child(2) th:nth-child(5),
+.twrap table tbody td:nth-child(4),
+.twrap table tbody td:nth-child(6){border-left:1.5px solid var(--border)}
 td.win-n{color:var(--win-n-fg);font-weight:700}
 td.win-q{color:var(--win-q-fg);font-weight:700}
 td.win-m{color:var(--win-m-fg);font-weight:700}
+td.sig{color:var(--sig-fg);font-weight:600}
+td.nonsig{color:var(--nonsig-fg);font-style:italic}
 .hint{font-size:14.5px;color:var(--text-2);margin-top:.7rem}
 details{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem}
 summary{cursor:pointer;font-weight:700;font-size:15.5px;list-style:none}
@@ -102,22 +114,29 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 .lit-table tbody tr:last-child td { border-bottom:2px solid var(--text); }
 .lit-table-note { font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.65; }
 .lit-table-note b { color:var(--text-2); }
+.view-btn{background:var(--bg);border:1px solid var(--border);border-radius:9px;
+  padding:9px 14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text-2);
+  text-align:left;flex:1;min-width:260px;transition:border-color .15s,color .15s}
+.view-btn:hover{border-color:var(--accent)}
+.view-btn.active{border-color:var(--accent);color:var(--accent);background:var(--surface)}
 </style>
 </head>
 <body>
 <div class="hdr">
   <div>
     <h1>Benchmarks DTLZ1-7 / MaF1-7 &mdash; NSGA-III vs QI-NSGA-III vs MOEA/D</h1>
-    <div class="meta">Protocole Cui, Shi, Wang, Ding, Li &amp; Li (2025), <i>Complex &amp; Intelligent Systems</i> 11:136
-    &mdash; 30 runs independants par probleme (seeds fixes), SBX &eta;=20 p<sub>c</sub>=1.0, PM &eta;=20 p<sub>m</sub>=1/D,
-    directions de reference Das-Dennis, budget fixe de 30000 evaluations par run. Resultats deja calcules,
-    aucune execution necessaire &mdash; code source en bas de page.</div>
+    <div class="meta">Protocole experimental adapte de Cui, Shi, Wang, Ding, Li &amp; Li (2025), <i>Complex &amp; Intelligent Systems</i> 11:136
+    &mdash; budget, operateurs (SBX &eta;=20 p<sub>c</sub>=1.0, PM &eta;=20 p<sub>m</sub>=1/D) et directions de reference
+    (Das-Dennis) repris de l'article, mais dimension decisionnelle D definie selon la convention standard propre
+    a chaque benchmark (voir Tableau 2 ci-dessous), pas la valeur fixe D=54 de l'article. 30 runs independants
+    par probleme (seeds fixes), budget fixe de 30000 evaluations par run. Resultats deja calcules, aucune
+    execution necessaire.</div>
   </div>
   <button id="tbtn" onclick="toggleDark()">&#9680;</button>
 </div>
 
 <div class="lit-table-block">
-    <div class="lit-table-caption">Tableau 2 &mdash; Param&egrave;tres exp&eacute;rimentaux reproduits</div>
+    <div class="lit-table-caption">Tableau 2 &mdash; Param&egrave;tres exp&eacute;rimentaux adapt&eacute;s</div>
     <div class="lit-table-scroll">
       <table class="lit-table">
         <thead>
@@ -138,24 +157,13 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
 </div>
 
 <div class="card">
-  <div class="ct">Corrections apportees avant cette campagne</div>
-  <ul style="padding-left:1.2em;font-size:15.5px;line-height:1.85">
-    <li>Budget d'evaluations reel de QI-NSGA-III (reevaluation redondante de la population parente a chaque
-    generation) &mdash; corrige, ~2x celui de NSGA-III &rarr; ~1.1x a generations egales</li>
-  </ul>
-  <p class="hint">Detail complet dans <code>Solvers/QINSGA3/README.md</code>, section "Design history".</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="view-btn active" id="btn-baseline" onclick="setView('baseline')">NSGA-III (sans archive) + QI-NSGA-III (archive) + MOEA/D</button>
+    <button class="view-btn" id="btn-archive" onclick="setView('archive')">NSGA-III + archive vs QI-NSGA-III (archive) + MOEA/D</button>
+  </div>
 </div>
 
-<div class="card">
-  <div class="ct">Archive externe : chaque algorithme tel que concu</div>
-  <p style="font-size:15.5px;line-height:1.7">QI-NSGA-III conserve son archive externe (non-dominance
-  cumulee sur tout le run, plafonnee a 500, tronquee au pop_size en fin de run) &mdash; c'est l'un de ses
-  choix de conception. NSGA-III ne dispose d'aucune archive &mdash; il rapporte uniquement sa derniere
-  generation, son comportement standard tel que publie (pymoo). Les deux algorithmes sont donc compares
-  tels qu'ils sont concus, pas dans une variante artificiellement symetrisee &mdash; meme position que sur
-  la page IRP 100 clients.</p>
-</div>
-
+<div id="view-baseline">
 <div class="scoreboard">
   <div class="score n">
     <div class="sl">NSGA-III meilleur (IGD moyen)</div>
@@ -165,7 +173,7 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="score q">
     <div class="sl">QI-NSGA-III meilleur (IGD moyen)</div>
     <div class="sv">17 / 25</div>
-    <div class="su">combinaisons probleme &times; M (68%) &mdash; inchange depuis l'ajout de MOEA/D</div>
+    <div class="su">combinaisons probleme &times; M (68%)</div>
   </div>
   <div class="score n" style="background:var(--bg)">
     <div class="sl" style="color:var(--text-2)">MOEA/D meilleur (IGD moyen)</div>
@@ -179,7 +187,9 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <p class="hint" style="margin-top:0;margin-bottom:.8rem">Methode de Cui et al. (2025), Fig. 1/2 &mdash; pour chaque probleme, les trois
   algorithmes sont classes par IGD moyen (rang 1 = meilleur, ex aequo a rang moyen), puis le rang est moyenne sur les 14 problemes
   disponibles a M=3 et les 11 a M=4 (DTLZ5-7 n'ont pas de front de reference pymoo au-dela de M=3). Plus bas =
-  meilleur.</p>
+  meilleur. Test de Friedman (differences de rang globales entre les 3 algorithmes) : <b>M=3, &chi;&sup2;=11.57,
+  p=0.0031</b> &mdash; <b>M=4, &chi;&sup2;=8.91, p=0.0116</b> &mdash; significatif dans les deux cas (p&lt;0.05) : les
+  differences de classement observees ne sont pas dues au hasard.</p>
   <div class="rank-charts">
     <div class="rank-card">
       <div class="rank-card-title">M = 3</div>
@@ -230,76 +240,323 @@ code{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospac
   <div class="ct">DTLZ1-7 &mdash; M=3 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
-      <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-<tr><td>DTLZ1</td><td>0.020532</td><td>0.292087</td><td>0.645413</td><td class='mean'>0.228815</td><td>0.215363</td><td>0.027533</td><td>0.032347</td><td>0.060678</td><td class='mean'>0.035625</td><td>0.009070</td><td>0.031129</td><td>0.607828</td><td>3.197094</td><td class='mean'>1.058044</td><td>0.991829</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.054459</td><td>0.054466</td><td>0.054488</td><td class='mean'>0.054468</td><td>0.000007</td><td>0.065895</td><td>0.071677</td><td>0.081608</td><td class='mean'>0.072326</td><td>0.004049</td><td>0.075023</td><td>0.076103</td><td>0.077361</td><td class='mean'>0.076054</td><td>0.000516</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>2.004426</td><td>6.271486</td><td>15.453127</td><td class='mean'>7.853266</td><td>3.844266</td><td>0.072882</td><td>0.122813</td><td>1.068804</td><td class='mean'>0.181430</td><td>0.188917</td><td>7.509574</td><td>28.343742</td><td>56.528217</td><td class='mean'>30.082606</td><td>13.982489</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.054462</td><td>0.054472</td><td>0.544326</td><td class='mean'>0.152405</td><td>0.195863</td><td>0.065729</td><td>0.072636</td><td>0.082466</td><td class='mean'>0.073323</td><td>0.004551</td><td>0.077819</td><td>0.744122</td><td>0.945924</td><td class='mean'>0.682847</td><td>0.299506</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ5</td><td>0.033811</td><td>0.038444</td><td>0.043229</td><td class='mean'>0.037518</td><td>0.002150</td><td>0.007557</td><td>0.008997</td><td>0.013561</td><td class='mean'>0.009401</td><td>0.001268</td><td>0.008363</td><td>0.009806</td><td>0.012698</td><td class='mean'>0.009975</td><td>0.001168</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ6</td><td>0.465591</td><td>0.727042</td><td>1.072340</td><td class='mean'>0.716894</td><td>0.135307</td><td>1.564528</td><td>1.840963</td><td>2.171592</td><td class='mean'>1.841740</td><td>0.125524</td><td>0.289038</td><td>0.399160</td><td>1.008670</td><td class='mean'>0.479313</td><td>0.181702</td><td class='win-m'>MOEA/D</td></tr><tr><td>DTLZ7</td><td>0.097563</td><td>0.103020</td><td>0.371852</td><td class='mean'>0.113257</td><td>0.048315</td><td>0.092715</td><td>0.105321</td><td>0.125244</td><td class='mean'>0.107515</td><td>0.007799</td><td>0.431286</td><td>0.819970</td><td>1.651532</td><td class='mean'>0.789524</td><td>0.260918</td><td class='win-q'>QI-NSGA-III</td></tr>
+<tr><td>DTLZ1</td><td class='mean'>0.228815</td><td>0.215363</td><td class='mean'>0.035625</td><td>0.009070</td><td class='mean'>1.058044</td><td>0.991829</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.223 ns (r=0.18)</td></tr><tr><td>DTLZ2</td><td class='mean'>0.054468</td><td>0.000007</td><td class='mean'>0.072326</td><td>0.004049</td><td class='mean'>0.076054</td><td>0.000516</td><td class='win-n'>NSGA-III</td><td class='sig'>8.9e-11 (r=1.00)</td></tr><tr><td>DTLZ3</td><td class='mean'>7.853266</td><td>3.844266</td><td class='mean'>0.181430</td><td>0.188917</td><td class='mean'>30.082606</td><td>13.982488</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>DTLZ4</td><td class='mean'>0.152405</td><td>0.195863</td><td class='mean'>0.073323</td><td>0.004551</td><td class='mean'>0.682847</td><td>0.299506</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>6.7e-5 (r=0.60)</td></tr><tr><td>DTLZ5</td><td class='mean'>0.037518</td><td>0.002150</td><td class='mean'>0.009401</td><td>0.001268</td><td class='mean'>0.009975</td><td>0.001168</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>0.033 (r=0.32)</td></tr><tr><td>DTLZ6</td><td class='mean'>0.716894</td><td>0.135306</td><td class='mean'>1.841740</td><td>0.125524</td><td class='mean'>0.479313</td><td>0.181702</td><td class='win-m'>MOEA/D</td><td class='sig'>6.5e-7 (r=0.75)</td></tr><tr><td>DTLZ7</td><td class='mean'>0.113257</td><td>0.048315</td><td class='mean'>0.107515</td><td>0.007799</td><td class='mean'>0.789524</td><td>0.260918</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.122 ns (r=0.23)</td></tr>
     </tbody>
   </table></div>
-  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
 </div>
 <div class="card">
-  <div class="ct">DTLZ1-7 &mdash; M=4 objectifs</div>
+  <div class="ct">DTLZ1-4 &mdash; M=4 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
-      <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-<tr><td>DTLZ1</td><td>0.041135</td><td>0.263234</td><td>0.776712</td><td class='mean'>0.214947</td><td>0.185515</td><td>0.055618</td><td>0.067584</td><td>0.095714</td><td class='mean'>0.069680</td><td>0.008502</td><td>0.093418</td><td>1.820678</td><td>7.842830</td><td class='mean'>2.401696</td><td>1.929810</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ2</td><td>0.121039</td><td>0.121124</td><td>0.121318</td><td class='mean'>0.121128</td><td>0.000048</td><td>0.136593</td><td>0.147211</td><td>0.154437</td><td class='mean'>0.147147</td><td>0.004781</td><td>0.242935</td><td>0.252223</td><td>0.261427</td><td class='mean'>0.252040</td><td>0.004604</td><td class='win-n'>NSGA-III</td></tr><tr><td>DTLZ3</td><td>0.195184</td><td>5.138665</td><td>14.394569</td><td class='mean'>5.785954</td><td>3.541791</td><td>0.192736</td><td>0.261414</td><td>1.393011</td><td class='mean'>0.322345</td><td>0.217214</td><td>11.159391</td><td>33.845572</td><td>69.498681</td><td class='mean'>37.571724</td><td>15.787481</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>DTLZ4</td><td>0.121092</td><td>0.121152</td><td>0.751686</td><td class='mean'>0.142183</td><td>0.113182</td><td>0.147725</td><td>0.156125</td><td>0.167251</td><td class='mean'>0.156704</td><td>0.004975</td><td>0.258510</td><td>0.750968</td><td>1.045503</td><td class='mean'>0.737793</td><td>0.263162</td><td class='win-n'>NSGA-III</td></tr>
+<tr><td>DTLZ1</td><td class='mean'>0.214947</td><td>0.185515</td><td class='mean'>0.069680</td><td>0.008502</td><td class='mean'>2.401696</td><td>1.929810</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.363 ns (r=0.14)</td></tr><tr><td>DTLZ2</td><td class='mean'>0.121128</td><td>0.000048</td><td class='mean'>0.147147</td><td>0.004781</td><td class='mean'>0.252040</td><td>0.004605</td><td class='win-n'>NSGA-III</td><td class='sig'>9.0e-11 (r=1.00)</td></tr><tr><td>DTLZ3</td><td class='mean'>5.785954</td><td>3.541791</td><td class='mean'>0.322345</td><td>0.217214</td><td class='mean'>37.571724</td><td>15.787481</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>6.7e-10 (r=0.93)</td></tr><tr><td>DTLZ4</td><td class='mean'>0.142183</td><td>0.113182</td><td class='mean'>0.156704</td><td>0.004975</td><td class='mean'>0.737793</td><td>0.263162</td><td class='win-n'>NSGA-III</td><td class='sig'>5.6e-10 (r=0.93)</td></tr>
     </tbody>
   </table></div>
-  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
 </div>
 <div class="card">
   <div class="ct">MaF1-7 &mdash; M=3 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
-      <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-<tr><td>MaF1</td><td>0.081735</td><td>0.082160</td><td>0.082220</td><td class='mean'>0.082138</td><td>0.000104</td><td>0.053686</td><td>0.056570</td><td>0.059026</td><td class='mean'>0.056398</td><td>0.001417</td><td>0.066003</td><td>0.066947</td><td>0.068903</td><td class='mean'>0.067136</td><td>0.000832</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.037403</td><td>0.037933</td><td>0.038420</td><td class='mean'>0.037914</td><td>0.000298</td><td>0.047295</td><td>0.055906</td><td>0.067825</td><td class='mean'>0.055703</td><td>0.004816</td><td>0.040448</td><td>0.041008</td><td>0.041311</td><td class='mean'>0.041021</td><td>0.000156</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>2.384074</td><td>50.128927</td><td>493.682788</td><td class='mean'>102.134438</td><td>109.911589</td><td>0.133214</td><td>0.214174</td><td>34.480705</td><td class='mean'>1.589936</td><td>6.154247</td><td>61.609202</td><td>741.333539</td><td>4378.026555</td><td class='mean'>1182.014000</td><td>1041.838418</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>2.528886</td><td>18.976032</td><td>45.384569</td><td class='mean'>18.869260</td><td>9.842892</td><td>0.337382</td><td>0.441434</td><td>1.614409</td><td class='mean'>0.493141</td><td>0.228072</td><td>42.978305</td><td>100.927728</td><td>204.970469</td><td class='mean'>105.982927</td><td>39.988975</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.259495</td><td>0.259765</td><td>2.048734</td><td class='mean'>0.625457</td><td>0.674124</td><td>0.301346</td><td>0.324209</td><td>0.369813</td><td class='mean'>0.324294</td><td>0.014491</td><td>0.354273</td><td>3.464185</td><td>4.888461</td><td class='mean'>3.171281</td><td>1.782864</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF6</td><td>0.037782</td><td>0.037935</td><td>0.040137</td><td class='mean'>0.038127</td><td>0.000487</td><td>0.008051</td><td>0.010493</td><td>0.014822</td><td class='mean'>0.010763</td><td>0.001916</td><td>0.008978</td><td>0.010917</td><td>0.432014</td><td class='mean'>0.048611</td><td>0.104216</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.097996</td><td>0.103503</td><td>0.372381</td><td class='mean'>0.113598</td><td>0.048332</td><td>0.092380</td><td>0.105122</td><td>0.125951</td><td class='mean'>0.107521</td><td>0.007935</td><td>0.432870</td><td>0.820586</td><td>1.649873</td><td class='mean'>0.789997</td><td>0.260140</td><td class='win-q'>QI-NSGA-III</td></tr>
+<tr><td>MaF1</td><td class='mean'>0.082138</td><td>0.000104</td><td class='mean'>0.056398</td><td>0.001417</td><td class='mean'>0.067136</td><td>0.000832</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.0e-11 (r=1.00)</td></tr><tr><td>MaF2</td><td class='mean'>0.037914</td><td>0.000298</td><td class='mean'>0.055703</td><td>0.004816</td><td class='mean'>0.041021</td><td>0.000156</td><td class='win-n'>NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF3</td><td class='mean'>102.134438</td><td>109.911589</td><td class='mean'>1.589936</td><td>6.154247</td><td class='mean'>1182.014000</td><td>1041.838418</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>1.8e-10 (r=0.98)</td></tr><tr><td>MaF4</td><td class='mean'>18.869260</td><td>9.842892</td><td class='mean'>0.493141</td><td>0.228072</td><td class='mean'>105.982927</td><td>39.988975</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF5</td><td class='mean'>0.625457</td><td>0.674125</td><td class='mean'>0.324294</td><td>0.014491</td><td class='mean'>3.171281</td><td>1.782864</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>4.0e-4 (r=0.53)</td></tr><tr><td>MaF6</td><td class='mean'>0.038127</td><td>0.000487</td><td class='mean'>0.010763</td><td>0.001916</td><td class='mean'>0.048611</td><td>0.104216</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF7</td><td class='mean'>0.113598</td><td>0.048332</td><td class='mean'>0.107521</td><td>0.007935</td><td class='mean'>0.789997</td><td>0.260140</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.212 ns (r=0.19)</td></tr>
     </tbody>
   </table></div>
-  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
 </div>
 <div class="card">
   <div class="ct">MaF1-7 &mdash; M=4 objectifs</div>
   <div class="twrap"><table>
     <thead>
-      <tr><th rowspan="2">Probleme</th><th colspan="5">NSGA-III</th><th colspan="5">QI-NSGA-III</th><th colspan="5">MOEA/D</th><th rowspan="2">Gagnant</th></tr>
-      <tr><th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th>
-          <th>Best</th><th>Median</th><th>Worst</th><th>Mean</th><th>Std</th></tr>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
     </thead>
     <tbody>
-<tr><td>MaF1</td><td>0.169999</td><td>0.177070</td><td>0.195570</td><td class='mean'>0.177754</td><td>0.006869</td><td>0.100003</td><td>0.105469</td><td>0.112377</td><td class='mean'>0.105875</td><td>0.002945</td><td>0.127668</td><td>0.129358</td><td>0.135854</td><td class='mean'>0.130192</td><td>0.002167</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF2</td><td>0.092649</td><td>0.093732</td><td>0.094590</td><td class='mean'>0.093731</td><td>0.000456</td><td>0.090606</td><td>0.098990</td><td>0.104465</td><td class='mean'>0.098727</td><td>0.003650</td><td>0.093415</td><td>0.094745</td><td>0.096409</td><td class='mean'>0.094796</td><td>0.000845</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF3</td><td>4.241491</td><td>49.017541</td><td>536.796184</td><td class='mean'>75.636251</td><td>96.090240</td><td>0.220238</td><td>0.549797</td><td>1687.712993</td><td class='mean'>57.164134</td><td>302.787899</td><td>605.547226</td><td>2247.713597</td><td>4929.730889</td><td class='mean'>2407.541060</td><td>1230.285816</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF4</td><td>1.390527</td><td>22.970317</td><td>62.102729</td><td class='mean'>26.242364</td><td>16.415227</td><td>1.255270</td><td>1.785694</td><td>2.845838</td><td class='mean'>1.882547</td><td>0.420162</td><td>20.322518</td><td>233.824941</td><td>414.060478</td><td class='mean'>222.185109</td><td>108.395440</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF5</td><td>0.900465</td><td>0.905489</td><td>3.404066</td><td class='mean'>0.988590</td><td>0.448545</td><td>0.921932</td><td>0.994928</td><td>1.090050</td><td class='mean'>1.000998</td><td>0.034815</td><td>1.733535</td><td>4.081733</td><td>10.690663</td><td class='mean'>5.646330</td><td>3.665312</td><td class='win-n'>NSGA-III</td></tr><tr><td>MaF6</td><td>0.061708</td><td>0.080064</td><td>0.080237</td><td class='mean'>0.079412</td><td>0.003291</td><td>0.005874</td><td>0.007965</td><td>0.014304</td><td class='mean'>0.008491</td><td>0.001729</td><td>0.015943</td><td>0.020045</td><td>0.605369</td><td class='mean'>0.068831</td><td>0.131781</td><td class='win-q'>QI-NSGA-III</td></tr><tr><td>MaF7</td><td>0.219966</td><td>0.250488</td><td>0.470881</td><td class='mean'>0.269907</td><td>0.057918</td><td>0.372389</td><td>0.451090</td><td>0.511664</td><td class='mean'>0.445820</td><td>0.038573</td><td>0.485957</td><td>1.432991</td><td>2.181413</td><td class='mean'>1.399449</td><td>0.410555</td><td class='win-n'>NSGA-III</td></tr>
+<tr><td>MaF1</td><td class='mean'>0.177754</td><td>0.006869</td><td class='mean'>0.105875</td><td>0.002945</td><td class='mean'>0.130192</td><td>0.002167</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF2</td><td class='mean'>0.093731</td><td>0.000456</td><td class='mean'>0.098727</td><td>0.003650</td><td class='mean'>0.094796</td><td>0.000845</td><td class='win-n'>NSGA-III</td><td class='sig'>6.6e-6 (r=0.70)</td></tr><tr><td>MaF3</td><td class='mean'>75.636251</td><td>96.090240</td><td class='mean'>57.164134</td><td>302.787899</td><td class='mean'>2407.541060</td><td>1230.285816</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>6.1e-10 (r=0.93)</td></tr><tr><td>MaF4</td><td class='mean'>26.242364</td><td>16.415226</td><td class='mean'>1.882547</td><td>0.420162</td><td class='mean'>222.185109</td><td>108.395440</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>5.7e-10 (r=0.94)</td></tr><tr><td>MaF5</td><td class='mean'>0.988590</td><td>0.448545</td><td class='mean'>1.000998</td><td>0.034815</td><td class='mean'>5.646330</td><td>3.665312</td><td class='win-n'>NSGA-III</td><td class='sig'>5.6e-10 (r=0.93)</td></tr><tr><td>MaF6</td><td class='mean'>0.079412</td><td>0.003291</td><td class='mean'>0.008491</td><td>0.001729</td><td class='mean'>0.068831</td><td>0.131781</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.0e-11 (r=1.00)</td></tr><tr><td>MaF7</td><td class='mean'>0.269907</td><td>0.057918</td><td class='mean'>0.445820</td><td>0.038573</td><td class='mean'>1.399449</td><td>0.410555</td><td class='win-n'>NSGA-III</td><td class='sig'>1.1e-9 (r=0.92)</td></tr>
     </tbody>
   </table></div>
-  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.</p>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
 </div>
 
 <div class="card">
-  <div class="ct">Conclusion</div>
-  <p style="font-size:15.5px;line-height:1.7">Sur les 25 combinaisons probleme &times; M testees, <b>QI-NSGA-III
-  obtient le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>. Meme si
-  QI-NSGA-III gagne le plus souvent, il ne gagne pas toujours &mdash; NSGA-III l'emporte sur des problemes
-  precis (DTLZ2, DTLZ4 a M=4, MaF2, MaF5 et MaF7 a M=4), et MOEA/D une fois (DTLZ6, M=3). QI-NSGA-III reste
-  neanmoins nettement devant, surtout sur les problemes multimodaux difficiles (DTLZ1, DTLZ3, MaF3, MaF4), ou
-  il est a la fois meilleur en moyenne et plus regulier d'un run a l'autre. MOEA/D est le plus faible des trois
-  sur l'ensemble de la suite, souvent par un a deux ordres de grandeur (ex. MaF3 M=3 : IGD moyen 1182.0 contre
-  1.59 pour QI-NSGA-III).</p>
+  <div class="ct">Post-hoc global (Wilcoxon apparie par probleme + Holm)</div>
+  <p class="hint" style="margin-top:0;margin-bottom:.8rem">Suite du test de Friedman ci-dessus : Wilcoxon
+  signe apparie sur les IGD moyens des problemes (chaque probleme = une paire), les 3 comparaisons corrigees
+  par Holm au sein de chaque M. r = correlation biserielle appariee (0=aucun effet, 1=dominance totale).</p>
+  <div class="twrap"><table>
+    <thead><tr><th>M</th><th>Comparaison</th><th>p (Holm)</th><th>r</th><th>Signif.</th></tr></thead>
+    <tbody>
+<tr><td>3</td><td>QI-NSGA-III vs NSGA-III</td><td>0.040</td><td>+0.66</td><td class='sig'>oui</td></tr>
+<tr><td>3</td><td>QI-NSGA-III vs MOEA/D</td><td>0.040</td><td>+0.73</td><td class='sig'>oui</td></tr>
+<tr><td>3</td><td>NSGA-III vs MOEA/D</td><td>0.040</td><td>+0.73</td><td class='sig'>oui</td></tr>
+<tr><td>4</td><td>QI-NSGA-III vs MOEA/D</td><td>0.006</td><td>+0.97</td><td class='sig'>oui</td></tr>
+<tr><td>4</td><td>NSGA-III vs MOEA/D</td><td>0.020</td><td>+0.85</td><td class='sig'>oui</td></tr>
+<tr><td>4</td><td>QI-NSGA-III vs NSGA-III</td><td>0.206</td><td>+0.46</td><td class='nonsig'>non</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">r positif = le premier algorithme cite a l'IGD le plus bas. <b>QI-NSGA-III vs NSGA-III n'est
+  significatif globalement qu'a M=3</b> (p=0.040) &mdash; a M=4 l'ecart existe (r=+0.46) mais l'echantillon
+  (11 problemes apparies) est trop petit pour conclure formellement. Les deux algorithmes dominent MOEA/D de
+  facon robuste et systematique (r&ge;0.73, p&le;0.04) aux deux M.</p>
+</div>
+
+<div class="card">
+  <div class="ct">Conclusion &mdash; NSGA-III (sans archive) + QI-NSGA-III (archive) + MOEA/D</div>
+  <p style="font-size:15.5px;line-height:1.7">Sur les 25 combinaisons probleme &times; M, <b>QI-NSGA-III
+  presente le meilleur IGD moyen sur 17 (68%)</b>, <b>NSGA-III sur 7 (28%)</b>, <b>MOEA/D sur 1 (4%)</b>.
+  Parmi les 17 victoires de QI-NSGA-III, <b>13 sont statistiquement significatives</b> (Mann-Whitney + Holm,
+  p&le;0.05) et 4 ne le sont pas (DTLZ1 M=3, DTLZ1 M=4, DTLZ7 M=3, MaF7 M=3) &mdash; DTLZ1 est le probleme ou
+  les trois algorithmes sont les plus difficiles a departager (taille d'effet la plus faible de toute la
+  suite). Le test de Friedman confirme une difference globale de classement entre les trois algorithmes aux
+  deux M (p=0.0031 et p=0.0116). Le post-hoc global, cependant, nuance la comparaison directe QI-NSGA-III
+  vs NSGA-III : significative a M=3 (p=0.040) mais pas a M=4 (p=0.206, effet positif r=+0.46 mais echantillon
+  de 11 problemes trop petit pour conclure). En revanche, <b>QI-NSGA-III et NSGA-III dominent tous deux MOEA/D
+  de facon robuste et systematique</b> (p&le;0.04, r&ge;0.73) aux deux M. En resume : QI-NSGA-III gagne plus
+  souvent et l'essentiel de son avantage est solide, mais son superiorite globale sur NSGA-III specifiquement
+  reste partielle, pas acquise sur l'ensemble de la suite.</p>
+</div>
+</div>
+
+<div id="view-archive" style="display:none">
+
+<div class="scoreboard">
+  <div class="score n">
+    <div class="sl">NSGA-III meilleur (IGD moyen)</div>
+    <div class="sv">9 / 25</div>
+    <div class="su">combinaisons probleme &times; M (36%) &mdash; avec archive externe</div>
+  </div>
+  <div class="score q">
+    <div class="sl">QI-NSGA-III meilleur (IGD moyen)</div>
+    <div class="sv">15 / 25</div>
+    <div class="su">combinaisons probleme &times; M (60%)</div>
+  </div>
+  <div class="score n" style="background:var(--bg)">
+    <div class="sl" style="color:var(--text-2)">MOEA/D meilleur (IGD moyen)</div>
+    <div class="sv">1 / 25</div>
+    <div class="su">combinaisons probleme &times; M (4%) &mdash; inchange (DTLZ6, M=3)</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">Classement moyen (rang IGD) &mdash; DTLZ1-7 + MaF1-7 combines (avec archive pour NSGA-III)</div>
+  <p class="hint" style="margin-top:0;margin-bottom:.8rem">Meme methode que la vue precedente (Cui et al. 2025, Fig. 1/2),
+  NSGA-III utilisant ici la meme archive externe que QI-NSGA-III. Test de Friedman : <b>M=3, &chi;&sup2;=11.29,
+  p=0.0035</b> &mdash; <b>M=4, &chi;&sup2;=11.09, p=0.0039</b> &mdash; toujours significatif dans les deux cas.</p>
+  <div class="rank-charts">
+    <div class="rank-card">
+      <div class="rank-card-title">M = 3</div>
+      <div class="rank-card-sub">rang moyen IGD, 14 problemes &mdash; plus bas = meilleur</div>
+      <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
+        <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
+        <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
+        <line x1="26" y1="92.5" x2="286" y2="92.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="95.5">1</text>
+        <line x1="26" y1="65.0" x2="286" y2="65.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="68.0">2</text>
+        <line x1="26" y1="37.5" x2="286" y2="37.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="40.5">3</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">4</text>
+        <rect x="26.0" y="70.9" width="77.3" height="49.1" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III (avec archive) — rang moyen 1.79 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="64.7" y="65.9">1.79</text>
+        <text class="rank-axis-lbl" x="64.7" y="134.0">NSGA-III</text>
+        <rect x="117.3" y="78.75" width="77.3" height="41.25" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.50 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="156.0" y="73.75">1.50</text>
+        <text class="rank-axis-lbl" x="156.0" y="134.0">QI-NSGA-III</text>
+        <rect x="208.7" y="45.36" width="77.3" height="74.64" rx="4" fill="var(--accent)" opacity=".92"><title>MOEA/D — rang moyen 2.71 (sur 14 problèmes, M=3)</title></rect>
+        <text class="rank-bar-lbl" x="247.3" y="40.36">2.71</text>
+        <text class="rank-axis-lbl" x="247.3" y="134.0">MOEA/D</text>
+      </svg>
+    </div>
+    <div class="rank-card">
+      <div class="rank-card-title">M = 4</div>
+      <div class="rank-card-sub">rang moyen IGD, 11 problemes &mdash; plus bas = meilleur</div>
+      <svg class="rank-svg" viewBox="0 0 296 134" style="height:134px">
+        <text class="rank-y-title" x="6.0" y="65.0" transform="rotate(-90 6.0 65.0)">Mean rank</text>
+        <line x1="26" y1="120.0" x2="286" y2="120.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="123.0">0</text>
+        <line x1="26" y1="92.5" x2="286" y2="92.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="95.5">1</text>
+        <line x1="26" y1="65.0" x2="286" y2="65.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="68.0">2</text>
+        <line x1="26" y1="37.5" x2="286" y2="37.5" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="40.5">3</text>
+        <line x1="26" y1="10.0" x2="286" y2="10.0" stroke="var(--border)" stroke-width="1"/><text class="rank-grid-lbl" x="23" y="13.0">4</text>
+        <rect x="26.0" y="75.0" width="77.3" height="45.0" rx="4" fill="var(--accent)" opacity=".92"><title>NSGA-III (avec archive) — rang moyen 1.64 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="64.7" y="70.0">1.64</text>
+        <text class="rank-axis-lbl" x="64.7" y="134.0">NSGA-III</text>
+        <rect x="117.3" y="77.5" width="77.3" height="42.5" rx="4" fill="var(--accent)" opacity=".92"><title>QI-NSGA-III — rang moyen 1.55 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="156.0" y="72.5">1.55</text>
+        <text class="rank-axis-lbl" x="156.0" y="134.0">QI-NSGA-III</text>
+        <rect x="208.7" y="42.5" width="77.3" height="77.5" rx="4" fill="var(--accent)" opacity=".92"><title>MOEA/D — rang moyen 2.82 (sur 11 problèmes, M=4)</title></rect>
+        <text class="rank-bar-lbl" x="247.3" y="37.5">2.82</text>
+        <text class="rank-axis-lbl" x="247.3" y="134.0">MOEA/D</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">DTLZ1-7 &mdash; M=3 objectifs (NSGA-III avec archive)</div>
+  <div class="twrap"><table>
+    <thead>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III (archive)</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
+    </thead>
+    <tbody>
+<tr><td>DTLZ1</td><td class='mean'>0.228309</td><td>0.215670</td><td class='mean'>0.035625</td><td>0.009070</td><td class='mean'>1.058044</td><td>0.991829</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.252 ns (r=0.17)</td></tr><tr><td>DTLZ2</td><td class='mean'>0.054419</td><td>0.000053</td><td class='mean'>0.072326</td><td>0.004049</td><td class='mean'>0.076054</td><td>0.000516</td><td class='win-n'>NSGA-III</td><td class='sig'>9.0e-11 (r=1.00)</td></tr><tr><td>DTLZ3</td><td class='mean'>7.853389</td><td>3.844292</td><td class='mean'>0.181430</td><td>0.188917</td><td class='mean'>30.082606</td><td>13.982488</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>DTLZ4</td><td class='mean'>0.151847</td><td>0.194912</td><td class='mean'>0.073323</td><td>0.004551</td><td class='mean'>0.682847</td><td>0.299506</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>6.8e-5 (r=0.60)</td></tr><tr><td>DTLZ5</td><td class='mean'>0.016078</td><td>0.002662</td><td class='mean'>0.009401</td><td>0.001268</td><td class='mean'>0.009975</td><td>0.001168</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>0.033 (r=0.32)</td></tr><tr><td>DTLZ6</td><td class='mean'>0.712699</td><td>0.136121</td><td class='mean'>1.841740</td><td>0.125524</td><td class='mean'>0.479313</td><td>0.181702</td><td class='win-m'>MOEA/D</td><td class='sig'>7.6e-7 (r=0.74)</td></tr><tr><td>DTLZ7</td><td class='mean'>0.093234</td><td>0.051369</td><td class='mean'>0.107515</td><td>0.007799</td><td class='mean'>0.789524</td><td>0.260918</td><td class='win-n'>NSGA-III</td><td class='sig'>1.4e-9 (r=0.91)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
+</div>
+<div class="card">
+  <div class="ct">DTLZ1-4 &mdash; M=4 objectifs (NSGA-III avec archive)</div>
+  <div class="twrap"><table>
+    <thead>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III (archive)</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
+    </thead>
+    <tbody>
+<tr><td>DTLZ1</td><td class='mean'>0.214962</td><td>0.185331</td><td class='mean'>0.069680</td><td>0.008502</td><td class='mean'>2.401696</td><td>1.929810</td><td class='win-q'>QI-NSGA-III</td><td class='nonsig'>0.379 ns (r=0.13)</td></tr><tr><td>DTLZ2</td><td class='mean'>0.126584</td><td>0.005507</td><td class='mean'>0.147147</td><td>0.004781</td><td class='mean'>0.252040</td><td>0.004605</td><td class='win-n'>NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>DTLZ3</td><td class='mean'>5.789915</td><td>3.541623</td><td class='mean'>0.322345</td><td>0.217214</td><td class='mean'>37.571724</td><td>15.787481</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>7.4e-10 (r=0.93)</td></tr><tr><td>DTLZ4</td><td class='mean'>0.145236</td><td>0.112262</td><td class='mean'>0.156704</td><td>0.004975</td><td class='mean'>0.737793</td><td>0.263162</td><td class='win-n'>NSGA-III</td><td class='sig'>5.6e-10 (r=0.93)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
+</div>
+<div class="card">
+  <div class="ct">MaF1-7 &mdash; M=3 objectifs (NSGA-III avec archive)</div>
+  <div class="twrap"><table>
+    <thead>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III (archive)</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
+    </thead>
+    <tbody>
+<tr><td>MaF1</td><td class='mean'>0.059897</td><td>0.002719</td><td class='mean'>0.056398</td><td>0.001417</td><td class='mean'>0.067136</td><td>0.000832</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>1.1e-6 (r=0.73)</td></tr><tr><td>MaF2</td><td class='mean'>0.035054</td><td>0.000490</td><td class='mean'>0.055703</td><td>0.004816</td><td class='mean'>0.041021</td><td>0.000156</td><td class='win-n'>NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF3</td><td class='mean'>101.602654</td><td>109.988027</td><td class='mean'>1.589936</td><td>6.154247</td><td class='mean'>1182.014000</td><td>1041.838418</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>1.8e-10 (r=0.98)</td></tr><tr><td>MaF4</td><td class='mean'>18.779526</td><td>9.768129</td><td class='mean'>0.493141</td><td>0.228072</td><td class='mean'>105.982927</td><td>39.988975</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF5</td><td class='mean'>0.619004</td><td>0.663952</td><td class='mean'>0.324294</td><td>0.014491</td><td class='mean'>3.171281</td><td>1.782864</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>4.0e-4 (r=0.53)</td></tr><tr><td>MaF6</td><td class='mean'>0.015756</td><td>0.002081</td><td class='mean'>0.010763</td><td>0.001916</td><td class='mean'>0.048611</td><td>0.104216</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>2.4e-9 (r=0.92)</td></tr><tr><td>MaF7</td><td class='mean'>0.093517</td><td>0.051823</td><td class='mean'>0.107521</td><td>0.007935</td><td class='mean'>0.789997</td><td>0.260140</td><td class='win-n'>NSGA-III</td><td class='sig'>3.5e-9 (r=0.89)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
+</div>
+<div class="card">
+  <div class="ct">MaF1-7 &mdash; M=4 objectifs (NSGA-III avec archive)</div>
+  <div class="twrap"><table>
+    <thead>
+      <tr><th rowspan="2">Probleme</th><th colspan="2">NSGA-III (archive)</th><th colspan="2">QI-NSGA-III</th><th colspan="2">MOEA/D</th><th rowspan="2">Gagnant</th><th rowspan="2">p (Holm) / r<br>gagnant vs 2e</th></tr>
+      <tr><th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th>
+          <th>Mean</th><th>Std</th></tr>
+    </thead>
+    <tbody>
+<tr><td>MaF1</td><td class='mean'>0.148655</td><td>0.004677</td><td class='mean'>0.105875</td><td>0.002945</td><td class='mean'>0.130192</td><td>0.002167</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF2</td><td class='mean'>0.086756</td><td>0.001655</td><td class='mean'>0.098727</td><td>0.003650</td><td class='mean'>0.094796</td><td>0.000845</td><td class='win-n'>NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF3</td><td class='mean'>71.667279</td><td>94.946444</td><td class='mean'>57.164134</td><td>302.787899</td><td class='mean'>2407.541060</td><td>1230.285816</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>6.1e-10 (r=0.93)</td></tr><tr><td>MaF4</td><td class='mean'>25.160910</td><td>15.629437</td><td class='mean'>1.882547</td><td>0.420162</td><td class='mean'>222.185109</td><td>108.395440</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>5.6e-10 (r=0.93)</td></tr><tr><td>MaF5</td><td class='mean'>0.998836</td><td>0.430625</td><td class='mean'>1.000998</td><td>0.034815</td><td class='mean'>5.646330</td><td>3.665312</td><td class='win-n'>NSGA-III</td><td class='sig'>4.2e-9 (r=0.88)</td></tr><tr><td>MaF6</td><td class='mean'>0.032325</td><td>0.005139</td><td class='mean'>0.008491</td><td>0.001729</td><td class='mean'>0.068831</td><td>0.131781</td><td class='win-q'>QI-NSGA-III</td><td class='sig'>9.1e-11 (r=1.00)</td></tr><tr><td>MaF7</td><td class='mean'>0.239035</td><td>0.060787</td><td class='mean'>0.445820</td><td>0.038573</td><td class='mean'>1.399449</td><td>0.410555</td><td class='win-n'>NSGA-III</td><td class='sig'>5.1e-10 (r=0.94)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">IGD (Inverted Generational Distance) &mdash; plus bas = mieux. 30 runs independants par probleme (seeds fixes). Gagnant = IGD moyen le plus bas.
+  <b>p (Holm) / r</b> : test de Mann-Whitney entre le gagnant et le 2e, sur les 3 paires d'algorithmes,
+  corrige par la methode de Holm (famille de 3 tests par probleme), avec taille d'effet r (correlation
+  bis&eacute;rielle par rangs, derivee de la statistique U &mdash; 0=aucun effet, 1=separation totale) &mdash;
+  rouge/gras = ecart significatif (p&le;0.05 apres correction), gris/italique (<i>ns</i>) = ecart non
+  significatif malgre le classement.</p>
+</div>
+
+<div class="card">
+  <div class="ct">Post-hoc global (Wilcoxon apparie par probleme + Holm, avec archive)</div>
+  <p class="hint" style="margin-top:0;margin-bottom:.8rem">Meme methode que la vue precedente, NSGA-III
+  utilisant ici la meme archive externe que QI-NSGA-III.</p>
+  <div class="twrap"><table>
+    <thead><tr><th>M</th><th>Comparaison</th><th>p (Holm)</th><th>r</th><th>Signif.</th></tr></thead>
+    <tbody>
+<tr><td>3</td><td>NSGA-III vs MOEA/D</td><td>0.009</td><td>+0.85</td><td class='sig'>oui</td></tr>
+<tr><td>3</td><td>QI-NSGA-III vs MOEA/D</td><td>0.027</td><td>+0.73</td><td class='sig'>oui</td></tr>
+<tr><td>3</td><td>QI-NSGA-III vs NSGA-III</td><td>0.241</td><td>+0.37</td><td class='nonsig'>non</td></tr>
+<tr><td>4</td><td>QI-NSGA-III vs MOEA/D</td><td>0.006</td><td>+0.97</td><td class='sig'>oui</td></tr>
+<tr><td>4</td><td>NSGA-III vs MOEA/D</td><td>0.006</td><td>+0.94</td><td class='sig'>oui</td></tr>
+<tr><td>4</td><td>QI-NSGA-III vs NSGA-III</td><td>0.206</td><td>+0.46</td><td class='nonsig'>non</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">Avec l'archive, <b>QI-NSGA-III vs NSGA-III n'est significatif globalement a aucun des deux M</b>
+  (p=0.241 et p=0.206) &mdash; l'effet reste positif (r=+0.37 a +0.46) mais l'echantillon de problemes est trop
+  petit pour trancher formellement. Les deux dominent toujours MOEA/D de facon robuste (r&ge;0.73, p&le;0.03).</p>
+</div>
+
+<div class="card">
+  <div class="ct">Conclusion &mdash; NSGA-III + archive vs QI-NSGA-III (archive) + MOEA/D</div>
+  <p style="font-size:15.5px;line-height:1.7">Avec la meme archive externe des deux cotes, <b>QI-NSGA-III
+  presente le meilleur IGD moyen sur 15/25 (60%)</b>, <b>NSGA-III sur 9/25 (36%)</b>, <b>MOEA/D sur 1/25 (4%)</b>.
+  Parmi les 15 victoires de QI-NSGA-III, <b>13 sont statistiquement significatives</b> et 2 ne le sont pas
+  (DTLZ1 M=3, DTLZ1 M=4 &mdash; toujours le probleme le plus difficile a departager). Le test de Friedman
+  confirme une difference globale de classement aux deux M (p=0.0035 et p=0.0039). Le post-hoc global est ici
+  plus tranche que dans la vue sans archive : <b>QI-NSGA-III vs NSGA-III n'est significatif a aucun des deux M</b>
+  (p=0.241 et p=0.206), l'effet restant positif (r=+0.37 a +0.46) mais insuffisant sur seulement 11 a 14
+  problemes apparies. Les deux algorithmes dominent en revanche MOEA/D de facon robuste et systematique
+  (p&le;0.03, r&ge;0.73) aux deux M. En resume : meme lorsque NSGA-III beneficie de la meme archive que
+  QI-NSGA-III, ce dernier gagne toujours plus souvent, mais son avantage global sur NSGA-III specifiquement
+  n'est pas statistiquement etabli sur l'ensemble de la suite &mdash; seule sa domination sur MOEA/D l'est.</p>
+</div>
+
 </div>
 
 <script>
+function setView(view){
+  document.getElementById('view-baseline').style.display = (view === 'baseline') ? '' : 'none';
+  document.getElementById('view-archive').style.display  = (view === 'archive')  ? '' : 'none';
+  document.getElementById('btn-baseline').classList.toggle('active', view === 'baseline');
+  document.getElementById('btn-archive').classList.toggle('active', view === 'archive');
+  localStorage.setItem('bench-view', view);
+}
+(function(){
+  const saved = localStorage.getItem('bench-view');
+  if (saved === 'archive') setView('archive');
+})();
 function toggleDark(){
   const on = document.documentElement.toggleAttribute('data-dark');
   localStorage.setItem('bench-dark', on ? '1' : '');
