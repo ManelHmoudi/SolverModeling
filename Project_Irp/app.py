@@ -1029,10 +1029,10 @@ body {
 }
 .card-body {
   flex: 1;
-  padding: 20px 20px 14px;
+  padding: 14px 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 .card-top {
   display: flex;
@@ -1292,7 +1292,7 @@ body {
   <div class="section-hdr">
     <span class="section-hdr-label">Modules disponibles</span>
     <div class="section-hdr-line"></div>
-    <span class="section-hdr-label">5 actifs</span>
+    <span class="section-hdr-label">4 actifs</span>
   </div>
 
   <section class="modules" aria-label="Modules du solveur">
@@ -1371,12 +1371,6 @@ body {
         </div>
         <h2 class="card-title">NSGA-III</h2>
         <p class="card-desc">Algorithme génétique many-objectifs. Construit un front de Pareto dense sur les quatre objectifs de l'IRP.</p>
-        <div class="card-tags">
-          <span class="card-tag">Front de Pareto</span>
-          <span class="card-tag">Directions de référence</span>
-          <span class="card-tag">4 objectifs</span>
-
-        </div>
         <div class="runs-row">
           <span class="runs-label">Exécutions</span>
           <div class="runs-group" id="n3RunsBtns">
@@ -1385,6 +1379,7 @@ body {
             <button class="runs-btn"          data-runs="5"  onclick="setN3Runs(5)">5×</button>
             <button class="runs-btn"          data-runs="10" onclick="setN3Runs(10)">10×</button>
             <button class="runs-btn"          data-runs="20" onclick="setN3Runs(20)">20×</button>
+            <button class="runs-btn"          data-runs="30" onclick="setN3Runs(30)">30×</button>
           </div>
         </div>
       </div>
@@ -1415,11 +1410,7 @@ body {
           </div>
         </div>
         <h2 class="card-title">QI-NSGA-III</h2>
-        <p class="card-desc">Variante quantique-inspirée de NSGA-III. Les chromosomes sont encodés sous forme d'angles de rotation θ ; la convergence est pilotée par des portes de rotation adaptatives plutôt que par le croisement </p>
-        <div class="card-tags">
-          <span class="card-tag">Encodage quantique</span>
-          <span class="card-tag">Porte de rotation θ</span>
-        </div>
+        <p class="card-desc">Variante quantique-inspirée de NSGA-III, dont la convergence est pilotée par des portes de rotation adaptatives.</p>
         <div class="runs-row">
           <span class="runs-label">Exécutions</span>
           <div class="runs-group" id="qi3RunsBtns">
@@ -1428,6 +1419,7 @@ body {
             <button class="runs-btn"          data-runs="5"  onclick="setQi3Runs(5)">5×</button>
             <button class="runs-btn"          data-runs="10" onclick="setQi3Runs(10)">10×</button>
             <button class="runs-btn"          data-runs="20" onclick="setQi3Runs(20)">20×</button>
+            <button class="runs-btn"          data-runs="30" onclick="setQi3Runs(30)">30×</button>
           </div>
         </div>
       </div>
@@ -1443,50 +1435,6 @@ body {
       </div>
     </article>
 
-    <!-- ── 05 MOEA/D ── -->
-    <article class="card" style="--card-color:var(--c4);--card-icon-bg:var(--c4-bg)">
-      <div class="card-body">
-        <div class="card-top">
-          <div class="card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--c4)" stroke-width="1.8" stroke-linecap="round">
-              <circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/>
-              <path d="M5 6L12 18M19 6L12 18M5 6L19 6"/>
-            </svg>
-          </div>
-          <div class="card-badges">
-            <span class="badge-num">05</span>
-            <span class="badge-status active">Actif</span>
-          </div>
-        </div>
-        <h2 class="card-title">MOEA/D</h2>
-        <p class="card-desc">Algorithme évolutionnaire many-objectifs basé sur la décomposition. Divise le front en sous-problèmes scalarisés selon les directions de référence de Das-Dennis, évolués conjointement par remplacement de voisinage.</p>
-        <div class="card-tags">
-          <span class="card-tag">Décomposition</span>
-          <span class="card-tag">Remplacement de voisinage</span>
-        </div>
-        <div class="runs-row">
-          <span class="runs-label">Exécutions</span>
-          <div class="runs-group" id="moeadRunsBtns">
-            <button class="runs-btn selected" data-runs="1"  onclick="setMoeadRuns(1)">1×</button>
-            <button class="runs-btn"          data-runs="3"  onclick="setMoeadRuns(3)">3×</button>
-            <button class="runs-btn"          data-runs="5"  onclick="setMoeadRuns(5)">5×</button>
-            <button class="runs-btn"          data-runs="10" onclick="setMoeadRuns(10)">10×</button>
-            <button class="runs-btn"          data-runs="20" onclick="setMoeadRuns(20)">20×</button>
-          </div>
-        </div>
-      </div>
-      <div class="card-footer">
-        <a class="btn btn-primary" id="moead-run" href="{{ url_for('run_moead_route') }}?instance=25&runs=1" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Lancer
-        </a>
-        <a class="btn btn-secondary" id="moead-report" href="{{ url_for('moead_report') }}?instance=25" target="_blank" rel="noopener noreferrer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Dernier rapport
-        </a>
-      </div>
-    </article>
-
   </section>
   </div>
 
@@ -1496,7 +1444,7 @@ body {
     <div>
       <div class="part-eyebrow">Partie 2</div>
       <div class="part-title">Benchmarking académique</div>
-      <div class="part-sub">Validation de l'implémentation NSGA-III sur les suites de test de référence de la littérature (DTLZ1&ndash;7, MaF1&ndash;7), en reproduisant le protocole expérimental de Cui et al. (2025) &mdash; population, opérateurs, budget d'évaluations et métrique IGD.</div>
+      <div class="part-sub">Validation de NSGA-III, QI-NSGA-III et MOEA/D sur les suites de test de référence de la littérature (DTLZ1&ndash;7, MaF1&ndash;7), en reproduisant le protocole expérimental de Cui et al. (2025) &mdash; population, opérateurs, budget d'évaluations et métrique IGD.</div>
     </div>
   </div>
 
@@ -1506,7 +1454,7 @@ body {
     </div>
     <div>
       <div class="blink-title">Benchmarking DTLZ / MaF</div>
-      <div class="blink-sub">NSGA-III sur DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; résultats IGD &mdash; 30 exécutions &mdash; M=3/4 objectifs</div>
+      <div class="blink-sub">NSGA-III, QI-NSGA-III et MOEA/D sur DTLZ1&ndash;7 / MaF1&ndash;7 &mdash; résultats IGD &mdash; 30 exécutions &mdash; M=3/4 objectifs</div>
     </div>
     <svg class="blink-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </a>

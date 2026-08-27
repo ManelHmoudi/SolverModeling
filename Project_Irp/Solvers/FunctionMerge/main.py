@@ -1,6 +1,11 @@
 """FunctionMerge — Combined multi-objective IRP solve.
 
-Scalarization: minimize f1 + f2 + f3 + f4
+Scalarization: minimize a normalized weighted sum of f1..f4,
+    F = sum_m w_m * (f_m - f_m_ideal) / (f_m_nadir - f_m_ideal),
+ideal/nadir taken from ObjectiveCalibration's single-objective solves
+(nadir = 1.2 x ideal, same convention as the C_max/E_max/T_max/B budgets).
+Raw f1+f2+f3+f4 would add DT + kg CO2 + hours + DT with no dimensional
+meaning and would favor whichever objective has the largest raw magnitude.
 Called from app.py via run_function_merge().
 """
 
@@ -27,6 +32,11 @@ try:
     from .report import compute_node_positions, write_report
 except ImportError:
     from report import compute_node_positions, write_report
+
+try:
+    from ..ObjectiveCalibration.main import build_report_data as _build_calibration_data
+except ImportError:
+    from Solvers.ObjectiveCalibration.main import build_report_data as _build_calibration_data
 
 
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "irp_function_merge_report.html")
@@ -129,8 +139,19 @@ def _build_model(sets_, params_):
     return mdl, vars_, objectives
 
 
-def run_combined_solve(data_path=None):
+def run_combined_solve(data_path=None, weights=None):
+    """weights: optional dict {"f1":.., "f2":.., "f3":.., "f4":..} for the
+    normalized weighted sum below (defaults to equal weights 0.25 each)."""
     sets_, params_ = load_instance(data_path)
+
+    # Ideal/nadir bounds for normalization -- reuses the single-objective
+    # solves already performed by ObjectiveCalibration for the C_max/E_max/
+    # T_max/B budget thresholds (nadir = 1.2 x ideal, same convention as
+    # those budgets), instead of re-solving f1..f4 individually here.
+    calib = _build_calibration_data(data_path)
+    ideal = {row["budget_key"]: row["value"] for row in calib["objs"]}
+    nadir = calib["bounds"]
+
     mdl, vars_, objectives = _build_model(sets_, params_)
 
     f1 = objectives["f1"]
@@ -138,7 +159,24 @@ def run_combined_solve(data_path=None):
     f3 = objectives["f3"]
     f4 = objectives["f4"]
 
-    composite = f1 + f2 + f3 + f4
+    if weights is None:
+        weights = {"f1": 0.25, "f2": 0.25, "f3": 0.25, "f4": 0.25}
+
+    _terms = [("f1", f1, "C_max"), ("f2", f2, "E_max"),
+              ("f3", f3, "T_max"), ("f4", f4, "B")]
+
+    def _denom(key):
+        d = nadir[key] - ideal[key]
+        return d if abs(d) > 1e-6 else 1.0
+
+    # Normalized weighted sum (Deb-style min-max normalization), replacing
+    # the raw f1+f2+f3+f4 sum: additioning DT + kg CO2 + hours + DT with no
+    # normalization favored whichever objective had the largest raw
+    # magnitude and had no dimensional meaning.
+    composite = mdl.sum(
+        weights[name] * (expr - ideal[key]) / _denom(key)
+        for name, expr, key in _terms
+    )
     mdl.minimize(composite)
 
     mdl.parameters.emphasis.mip              = 1   # feasibility first
