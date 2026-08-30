@@ -186,7 +186,12 @@ def build_report_data(data_path=None, timelimit=600):
     for label, expr, param_name in calibration:
         value, obj_data = _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params_)
         if value is not None:
-            calib_results[param_name] = round(value * 1.2, 4)
+            # Upper bound = ideal + 20% margin. Additive-on-|value| (not a plain
+            # x1.2) so a negative ideal (possible for f4/BFR) still yields a
+            # bound *larger* than the ideal -- x1.2 alone would flip it smaller
+            # (1.2 * -100 = -120 < -100), inverting the C15-C18 budget direction.
+            margin = 0.2 * abs(value) if value != 0 else 1.0
+            calib_results[param_name] = round(value + margin, 4)
             objs_data.append(obj_data)
 
     return {

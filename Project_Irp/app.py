@@ -1341,7 +1341,7 @@ body {
           </div>
         </div>
         <h2 class="card-title">Fusion des fonctions</h2>
-        <p class="card-desc">Résolution CPLEX scalarisée en une seule exécution — minimise simultanément f1 + f2 + f3 + f4 (coût, CO₂, temps et fonds de roulement).</p>
+        <p class="card-desc">Résolution CPLEX scalarisée en une seule exécution — minimise une somme pondérée normalisée des 4 objectifs (coût, CO₂, temps et fonds de roulement) ramenés à l'échelle [0, 1].</p>
       </div>
       <div class="card-footer">
         <a class="btn btn-primary" id="fm-run" href="{{ url_for('run_function_merge_route') }}?instance=15" target="_blank" rel="noopener noreferrer">

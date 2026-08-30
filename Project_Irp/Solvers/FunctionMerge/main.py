@@ -1,9 +1,12 @@
 """FunctionMerge — Combined multi-objective IRP solve.
 
 Scalarization: minimize a normalized weighted sum of f1..f4,
-    F = sum_m w_m * (f_m - f_m_ideal) / (f_m_nadir - f_m_ideal),
-ideal/nadir taken from ObjectiveCalibration's single-objective solves
-(nadir = 1.2 x ideal, same convention as the C_max/E_max/T_max/B budgets).
+    F = sum_m w_m * (f_m - f_m_ideal) / (f_m_bound - f_m_ideal),
+ideal/bound taken from ObjectiveCalibration's single-objective solves
+(bound = ideal + 20% margin, same convention as the C_max/E_max/T_max/B
+budgets). This is a calibrated upper bound / tolerance threshold, not a
+true nadir point (which would require a payoff table across all
+single-objective optima, not just a margin around each ideal).
 Raw f1+f2+f3+f4 would add DT + kg CO2 + hours + DT with no dimensional
 meaning and would favor whichever objective has the largest raw magnitude.
 Called from app.py via run_function_merge().
@@ -144,13 +147,14 @@ def run_combined_solve(data_path=None, weights=None):
     normalized weighted sum below (defaults to equal weights 0.25 each)."""
     sets_, params_ = load_instance(data_path)
 
-    # Ideal/nadir bounds for normalization -- reuses the single-objective
-    # solves already performed by ObjectiveCalibration for the C_max/E_max/
-    # T_max/B budget thresholds (nadir = 1.2 x ideal, same convention as
-    # those budgets), instead of re-solving f1..f4 individually here.
+    # Ideal / calibrated-upper-bound values for normalization -- reuses the
+    # single-objective solves already performed by ObjectiveCalibration for
+    # the C_max/E_max/T_max/B budget thresholds (bound = ideal + 20% margin,
+    # same convention as those budgets), instead of re-solving f1..f4
+    # individually here. Not a true nadir point (see module docstring).
     calib = _build_calibration_data(data_path)
     ideal = {row["budget_key"]: row["value"] for row in calib["objs"]}
-    nadir = calib["bounds"]
+    bound = calib["bounds"]
 
     mdl, vars_, objectives = _build_model(sets_, params_)
 
@@ -166,7 +170,7 @@ def run_combined_solve(data_path=None, weights=None):
               ("f3", f3, "T_max"), ("f4", f4, "B")]
 
     def _denom(key):
-        d = nadir[key] - ideal[key]
+        d = bound[key] - ideal[key]
         return d if abs(d) > 1e-6 else 1.0
 
     # Normalized weighted sum (Deb-style min-max normalization), replacing
