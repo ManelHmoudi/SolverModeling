@@ -13,3 +13,8 @@ __pycache__/
 validation_output.log
 validation_archetti/validation_report.csv
 validation/results/*.csv
+
+# Solver run artefacts / caches
+*_chromosomes.json
+Solvers/FunctionMerge/checkpoints/
+.venv/

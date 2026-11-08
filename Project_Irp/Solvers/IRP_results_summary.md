@@ -1,5 +1,8 @@
 # Résultats NSGA-III vs QI-NSGA-III sur l'IRP réel
 
+> **Note :** les scripts `sensitivity/compare_*.py` / `test_*.py` et logs cités ci-dessous (hors campagnes finales) ont été supprimés du dépôt lors du nettoyage ; ils restent consultables dans l'historique git.
+
+
 Contrairement aux benchmarks synthétiques (DTLZ/MaF, voir
 `Validation/Benchmarking/{dtlz,maf}/results/`), cette comparaison porte sur
 le **vrai problème IRP** (`data/instance_100_clients.json`, 100 clients,

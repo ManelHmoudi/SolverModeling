@@ -20,8 +20,9 @@ Project_Irp/
 ├── Validation/               Validation against external literature, not the IRP itself
 │   ├── Benchmarking/         DTLZ/MaF synthetic benchmarks (Cui et al. 2025 protocol)
 │   └── Archetti/             Archetti (2007) IRP benchmark instances
-├── sensitivity/              Throwaway diagnostic/tuning scripts
+├── sensitivity/              Final comparison campaigns (2-opt fairness, 3 algorithms) + their reference logs
 ├── data/                     Problem instances (instance_{N}_clients.json)
+├── Livrables_Prof/           Deliverables (Colab notebooks + HTML result reports)
 ├── docs/superpowers/         Design specs, plans, and history of explored mechanisms
 ├── app.py / main.py          Local Flask UI and its launcher
 └── requirements.txt
@@ -71,15 +72,17 @@ distinct from running them on the IRP.
 
 ## Experimentation — `sensitivity/`
 
-One-off diagnostic and tuning scripts (parameter sweeps, A/B comparisons
-between algorithm variants), always evaluated against a **shared**
-ideal/nadir so results are comparable across runs and algorithms.
-`compare_qinsga3_vs_nsga3.py` is the main head-to-head comparison; the
-others test individual hyperparameters or mechanism changes.
+Only the final comparison campaigns are kept, always evaluated against a
+**shared** ideal/nadir so results are comparable across algorithms:
 
-These scripts are throwaway by nature: once a question is answered, the
-script is deleted, and the finding is either integrated into production or
-recorded in `docs/superpowers/` as a rejected path.
+- `compare_2opt_fairness.py` — main campaign (NSGA-III vs QI-NSGA-III, with/without 2-opt, budget-matched).
+- `compare_3algos.py` — NSGA-III vs QI-NSGA-III vs MOEA/D.
+- `compare_qinsga3_vs_moead.py`, `compare_qinsga3_vs_nsga3.py` — pairwise head-to-head tests.
+- `*_log.txt` — raw logs of the campaigns reported in `Livrables_Prof/`.
+
+One-off tuning/diagnostic scripts were removed once their question was
+answered; the findings are in `Solvers/IRP_results_summary.md` and
+`docs/superpowers/`, and the scripts remain available in git history.
 
 ## Entry points
 
@@ -90,7 +93,7 @@ recorded in `docs/superpowers/` as a rejected path.
 
 ## Data & history
 
-- `data/instance_{N}_clients.json` — problem instances, 3 to 100 clients.
+- `data/instance_{N}_clients.json` — problem instances, 3 to 200 clients.
 - `docs/superpowers/` — design specs, implementation plans, and dated
   records of what's been tried and why, including mechanisms not adopted —
   a durable history that goes beyond what's currently in the code.

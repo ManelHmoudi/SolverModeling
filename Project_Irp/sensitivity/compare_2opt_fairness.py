@@ -549,7 +549,9 @@ def run_comparison(
     if qinsga3_gen is None:
         qinsga3_gen = max_gen
 
-    data_path = os.path.join(PROJECT_DIR, "data", f"instance_{instance}_clients.json")
+    data_path = os.environ.get("FAIRNESS_DATA_PATH") or os.path.join(
+        PROJECT_DIR, "data", f"instance_{instance}_clients.json"
+    )
     sets_, params_ = load_instance(data_path)
     ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
     effective_pop = max(pop_size, len(ref_dirs))
@@ -717,7 +719,17 @@ def run_comparison(
             F2 for label2, algo2, i2, F2 in _flat_runs
             if not (algo2 == algo and i2 == run_idx)
         ]
-        pf_ref_minus_r = build_empirical_reference_front(np.vstack(other_F))
+        # Guard: if this run is the only non-empty front in the whole pool
+        # (e.g. a tiny diagnostic run, or an instance where most searches
+        # fail to find any feasible solution), there is no "other" data to
+        # build a LORO reference from -- np.vstack([]) would raise. Fall
+        # back to compute_pareto_metrics' own Das-Dennis grid (its
+        # documented behaviour when reference_front is empty/None) instead
+        # of crashing the whole campaign over one degenerate run.
+        pf_ref_minus_r = (
+            build_empirical_reference_front(np.vstack(other_F))
+            if other_F else np.empty((0, F.shape[1]))
+        )
         q = compute_pareto_metrics(F, g_ideal, g_nadir, reference_front=pf_ref_minus_r)
         for ind in _INDICATORS:
             values[label][ind].append(q[ind])
@@ -874,7 +886,7 @@ if __name__ == "__main__":
         description="Campagne d'equite 2-opt (4 configurations) -- NSGA-III vs QI-NSGA-III"
     )
     parser.add_argument("--instance", default="100",
-                        choices=["3", "5", "15", "25", "30", "40", "100", "150"])
+                        choices=["3", "5", "15", "25", "30", "40", "100", "150", "200"])
     parser.add_argument("--seeds", type=int, nargs="+", default=DEFAULT_SEEDS)
     parser.add_argument("--gen", type=int, default=300)
     parser.add_argument("--pop", type=int, default=POP_SIZE)
