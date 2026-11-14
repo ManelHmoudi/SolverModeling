@@ -701,7 +701,7 @@ function renderResultsForM() {
   } else if (isDegenerateM4) {
     html = `<div class="rcard"><div class="nodata">M=4 is not shown for ${currentProb}: it has a degenerate/disconnected true Pareto front, and pymoo only ships a reference front for it at M=3 &mdash; IGD can&rsquo;t be scored otherwise.</div></div>`;
   } else {
-    html = `<div class="rcard"><div class="nodata">No benchmark results yet for this problem &mdash; run <code>python -m Validation.Benchmarking.${currentSuite}.main_validation</code> to generate them.</div></div>`;
+    html = `<div class="rcard"><div class="nodata">No benchmark results available for this problem.</div></div>`;
   }
   results.innerHTML = html;
   document.querySelectorAll('[data-key]').forEach(svg => {

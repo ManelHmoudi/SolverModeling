@@ -108,50 +108,6 @@ def _route_traversal_time(path: list, k, params_: dict) -> float:
     )
 
 
-def _rebuild_route_arcs(path: list, qty_on_route: dict, t, k, params_: dict):
-    """Recompute one route's x/f arc entries and per-client arrival times
-    for a (possibly reordered) path, given the SAME qty_on_route mapping
-    the original decode produced -- a 2-opt swap never changes which
-    clients are visited or their delivered quantities, only the order.
-    Mirrors decoder.py's own arrival-time accumulation (line 342) and
-    suffix-sum arc-flow construction (lines 353-368) exactly, factored out
-    here since build_routes doesn't expose either as a standalone function.
-
-    Returns (x_vars, f_vars, arrivals) for THIS route only -- the caller
-    merges these into the full route_result's dicts via _replace_route_arcs.
-    """
-    d = params_["d"]
-    v = params_["v"]
-    s = params_["s"]
-    speed = v[k]
-    depot = path[0]
-
-    x_vars = {}
-    f_vars = {}
-    arrivals = {}
-
-    current_time = 0.0
-    current = depot
-    for node in path[1:]:
-        current_time += s.get(current, 0.0) + d[current, node] / speed
-        if node != depot:
-            arrivals[node, t] = current_time
-        current = node
-
-    n = len(path)
-    suf = [0] * (n + 1)
-    for idx in range(n - 2, -1, -1):
-        node = path[idx + 1]
-        suf[idx] = suf[idx + 1] + (qty_on_route.get(node, 0) if node != depot else 0)
-
-    for idx in range(n - 1):
-        i, j = path[idx], path[idx + 1]
-        x_vars[i, j, t, k] = 1
-        f_vars[i, j, t, k] = suf[idx]
-
-    return x_vars, f_vars, arrivals
-
-
 def _replace_route_arcs(arc_dict: dict, old_path: list, t, k, new_entries: dict) -> dict:
     """Remove old_path's (i, j, t, k) arc keys from arc_dict, then merge in
     new_entries -- used to update route_result["x"]/["f"] for one repaired
@@ -174,13 +130,7 @@ def _route_f1_contribution(path: list, f_vars: dict, arrival_times: dict, t, k, 
     cancels exactly in the difference. So
         compute_f1(new_route_result) - compute_f1(old_route_result)
         == _route_f1_contribution(new_path, ...) - _route_f1_contribution(old_path, ...)
-    exactly -- see test_route_f1_contribution_delta_matches_compute_f1_delta,
-    which verifies this equivalence against the real compute_f1 formula.
-    Replaces an earlier version of this search that called compute_f1 on a
-    full scratch route_result per candidate -- correct, but O(whole network)
-    per candidate; measured ~43x slower than baseline on the real IRP
-    (sensitivity/route_repair_timing_check_iter5.txt, instance 100, gen=10),
-    which this fixes.
+    exactly.
     """
     c_ijk = params_["c_ijk"]
     d     = params_["d"]
@@ -205,15 +155,8 @@ def _route_f1_contribution(path: list, f_vars: dict, arrival_times: dict, t, k, 
 
 
 def _evaluate_candidate(path: list, qty_on_route: dict, t, k, tau_return_before: float, params_: dict):
-    """Single-pass, fast-path replacement for calling _route_traversal_time,
-    _rebuild_route_arcs, and _route_f1_contribution separately on the same
-    candidate -- the three together walk the path five times in total
-    (_route_traversal_time once, _rebuild_route_arcs three times internally,
-    _route_f1_contribution once more); this walks it at most three times
-    (matching _rebuild_route_arcs's own pass count, with zero extra passes)
-    by accumulating y3 during the arrival-time forward pass and y1 during
-    the arc-construction forward pass, instead of two separate follow-up
-    passes over already-computed data.
+    """Evaluate one reordered route in a single pass: rebuilds its x/f arcs
+    and arrival times and accumulates its f1 contribution (y1 + y3) on the fly.
 
     Returns None if the tau_return guard fails -- checked incrementally, so
     a failing candidate exits as soon as cumulative time exceeds
@@ -225,16 +168,7 @@ def _evaluate_candidate(path: list, qty_on_route: dict, t, k, tau_return_before:
     would exceed it too -- so an early exit can never accept a candidate
     the full computation would have rejected, or vice versa.
 
-    Otherwise returns (x_vars, f_vars, arrivals, contribution) -- exactly
-    what calling _rebuild_route_arcs(...) then
-    _route_f1_contribution(candidate, f_vars, arrivals, t, k, params_)
-    would have produced. See
-    test_evaluate_candidate_matches_separate_calls_on_accepted_and_rejected_candidates
-    for the equivalence proof against those two reference functions (which
-    are themselves proven equivalent to the real compute_f1 by
-    test_route_f1_contribution_delta_matches_compute_f1_delta) -- kept
-    unchanged as the "obviously correct" reference this fast path is
-    checked against, not removed.
+    Otherwise returns (x_vars, f_vars, arrivals, contribution) for this route.
     """
     d     = params_["d"]
     v     = params_["v"]

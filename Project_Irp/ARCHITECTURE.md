@@ -12,18 +12,16 @@ literature references), see each module's own `README.md`.
 ```
 Project_Irp/
 ├── models/                  Shared problem definition (sets, params, constraints, objectives)
-├── Solvers/                 The four solvers (see below)
+├── Solvers/                 The five solvers (see below)
 │   ├── ObjectiveCalibration/
 │   ├── FunctionMerge/
 │   ├── NSGA3/
-│   └── QINSGA3/
-├── Validation/               Validation against external literature, not the IRP itself
-│   ├── Benchmarking/         DTLZ/MaF synthetic benchmarks (Cui et al. 2025 protocol)
-│   └── Archetti/             Archetti (2007) IRP benchmark instances
-├── sensitivity/              Final comparison campaigns (2-opt fairness, 3 algorithms) + their reference logs
+│   ├── QINSGA3/
+│   └── MOEAD/
+├── Validation/Benchmarking/  DTLZ/MaF benchmark results (IGD CSVs) displayed by the UI
 ├── data/                     Problem instances (instance_{N}_clients.json)
+├── helpers/                  Synthetic instance generator
 ├── Livrables_Prof/           Deliverables (Colab notebooks + HTML result reports)
-├── docs/superpowers/         Design specs, plans, and history of explored mechanisms
 ├── app.py / main.py          Local Flask UI and its launcher
 └── requirements.txt
 ```
@@ -54,35 +52,19 @@ f1–f4) independently of any specific solver.
 | `FunctionMerge/` | Exact (CPLEX/DOcplex), scalarised | min(f1+f2+f3+f4) | Single combined objective — a baseline, not Pareto-aware |
 | `NSGA3/` | Metaheuristic — NSGA-III (pymoo) | All 4, Pareto front | Reference many-objective solver — see [`Solvers/NSGA3/README.md`](Solvers/NSGA3/README.md) |
 | `QINSGA3/` | Metaheuristic — quantum-inspired NSGA-III | All 4, Pareto front | This project's contribution — see [`Solvers/QINSGA3/README.md`](Solvers/QINSGA3/README.md) |
+| `MOEAD/` | Metaheuristic — MOEA/D (pymoo) | All 4, Pareto front | Decomposition-based comparison baseline — see [`Solvers/MOEAD/README.md`](Solvers/MOEAD/README.md) |
 
 `NSGA3/` and `QINSGA3/` share the same problem definition (`NSGA3/problem.py`,
 imported by both, never duplicated) and the same report/caching plumbing
 (`NSGA3/report_builder.py`, `NSGA3/report.py`), so their outputs are directly
 comparable and rendered through an identical HTML dashboard.
 
-## Validation — `Validation/`
+## Benchmark results — `Validation/Benchmarking/`
 
-Validates the algorithms themselves against published external results —
-distinct from running them on the IRP.
-
-| Module | Validates against | Method |
-|---|---|---|
-| `Benchmarking/` | DTLZ/MaF synthetic many-objective suites (Cui et al. 2025 protocol) | Runs NSGA-III and QI-NSGA-III via benchmark-only copies of the generational loops (`Benchmarking/algorithms/{nsga3,qinsga3}/`), kept separate from `Solvers/` so IRP solvers are never affected. `Benchmarking/engine.py` is the shared run/save/print harness; `dtlz/` and `maf/` each add their own problem set + CLI. Results live under `Benchmarking/{dtlz,maf}/results/`. |
-| `Archetti/` | Archetti (2007) published IRP instances, Vadseth (2021) reference solutions | Exact CPLEX solving of the mono-objective cost function (f1) |
-
-## Experimentation — `sensitivity/`
-
-Only the final comparison campaigns are kept, always evaluated against a
-**shared** ideal/nadir so results are comparable across algorithms:
-
-- `compare_2opt_fairness.py` — main campaign (NSGA-III vs QI-NSGA-III, with/without 2-opt, budget-matched).
-- `compare_3algos.py` — NSGA-III vs QI-NSGA-III vs MOEA/D.
-- `compare_qinsga3_vs_moead.py`, `compare_qinsga3_vs_nsga3.py` — pairwise head-to-head tests.
-- `*_log.txt` — raw logs of the campaigns reported in `Livrables_Prof/`.
-
-One-off tuning/diagnostic scripts were removed once their question was
-answered; the findings are in `Solvers/IRP_results_summary.md` and
-`docs/superpowers/`, and the scripts remain available in git history.
+`{dtlz,maf}/results/{nsga3,qinsga3,moead}/igd_<problem>_M<m>.csv` hold the
+per-run IGD values of the DTLZ/MaF benchmark campaigns (Cui et al. 2025
+protocol). The UI's benchmarking page reads them directly; the generating
+code is available in git history.
 
 ## Entry points
 
@@ -91,9 +73,9 @@ answered; the findings are in `Solvers/IRP_results_summary.md` and
 - Each solver is also independently runnable from the CLI:
   `python -m Solvers.<Module>.main` (see each module's README/docstring for flags).
 
-## Data & history
+## Data
 
-- `data/instance_{N}_clients.json` — problem instances, 3 to 200 clients.
-- `docs/superpowers/` — design specs, implementation plans, and dated
-  records of what's been tried and why, including mechanisms not adopted —
-  a durable history that goes beyond what's currently in the code.
+- `data/instance_{N}_clients.json` — problem instances, 3 to 800 clients.
+- `helpers/generate_synthetic_instances.py` — regenerates the synthetic
+  instances (110–800 clients) with varied periods, fleet and quantities,
+  sized so a full truck route respects `tau_max`.
