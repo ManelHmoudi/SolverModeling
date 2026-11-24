@@ -14,12 +14,12 @@ from html import escape
 
 from flask import Flask, jsonify, render_template_string, request, send_file, url_for
 
-from Solvers.ObjectiveCalibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
-from Solvers.FunctionMerge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
-from Solvers.NSGA3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
-from Solvers.NSGA3.report  import render_html as nsga3_render_html
-from Solvers.QINSGA3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
-from Solvers.MOEAD.main    import DEFAULT_REPORT_PATH as MOEAD_REPORT_PATH, run_moead_report, render_from_instance as moead_render_from_instance
+from solvers.objective_calibration.main import DEFAULT_REPORT_PATH, run_objective_calibration
+from solvers.function_merge.main import DEFAULT_REPORT_PATH as FM_REPORT_PATH, run_function_merge
+from solvers.nsga3.main    import DEFAULT_REPORT_PATH as NSGA3_REPORT_PATH, run_nsga3_report, render_from_instance as nsga3_render_from_instance
+from solvers.nsga3.report  import render_html as nsga3_render_html
+from solvers.qinsga3.main  import DEFAULT_REPORT_PATH as QINSGA3_REPORT_PATH, run_qinsga3_report, render_from_instance as qinsga3_render_from_instance
+from solvers.moead.main    import DEFAULT_REPORT_PATH as MOEAD_REPORT_PATH, run_moead_report, render_from_instance as moead_render_from_instance
 
 
 # ── Async job tracker ────────────────────────────────────────────────────────
@@ -120,18 +120,18 @@ p{{font-size:13.5px;color:var(--text-2);line-height:1.6;}}
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# One suite = one Validation/Benchmarking/<suite>/results/ folder. Both follow
+# One suite = one benchmarks/<suite>/ folder. Both follow
 # the same Cui et al. (2025) protocol (same p/H/N/Tmax, Table 2 gives an
 # identical row for "DTLZ 1-7" and "MaF 1-7"), so they share the M values and
 # the whole card/chart/table rendering — only the problem list and results
 # dir differ.
 _BENCHMARK_SUITES = {
     "dtlz": {
-        "results_dir": os.path.join(BASE_DIR, "Validation", "Benchmarking", "dtlz", "results"),
+        "results_dir": os.path.join(BASE_DIR, "benchmarks", "dtlz"),
         "problems": ["DTLZ1", "DTLZ2", "DTLZ3", "DTLZ4", "DTLZ5", "DTLZ6", "DTLZ7"],
     },
     "maf": {
-        "results_dir": os.path.join(BASE_DIR, "Validation", "Benchmarking", "maf", "results"),
+        "results_dir": os.path.join(BASE_DIR, "benchmarks", "maf"),
         "problems": ["MaF1", "MaF2", "MaF3", "MaF4", "MaF5", "MaF6", "MaF7"],
     },
 }
@@ -1661,7 +1661,7 @@ def run_function_merge_route():
             if result is None:
                 _job_error(job_id,
                     f"No feasible solution found for instance {inst_key} within the time limit.\n"
-                    "Try increasing timelimit or mipgap in Solvers/FunctionMerge/main.py.")
+                    "Try increasing timelimit or mipgap in solvers/function_merge/main.py.")
             else:
                 _job_done(job_id, f"/function-merge/report?instance={inst_key}")
         except Exception:

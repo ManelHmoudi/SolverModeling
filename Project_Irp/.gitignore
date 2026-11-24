@@ -5,9 +5,9 @@ __pycache__/
 
 # Generated reports (re-created on each run)
 *.html
-!Livrables_Prof/**/*.html
+!deliverables/**/*.html
 
 # Solver run artefacts / caches
 *_chromosomes.json
-Solvers/FunctionMerge/checkpoints/
+solvers/function_merge/checkpoints/
 .venv/
