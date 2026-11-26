@@ -6,8 +6,8 @@ from NSGA3.main, keeping the two solver modules fully decoupled.
 
 import numpy as np
 
-from .decoder   import decode_chromosome, build_routes
-from .evaluator import compute_f1, compute_f2, compute_f3, compute_f4_detail
+from .problem   import decode_full
+from .evaluator import compute_f1_detail, compute_f2, compute_f3, compute_f4_detail
 from .metrics   import compute_pareto_metrics, build_empirical_reference_front
 from .report    import compute_node_positions
 
@@ -56,14 +56,14 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
     to _repair_route_result -- see its own use_or_opt docstring. Shared by
     both algorithms' report pipelines for the same reason repair itself is,
     so an Or-opt fairness comparison between NSGA-III and QI-NSGA-III (see
-    sensitivity/compare_2opt_fairness.py's own --use-or-opt flag) applies
+    the earlier sensitivity campaigns (git history)) applies
     identically to both sides.
 
     use_single_relocation (default False, only meaningful when repair=True):
     forwarded to _repair_route_result the same way -- see its own
     use_single_relocation docstring.
 
-    use_two_opt (default True, only meaningful when repair=True): forwarded
+    use_two_opt (default False, only meaningful when repair=True): forwarded
     to _repair_route_result the same way -- see its own use_two_opt
     docstring.
 
@@ -75,14 +75,13 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
     forwarded to _repair_route_result the same way -- see its own
     use_route_swap docstring.
 
-    use_delivery_shift (default False, only meaningful when repair=True):
+    use_delivery_shift (default True, only meaningful when repair=True):
     forwarded to _repair_route_result the same way -- see its own
     use_delivery_shift docstring.
     """
     solutions = []
     for i, chromosome in enumerate(pareto_X):
-        quantities, priorities = decode_chromosome(chromosome, sets_)
-        route_result = build_routes(quantities, sets_, params_, priorities)
+        route_result = decode_full(chromosome, sets_, params_)
         if repair:
             from solvers.qinsga3.repair import _repair_route_result
             route_result = _repair_route_result(route_result, sets_, params_, use_or_opt=use_or_opt,
@@ -92,7 +91,7 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
                                                  use_route_swap=use_route_swap,
                                                  use_delivery_shift=use_delivery_shift)
 
-        f1         = compute_f1(route_result, sets_, params_)
+        f1, f1_sub = compute_f1_detail(route_result, sets_, params_)
         f2         = compute_f2(route_result, sets_, params_)
         f3         = compute_f3(route_result, sets_, params_)
         f4, f4_sub = compute_f4_detail(route_result, sets_, params_)
@@ -106,8 +105,9 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
             tau_ret = route_result["tau_return"].get(t, 0.0)
             routes_report[str(t)] = {
                 "trucks":     trucks_t,
-                "R_frigo":    params_["R_frigo"].get(t, 0.0),
-                "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
+                # supplier orders received in t (v2: decisions, not demand)
+                "R_frigo":    route_result["orders"][t]["frigo"],
+                "R_nonfrigo": route_result["orders"][t]["nonfrigo"],
                 "tau_return": round(tau_ret, 4),
                 "shipped":    sum(route_result["actual_qty"].get((l, t), 0)
                                   for l in sets_["clients"]),
@@ -125,6 +125,7 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
             "depot_stock": {str(t): route_result["depot_stock"][t] for t in sets_["T"]},
             "deliveries":  _build_delivery_rows(route_result, sets_, params_),
             "bfr_sub":     f4_sub,
+            "f1_sub":      f1_sub,
         })
 
     F = np.array([[s["objectives"]["f1"], s["objectives"]["f2"],
@@ -132,13 +133,10 @@ def _evaluate_pareto(pareto_X, sets_, params_, meta_base, repair: bool = False,
                   for s in solutions])
 
     if repair and len(solutions) > 0:
-        # The 2-opt repair above optimises f1 only, per individual -- it can
-        # improve one solution's f1 while worsening its f2/f3, which can
-        # make it newly dominated by another solution in the same front
-        # (confirmed on a real cached front: 40/40 non-dominated before
-        # repair, only 26/40 after). Re-filter to non-dominated before
-        # reporting/scoring, or HV/GD/IGD/Spacing get computed over a set
-        # that isn't actually a Pareto front any more.
+        # Repair never worsens a solution (f1 strictly better, f2-f4 not
+        # worse), but an improved solution can now dominate OTHER members of
+        # the front. Re-filter to non-dominated before reporting/scoring, or
+        # HV/GD/IGD/Spacing would be computed on a set that is no longer a front.
         from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
         nd_idx = NonDominatedSorting().do(F)[0]
         if len(nd_idx) < len(solutions):

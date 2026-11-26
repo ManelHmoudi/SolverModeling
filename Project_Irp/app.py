@@ -1312,7 +1312,7 @@ body {
           </div>
         </div>
         <h2 class="card-title">Calibration des objectifs</h2>
-        <p class="card-desc">Calibre et résout le MIP many-objectifs individuellement — dérive les bornes budgétaires C_max, E_max, T_max, B pour les quatre objectifs.</p>
+        <p class="card-desc">Résout le MIP pour chaque objectif séparément — table des gains : point idéal et nadir des quatre objectifs.</p>
       </div>
       <div class="card-footer">
         <a class="btn btn-primary" id="oc-run" href="{{ url_for('run_objective_calibration_route') }}?instance=15" target="_blank" rel="noopener noreferrer">
@@ -1464,8 +1464,8 @@ body {
     <div class="footer-pills">
       <span class="footer-pill">f1 Coût</span>
       <span class="footer-pill">f2 CO₂</span>
-      <span class="footer-pill">f3 Temps</span>
-      <span class="footer-pill">f4 BFR</span>
+      <span class="footer-pill">f3 Tournée la plus longue</span>
+      <span class="footer-pill">f4 BFR (pic)</span>
     </div>
   </footer>
 

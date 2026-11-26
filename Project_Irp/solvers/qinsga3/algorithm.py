@@ -66,6 +66,7 @@ Performance:
 from __future__ import annotations
 
 import os
+import contextlib
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
@@ -105,40 +106,10 @@ def _worker_eval(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _build_g_constraints(route_result: dict, sets_: dict, params_: dict) -> list:
-    """Mirrors IRPProblem._evaluate's G-list construction exactly
-    (solvers/nsga3/problem.py:67-85) -- duplicated here, not imported,
-    since calling IRPProblem._evaluate directly would decode and build
-    routes itself with no repair hook. Kept in sync manually; see
-    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
-    """
-    clients  = sets_["clients"]
-    T        = sets_["T"]
-    q_lt     = params_["q_lt"]
-    tau_min  = params_["tau_min"]
-    tau_max  = params_["tau_max"]
-    I_max_f  = params_["I_O_max_frigo"]
-    I_max_nf = params_["I_O_max_nonfrigo"]
-    actual      = route_result["actual_qty"]
-    depot_stock = route_result["depot_stock"]
-
-    G = []
-    for t in T:
-        ret = route_result["tau_return"].get(t, 0.0)
-        G.append(ret - tau_max)
-        G.append(tau_min - ret)
-
-    for l in clients:
-        cum_del = cum_dem = 0
-        for t in T:
-            cum_del += actual.get((l, t), 0)
-            cum_dem += q_lt[l, t]
-            G.append(cum_dem - cum_del)
-
-    for t in T:
-        G.append(depot_stock[t]["frigo"]    - I_max_f)
-        G.append(depot_stock[t]["nonfrigo"] - I_max_nf)
-
-    return G
+    """Same G vector as IRPProblem._evaluate -- imported from the single
+    shared implementation (solvers/nsga3/problem.py) instead of a manual copy."""
+    from solvers.nsga3.problem import build_g_constraints
+    return build_g_constraints(route_result, sets_, params_)
 
 
 def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
@@ -151,7 +122,7 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
     """Remedy G: decode + repair (2-opt, Baldwinian -- see repair.py) +
     evaluate, replacing IRPProblem._evaluate for QINSGA3 only, when
     use_route_repair=True. See
-    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+    the earlier design notes (git history)
 
     use_or_opt (default False): forwarded to _repair_route_result -- see
     its own use_or_opt docstring.
@@ -172,12 +143,10 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
     use_delivery_shift (default True -- production default): forwarded to
     _repair_route_result -- see its own use_delivery_shift docstring.
     """
-    from solvers.nsga3.decoder import decode_chromosome, build_routes
-    from solvers.nsga3.evaluator import compute_f1, compute_f2, compute_f3, compute_f4
+    from solvers.nsga3.problem import decode_full, evaluate_route_result
     from solvers.qinsga3.repair import _repair_route_result
 
-    quantities, priorities = decode_chromosome(x, sets_)
-    route_result = build_routes(quantities, sets_, params_, priorities)
+    route_result = decode_full(x, sets_, params_)
     route_result = _repair_route_result(route_result, sets_, params_, use_or_opt=use_or_opt,
                                          use_single_relocation=use_single_relocation,
                                          use_two_opt=use_two_opt,
@@ -185,19 +154,14 @@ def _evaluate_with_repair(x: np.ndarray, sets_: dict, params_: dict,
                                          use_route_swap=use_route_swap,
                                          use_delivery_shift=use_delivery_shift)
 
-    F = np.array([
-        compute_f1(route_result, sets_, params_),
-        compute_f2(route_result, sets_, params_),
-        compute_f3(route_result, sets_, params_),
-        compute_f4(route_result, sets_, params_),
-    ])
-    G = np.array(_build_g_constraints(route_result, sets_, params_))
-    return F, G
+    F, G = evaluate_route_result(route_result, sets_, params_)
+    return np.array(F), np.array(G)
 
 
 def _worker_eval_repaired(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Same per-process pattern as _worker_eval, but routes through
-    _evaluate_with_repair (remedy G) instead of _g_problem._evaluate."""
+    _evaluate_with_repair (use_route_repair=True, ablation only) with the
+    default repair moves."""
     return _evaluate_with_repair(x, _g_problem.sets_, _g_problem.params_)
 
 
@@ -568,7 +532,7 @@ def _select_guides_ring(
     Unlike _select_guides (every population member in a niche is broadcast
     the SAME single niche champion -- the mechanism the diagnostic chapter
     identified as the root cause of QI-NSGA-III's chromosome-diversity
-    collapse on the IRP, see solvers/IRP_results_summary.md), each niche's
+    collapse on the IRP, see the earlier results summary (git history)), each niche's
     population members are arranged in a ring (fixed order = current array
     order, no cross-generation persistence needed -- unlike pbest/eq. 13,
     this is a purely per-generation grouping, so the individual-identity
@@ -623,7 +587,7 @@ def _select_guides_crowding(
     [Deb et al. 2002, §III-B -- _crowding_distance, already used elsewhere
     in this module for archive trimming] instead of LOWEST perpendicular
     distance to the reference ray. See
-    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md.
+    the earlier design notes (git history)
 
     ref_dirs is not needed here -- crowding distance doesn't reference the
     niche's ray, and assoc/pareto_idx already encode niche membership. The
@@ -661,8 +625,7 @@ def _crowding_saturation_stats(
 ) -> tuple:
     """Diagnostic only -- not called by _select_guides_crowding itself; wired
     optionally via run_qinsga3's crowding_saturation_log parameter. Added
-    after the final review of docs/superpowers/plans/
-    2026-08-03-qinsga3-crowding-distance-guide.md flagged (and simulated,
+    after a design review (git history) flagged (and simulated,
     but never measured) that with several objectives and small niches,
     _crowding_distance can assign inf to every Pareto member of a niche,
     degenerating _select_guides_crowding's argmax over crowding distance
@@ -748,7 +711,7 @@ def _supplement_from_archive_crowding(
     instead of lowest perpendicular distance to the reference ray -- kept
     consistent with _select_guides_crowding so no single generation mixes
     the two criteria across niches. See
-    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md.
+    the earlier design notes (git history)
 
     ref_dirs is still needed here (only) to compute arch_assoc via
     _assign_ref_dirs -- niche MEMBERSHIP is still by reference-ray
@@ -790,6 +753,7 @@ def _migrate(
     n_migrate:   int = 10,
 ) -> None:
     """Inject best archive θ per niche into n_migrate individuals [Han & Kim 2002].
+    Returns [(population index, archive index)] of the migrated individuals.
 
     arch_F_norm is pre-normalised by the caller (same array as passed to
     _supplement_from_archive) — no additional _normalise_F call needed here.
@@ -797,6 +761,7 @@ def _migrate(
     arch_assoc = _assign_ref_dirs(arch_F_norm, ref_dirs)
 
     targets = rng.choice(qpop.pop_size, size=min(n_migrate, qpop.pop_size), replace=False)
+    migrated = []
     for idx in targets:
         rd       = assoc[idx]
         in_niche = np.where(arch_assoc == rd)[0]
@@ -805,17 +770,19 @@ def _migrate(
             F_cand  = arch_F_norm[in_niche]
             proj    = F_cand @ r_norm
             d_perp2 = np.maximum((F_cand ** 2).sum(axis=1) - proj ** 2, 0.0)
-            qpop.theta[idx] = arch_theta[in_niche[d_perp2.argmin()]]
+            a_idx = int(in_niche[d_perp2.argmin()])
         else:
-            qpop.theta[idx] = arch_theta[np.linalg.norm(arch_F_norm, axis=1).argmin()]
-
-    qpop.theta = np.clip(qpop.theta, 0.0, np.pi / 2.0)
+            a_idx = int(np.linalg.norm(arch_F_norm, axis=1).argmin())
+        qpop.theta[idx] = arch_theta[a_idx]
+        migrated.append((int(idx), a_idx))
+    # archived theta already lie in [0, pi/2]; no clipping (it would change X)
+    return migrated
 
 
 # ---------------------------------------------------------------------------
 # Niche-recentring reset operator
 # [Tayarani-N & Akbarzadeh-T 2014, Evol. Intel. 7:219-239, §5], adapted --
-# see docs/superpowers/specs/2026-08-01-qinsga3-niche-recentring-reset-design.md
+# see the earlier design notes (git history)
 # for why. Two of the paper's mechanisms don't transfer to QINSGA3 and were
 # dropped rather than reused verbatim:
 #   - eq. 11 (convergence = theta near 0/pi/2): QINSGA3 initialises and
@@ -885,7 +852,7 @@ def _recentring_reset_mask(
 # [Bodha, Arun, Awasthi, Mahato & Fotis 2025, "Rotational gate based quantum
 # particle swarm optimization for benchmark suites and combined economic
 # emission dispatch", Engineering Research Express 7(4):045345], adapted --
-# see the docstring of sensitivity/compare_rqpso_rotation.py for the full
+# see the docstring of the earlier sensitivity campaigns (git history) for the full
 # derivation. Two adaptations, both necessary (domain change), not invented:
 #   - The paper's theta lives on a full circle [0, 2*pi) and uses a
 #     shortest-arc WRAP(.) distance; QINSGA3's theta is a bounded, non-cyclic
@@ -907,7 +874,7 @@ def _recentring_reset_mask(
 # from a freshly merged parent+offspring pool every generation -- there is no
 # stable per-individual identity to track a personal history against (the
 # same architectural mismatch already found for the niche-recentring
-# operator's stagnation gate, see docs/superpowers/specs/
+# operator's stagnation gate, see the earlier design notes (git history)
 # 2026-08-01-qinsga3-niche-recentring-reset-design.md). Approximated here by
 # tracking a best-ever theta/quality PER POPULATION SLOT INDEX rather than
 # per individual identity -- an explicit, documented approximation, not a
@@ -1333,11 +1300,11 @@ def _archive_update_epsilon(
     quite-beaten extreme points for the whole run, ending up 5-6x larger
     than what the search actually converged to and measurably degrading
     GD/IGD (the reported front is diluted with unrefined, unrepresentative
-    points) -- confirmed directly in sensitivity/2opt_fairness_30clients_
+    points) -- confirmed directly in the earlier sensitivity campaigns (git history)
     7seed_campaign_log.txt (QI-NSGA-III front saturating at pop_size=200 in
     5/7 seeds, vs NSGA-III's own converged ~29-35) and reproduced generically
-    by giving NSGA-III the same external-archive treatment (sensitivity/
-    2opt_fairness_100clients_3seed_archive_campaign_log.txt).
+    by giving NSGA-III the same external-archive treatment (earlier
+    campaigns, git history).
 
     Epsilon-dominance bounds the archive differently: divide objective space
     into a fixed grid (box width `epsilon` per objective, from `ideal`), and
@@ -1469,7 +1436,7 @@ def run_qinsga3(
     use_chaotic_rotation: bool = False,
     use_route_repair: bool = False,
     repair_final_front: bool = True,
-    eliminate_duplicates: bool = False,
+    eliminate_duplicates: bool = True,
     seed:             int   = 42,
     rotation_type:    str   = "tanh",
     compensate_dx_dtheta: bool = False,
@@ -1481,14 +1448,33 @@ def run_qinsga3(
     use_delivery_shift: bool = True,
     use_epsilon_archive: bool = False,
     epsilon_divisions: int = 20,
-    archive_final_front: bool = True,
+    archive_final_front: bool = False,
     max_evals:        int | None = None,
     callback          = None,
     crowding_saturation_log: list | None = None,
+    use_archive_guides: bool = True,
+    n_workers:        int   = 1,
+    stats:            dict | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Run one QINSGA-III instance. Returns (pareto_X, pareto_F, pareto_G).
 
-    Population evaluation is parallelised via ProcessPoolExecutor: the pool is
+    Fair-comparison settings (editor's remarks on budget and parallelism):
+      * evaluations are counted exactly; after a migration only the migrated
+        individuals change and their objectives are reused from the archive
+        (they were evaluated when archived), so no generation re-evaluates the
+        whole population. With max_evals = pop_size * n_gen the budget equals
+        NSGA-III's (pymoo counts the initial population as generation 1);
+      * n_workers=1 (default) evaluates in-process, like pymoo's serial runner
+        for NSGA-III and MOEA/D, so wall-clock times are comparable;
+      * archive_final_front=False (default) returns the last population's
+        front, like NSGA-III and MOEA/D;
+      * eliminate_duplicates=True (default) as in pymoo's NSGA-III;
+      * use_archive_guides=False switches off the archive supplementation of
+        empty-niche guides (for the component ablation).
+      * stats (optional dict) receives {"n_evals": ...}.
+
+    Population evaluation is serial by default (n_workers=1); with n_workers > 1
+    it is parallelised via ProcessPoolExecutor: the pool is
     created once per call; each worker process is initialised with a persistent
     IRPProblem singleton (_worker_init) so construction cost is paid once, not
     once per evaluation.  Assumes IRPProblem._evaluate is deterministic — results
@@ -1500,13 +1486,13 @@ def run_qinsga3(
 
     delta_similar controls the niche-recentring reset operator (disabled by
     default, delta_similar=0.0) -- see
-    docs/superpowers/specs/2026-08-01-qinsga3-niche-recentring-reset-design.md.
+    the earlier design notes (git history)
     Ablation-only until validated against solvers/nsga3 with the project's
     shared ideal/nadir + Mann-Whitney protocol.
 
     noise_scale defaults to 0.0 (disabled): a 20/30-seed ablation campaign
-    (sensitivity/compare_2opt_fairness.py --noise-scale 0.0, see
-    sensitivity/2opt_fairness_100clients_20seed_noisezero_campaign_log.txt)
+    (the earlier sensitivity campaigns (git history) --noise-scale 0.0, see
+    the earlier sensitivity campaigns (git history))
     found the measurement-noise term (chromosome.py::measure, Platel et al.
     2009 -- originally added to break integer-rounding ties after the IRP
     decoder rounds theta-measured X to integers) measurably hurt HV/GD/
@@ -1532,7 +1518,7 @@ def run_qinsga3(
     reference-ray-closest niche champion (and _supplement_from_archive's
     archive fallback) with the HIGHEST-crowding-distance member instead --
     see _select_guides_crowding's docstring for the full rationale and
-    docs/superpowers/specs/2026-08-03-qinsga3-crowding-distance-guide-design.md
+    the earlier design notes (git history)
     for the design. Mutually exclusive with use_ring_guides (both replace
     the same guide-selection step) -- combinable in principle with the
     rotation-rule variants (use_rqpso_rotation/use_pso_rotation/
@@ -1543,8 +1529,7 @@ def run_qinsga3(
     passed and use_crowding_guides is True, one (n_multi_member_niches,
     n_fully_saturated_niches) tuple from _crowding_saturation_stats is
     appended to it every generation. Diagnostic only, added after the
-    final review of docs/superpowers/plans/
-    2026-08-03-qinsga3-crowding-distance-guide.md found the design doc's
+    design review (git history) found the design doc's
     own "Risk" section (crowding distance saturating to inf for small
     niches) had been simulated but never actually measured on a real run.
 
@@ -1567,7 +1552,7 @@ def run_qinsga3(
     route before scoring it, for both parent and offspring populations
     every generation. Baldwinian: the repair never changes the chromosome,
     only the fitness it is scored with. See
-    docs/superpowers/specs/2026-08-04-qinsga3-route-repair-design.md.
+    the earlier design notes (git history)
     Consequence: the returned Pareto front's pareto_F reflects repaired
     fitness, but pareto_X (the chromosomes) will NOT reproduce those exact
     objective values if decoded through the normal
@@ -1594,12 +1579,12 @@ def run_qinsga3(
     ideal/nadir vs solvers/nsga3's cache, Mann-Whitney U): HV +29.2%
     (p=0.000059), GD -15.3% (p=0.001116), IGD -10.4% (p=0.000179), all
     significant, runtime unchanged vs the pre-remedy-G baseline -- see
-    solvers/IRP_results_summary.md's "Remède G — variante pratique"
+    the earlier results summary (git history) "Remède G — variante pratique"
     section for the full numbers. Still significantly worse than NSGA-III
     on the same instance (the gap is not closed, only narrowed). Set
     repair_final_front=False to reproduce the pre-remedy-G behaviour (e.g.
     for ablation comparisons against this new default -- see
-    sensitivity/compare_route_repair_final.py). Mutually exclusive in
+    the earlier sensitivity campaigns (git history)). Mutually exclusive in
     practice with use_route_repair (combining both would repair the front
     twice, redundantly) -- not asserted against, since nothing currently
     calls them together, but do not combine them. Same Baldwinian
@@ -1674,9 +1659,9 @@ def run_qinsga3(
     30-client IRP instance), the plain archive keeps accumulating never-
     literally-dominated points for the whole run and saturates at its
     pop_size final-trim target regardless of how small the actual front is,
-    diluting the reported GD/IGD -- see sensitivity/2opt_fairness_30clients_
+    diluting the reported GD/IGD -- see the earlier sensitivity campaigns (git history)
     7seed_campaign_log.txt and the generic (non-quantum-specific)
-    reproduction in sensitivity/2opt_fairness_100clients_3seed_
+    reproduction in the earlier sensitivity campaigns (git history)
     archive_campaign_log.txt (NSGA-III given the same archive treatment
     shows the same explosion). Epsilon-dominance bounds the archive by the
     number of distinct epsilon-sized regions of objective space the search
@@ -1692,7 +1677,8 @@ def run_qinsga3(
     archive); smaller values give a coarser grid (smaller archive, coarser
     front resolution).
 
-    archive_final_front (default True -- production default) selects
+    archive_final_front (default False: the last population's front, the same
+    rule as NSGA-III and MOEA/D; True is kept for ablation) selects
     whether the RETURNED front comes from the external archive (trimmed to
     pop_size) or from the final generation's own population, mirroring
     NSGA-III's own default (no archive at all, last generation only) --
@@ -1791,7 +1777,7 @@ def run_qinsga3(
     # per-gene rate _do() uses (PolynomialMutation._do -> get_prob_var()).
     # Passing p_mut as `prob` (as before) silently discarded it: pymoo's own
     # get_prob_var() fallback (min(0.5, 1/problem.n_var)) took over instead,
-    # making p_mut a dead parameter -- see sensitivity/compare_pmut.py, which
+    # making p_mut a dead parameter -- see the earlier sensitivity campaigns (git history), which
     # varies p_mut expecting a real effect. At p_mut's own default (1/n_genes
     # == 1/problem.n_var), this fallback already matched p_mut numerically,
     # so this fix is a no-op for every default-parameter run; it only
@@ -1834,23 +1820,28 @@ def run_qinsga3(
     if use_chaotic_rotation:
         lam = None   # seeded from generation 0's own F_norm (eq. 18), then evolves per-slot
 
-    n_workers = min(os.cpu_count() or 1, pop_size)
+    n_workers = max(1, min(int(n_workers), pop_size))
     chunksize = max(1, pop_size // (2 * n_workers))
+    if n_workers == 1:
+        _worker_init(sets_, params_)          # in-process, same code path as the workers
+        pool_ctx = contextlib.nullcontext(None)
+    else:
+        pool_ctx = ProcessPoolExecutor(max_workers=n_workers, initializer=_worker_init,
+                                       initargs=(sets_, params_))
 
-    with ProcessPoolExecutor(
-        max_workers=n_workers,
-        initializer=_worker_init,
-        initargs=(sets_, params_),
-    ) as pool:
+    with pool_ctx as pool:
 
         _n_eval_used = 0
 
         def _eval_batch(X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-            """Evaluate all individuals in X in parallel across worker processes."""
+            """Evaluate all individuals in X (in-process or across worker processes)."""
             nonlocal _n_eval_used
             _n_eval_used += len(X)
             worker_fn = _worker_eval_repaired if use_route_repair else _worker_eval
-            results = list(pool.map(worker_fn, list(X), chunksize=chunksize))
+            if pool is None:
+                results = [worker_fn(x) for x in X]
+            else:
+                results = list(pool.map(worker_fn, list(X), chunksize=chunksize))
             return (
                 np.array([r[0] for r in results]),
                 np.array([r[1] for r in results]),
@@ -1941,17 +1932,19 @@ def run_qinsga3(
             arch_F_norm    = None
             if len(arch_X) >= 4:
                 arch_theta_arr = np.array(arch_theta)
+                arch_F_arr     = np.array(arch_F)
                 if survival.norm.nadir_point is None:
                     arch_F_norm = _normalise_F(np.array(arch_F))
                 else:
                     arch_F_norm = _normalise_F(np.array(arch_F), survival.norm.ideal_point, survival.norm.nadir_point)
-                pareto_assoc   = assoc[pareto_idx]
-                supplement_fn  = (_supplement_from_archive_crowding if use_crowding_guides
-                                   else _supplement_from_archive)
-                guides_theta   = supplement_fn(
-                    guides_theta, assoc, pareto_assoc,
-                    arch_theta_arr, arch_F_norm, ref_dirs,
-                )
+                if use_archive_guides:
+                    pareto_assoc   = assoc[pareto_idx]
+                    supplement_fn  = (_supplement_from_archive_crowding if use_crowding_guides
+                                       else _supplement_from_archive)
+                    guides_theta   = supplement_fn(
+                        guides_theta, assoc, pareto_assoc,
+                        arch_theta_arr, arch_F_norm, ref_dirs,
+                    )
 
             alpha = alpha_min + (alpha_max - alpha_min) * (1.0 - gen / max_gen)
 
@@ -2052,7 +2045,7 @@ def run_qinsga3(
             # disables it) -- same positional approximation _migrate below
             # already makes: assoc/F_norm were computed from the PARENT
             # population earlier this generation, applied here against the
-            # post-survival qpop.theta. See docs/superpowers/specs/
+            # post-survival qpop.theta. See the earlier design notes (git history)
             # 2026-08-01-qinsga3-niche-recentring-reset-design.md.
             if delta_similar > 0.0:
                 reset_mask = _recentring_reset_mask(
@@ -2068,11 +2061,23 @@ def run_qinsga3(
             if (arch_F_norm is not None
                     and migration_period > 0
                     and gen % migration_period == 0):
-                _migrate(
+                migrated = _migrate(
                     qpop, arch_theta_arr, arch_F_norm,
                     assoc, ref_dirs, rng, n_migrate=n_migrate,
                 )
-                _prev_cache_valid = False
+                # Migrated individuals take an archived theta; measure() is
+                # deterministic (noise_scale=0), so their X and F are exactly
+                # the archived ones. Reuse them instead of re-evaluating the
+                # whole population (the source of the former +10 % budget).
+                # Archive members are feasible: CV = 0.
+                if noise_scale == 0.0 and _prev_cache_valid:
+                    _prev_survived_F = _prev_survived_F.copy()
+                    _prev_survived_G = _prev_survived_G.copy()
+                    for idx, a_idx in migrated:
+                        _prev_survived_F[idx] = arch_F_arr[a_idx]
+                        _prev_survived_G[idx] = 0.0
+                else:
+                    _prev_cache_valid = False
 
             if callback is not None and (gen % 10 == 0 or gen == max_gen - 1):
                 callback(gen, F_offspring, G_offspring, off_pareto_idx)
@@ -2091,16 +2096,11 @@ def run_qinsga3(
         # enter the archive, since _archive_update only screens new candidates
         # against each other for exact duplicates, never for dominance.
         #
-        # In max_evals mode, reuse the last generation's own cached survived
-        # F/G (same _prev_cache_valid condition the in-loop parent reuse
-        # uses) when valid, instead of an unconditional fresh evaluation --
-        # qpop.theta here is exactly the post-survival theta that cache was
-        # computed from, so re-measuring it would just recompute already-
-        # known numbers and overshoot the budget by another pop_size for no
-        # reason. Default behaviour (max_evals=None) is untouched: always a
-        # fresh evaluation, exactly as before.
+        # Reuse the last generation's cached survived F/G when valid (qpop.theta
+        # is exactly the post-survival theta they were computed from), instead
+        # of re-evaluating the same individuals (no extra evaluations).
         X_final = qpop.measure()
-        if max_evals is not None and _prev_cache_valid and noise_scale == 0.0:
+        if _prev_cache_valid and noise_scale == 0.0:
             F_final, G_final = _prev_survived_F, _prev_survived_G
         else:
             F_final, G_final = _eval_batch(X_final)
@@ -2111,6 +2111,9 @@ def run_qinsga3(
             G_final[final_pareto_idx], qpop.theta[final_pareto_idx],
         )
 
+    if stats is not None:
+        stats["n_evals"] = int(_n_eval_used)
+
     if archive_final_front and arch_X:
         arch_X_arr, arch_F_arr, _ = _crowding_trim(
             np.array(arch_X), np.array(arch_F), np.array(arch_theta), pop_size
@@ -2119,21 +2122,24 @@ def run_qinsga3(
             arch_X_arr, arch_F_arr, np.zeros((len(arch_X_arr), n_constr))
         )
     else:
-        pareto_X, pareto_F, pareto_G = (
-            X_final[final_pareto_idx], F_final[final_pareto_idx], G_final[final_pareto_idx]
-        )
+        # Same final-front rule as NSGA-III and MOEA/D: the FEASIBLE non-dominated
+        # set of the last population; no feasible member -> empty front (run skipped).
+        feasible = np.where(np.maximum(G_final, 0).sum(axis=1) <= 1e-9)[0]
+        if len(feasible):
+            front = feasible[sorter.do(F_final[feasible], only_non_dominated_front=True)]
+        else:
+            front = np.array([], dtype=int)
+        pareto_X, pareto_F, pareto_G = X_final[front], F_final[front], G_final[front]
 
-    if repair_final_front:
+    if repair_final_front and len(pareto_X):
         pareto_F, pareto_G = _repair_pareto_front(pareto_X, sets_, params_, use_or_opt=use_or_opt,
                                                    use_single_relocation=use_single_relocation,
                                                    use_two_opt=use_two_opt,
                                                    use_inter_route_relocate=use_inter_route_relocate,
                                                    use_route_swap=use_route_swap,
                                                    use_delivery_shift=use_delivery_shift)
-        # Repair optimises f1 only, per individual -- it can newly dominate
-        # another front member (confirmed on a real front: 40/40
-        # non-dominated before repair, only 26/40 after). Re-filter to
-        # non-dominated so the returned "Pareto front" still is one.
+        # Repair never worsens a solution, but an improved one can newly
+        # dominate another front member: re-filter to non-dominated.
         from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
         nd_idx = NonDominatedSorting().do(pareto_F)[0]
         if len(nd_idx) < len(pareto_X):

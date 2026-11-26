@@ -1,195 +1,170 @@
 """
 Many-Objective Inventory Routing Problem (IRP)
 ===============================================
-Objective Functions
+Objective functions -- docs/model_formulation.md §6
 -------------------
-f1 -- Logistics cost        (transport + storage + time-window penalties)
-f2 -- CO2 emissions         (CMEM model, Bektas & Laporte 2011)
-f3 -- Total travel time     (sum of arc travel times)
-f4 -- Working capital (BFR) (stock value + receivables - payables)
+f1 -- Logistics cost (€)  dispatch + distance (incl. empty return) + load
+                          + depot holding + time windows + ordering
+f2 -- CO2 emissions (kg)  linearised CMEM (Bektas & Laporte 2011)
+f3 -- Longest route per period, summed over the periods (h)
+f4 -- Peak net working capital (€), cyclic (steady-state) accounting
 """
+
+from .variables import PRODUCT_CLASSES
+
+
+def cyclic_window(t, L, T):
+    """Periods t, t-1, ..., t-L+1 of a repeating horizon (indices wrap around).
+    A period appears several times when L > |T|, as in steady state."""
+    n = len(T)
+    pos = T.index(t)
+    return [T[(pos - j) % n] for j in range(L)]
+
+
+def delivered(mdl, vars_, l, t, T):
+    """D_l,t: units delivered to client l in period t."""
+    return mdl.sum(vars_["q_prime"][l, t, td] for td in T if td >= t)
 
 
 def build_f1_logistics_cost(mdl, vars_, sets_, params_):
+    """f1 = transport + depot holding + time windows + ordering (€).
+
+    Transport has three terms with explicit units (editor remark E2):
+        F_veh  [€/route]  ·  dispatched routes
+        c_km_k [€/km]     ·  distance of every arc, the empty return leg included
+        c_load [€/(unit·km)] · load × distance
     """
-    f1 = y1 (transport cost) + y2 (storage cost) + y3 (time-window penalties)
+    x, f = vars_["x"], vars_["f"]
+    A, T, M, O, N, clients = (sets_[k] for k in ("A", "T", "M", "O", "N", "clients"))
+    d = params_["d"]
 
-    Three components:
-        y1 -- transport cost: load-weighted arc cost (with refrigeration surcharge for k=1)
-        y2 -- storage cost: holding cost per unit per period
-        y3 -- time-window penalty: linearised via non-negative slack variables
-
-    """
-    f_var        = vars_["f"]
-    I_O_frigo    = vars_["I_O_frigo"]
-    I_O_nonfrigo = vars_["I_O_nonfrigo"]
-    w1           = vars_["w1"]
-    w2           = vars_["w2"]
-
-    A           = sets_["A"]
-    T           = sets_["T"]
-    M           = sets_["M"]
-    clients     = sets_["clients"]
-
-    c_ijk = params_["c_ijk"]
-    d     = params_["d"]
-    h_O = params_["h_O"]
-    c1    = params_["c1"]
-    c2    = params_["c2"]
-
-    # y1 -- transport cost: load-weighted arc cost
-    y1 = mdl.sum(
-        c_ijk[i, j, k] * d[i, j] * f_var[i, j, t, k]
-        for (i, j) in A for t in T for k in M
+    transport = (
+        params_["F_veh"] * mdl.sum(x[O, j, t, k] for j in N if j != O for t in T for k in M)
+        + mdl.sum(params_["c_km_k"][k] * d[i, j] * x[i, j, t, k] for (i, j) in A for t in T for k in M)
+        + mdl.sum(params_["c_load"] * d[i, j] * f[i, j, t, k] for (i, j) in A for t in T for k in M)
     )
-
-    # y2 -- storage holding cost: refrigerated + non-refrigerated inventory
-    y2 = mdl.sum(h_O * (I_O_frigo[t] + I_O_nonfrigo[t]) for t in T)
-
-    # y3 -- time-window penalty: linearised via non-negative slack variables
-    y3 = mdl.sum(c1 * w1[l, t] + c2 * w2[l, t] for l in clients for t in T)
-
-    return y1 + y2 + y3
+    depot_holding = mdl.sum(params_["h_frigo"] * vars_["I_O_frigo"][t]
+                            + params_["h_nonfrigo"] * vars_["I_O_nonfrigo"][t] for t in T)
+    time_windows = mdl.sum(params_["c1"] * vars_["w1"][l, t, k] + params_["c2"] * vars_["w2"][l, t, k]
+                           for l in clients for t in T for k in M)
+    ordering = params_["F_order"] * mdl.sum(vars_["z"][p, t] for p in PRODUCT_CLASSES for t in T)
+    return transport + depot_holding + time_windows + ordering
 
 
 def build_f2_co2_emissions(mdl, vars_, sets_, params_):
+    """f2 -- CO2 (kg), linearised CMEM (Bektas & Laporte 2011).
+
+    Energy on arc (i,j) [J] = d_m · [ alpha · (w·x + kg_per_unit·f) + beta · v² · x ],
+    alpha = a + g·Cr, beta = ½·Cd·A_f·ρ, v in m/s, d_m in m.
+    Fuel [L] = energy / fuel_to_joules ;  CO2 [kg] = fuel · e_co2.
     """
-    f2 -- CO2 emissions (linearised CMEM)
-
-    Fuel consumption on each arc depends on:
-        - vehicle curb weight (w) and payload (f[i,j,t,k]), scaled by alpha_co2
-        - aerodynamic drag, scaled by beta_co2 and speed squared
-    Units: energy in Joules (kg.m²/s²); converted to litres via fuel_to_joules,
-           then to kg CO2 via e_co2 (kg CO2/litre).
-
-    Reference: Bektas & Laporte (2011) -- Pollution-Routing Problem / CMEM.
-
-    """
-    x     = vars_["x"]
-    f_var = vars_["f"]
-
-    A = sets_["A"]
-    T = sets_["T"]
-    M = sets_["M"]
-
-    alpha_co2      = params_["alpha_co2"]
-    beta_co2       = params_["beta_co2"]
-    d_m            = params_["d_m"]
-    v2             = params_["v2"]
-    w              = params_["w"]
-    kg_per_unit    = params_["kg_per_unit"]
-    e_co2          = params_["e_co2"]
-    fuel_to_joules = params_["fuel_to_joules"]
-
-    f2_expr = (e_co2 / fuel_to_joules) * mdl.sum(
-        d_m[i, j] * (
-            alpha_co2[i, j] * (w * x[i, j, t, k] + kg_per_unit * f_var[i, j, t, k])
-          + beta_co2         *  v2[k]              * x[i, j, t, k]
-        )
-        for (i, j) in A for t in T for k in M
+    x, f = vars_["x"], vars_["f"]
+    d_m, v_ms = params_["d_m"], params_["v_ms"]
+    alpha, beta = params_["alpha_co2"], params_["beta_co2"]
+    w, kg = params_["w"], params_["kg_per_unit"]
+    return (params_["e_co2"] / params_["fuel_to_joules"]) * mdl.sum(
+        d_m[i, j] * (alpha * (w * x[i, j, t, k] + kg * f[i, j, t, k]) + beta * v_ms[k] ** 2 * x[i, j, t, k])
+        for (i, j) in sets_["A"] for t in sets_["T"] for k in sets_["M"]
     )
 
-    return f2_expr
 
+def build_f3_longest_route(mdl, vars_, sets_, params_):
+    """f3 = Σ_t E_t with (C19) E_t >= e_t,k for every vehicle k (h).
 
-def build_f3_travel_time(mdl, vars_, sets_, params_):
+    E_t is the time at which the last vehicle of period t is back at the
+    depot: the working day of the most loaded driver. Unlike total driving
+    time it is not proportional to the kilometres (so not redundant with
+    f2): it measures how evenly the work is spread over the fleet. Unused
+    vehicles have e_t,k free in [0, tau_max]; minimising f3 drives them to 0,
+    and exact_objective_values() reads only used vehicles.
     """
-    f3 -- Total travel time
-    Sum of travel times (hours) over all arcs used across all periods and vehicles.
+    E, e = vars_["E"], vars_["e"]
+    for t in sets_["T"]:
+        for k in sets_["M"]:
+            mdl.add_constraint(E[t] >= e[t, k], ctname=f"C19_longest_t{t}_k{k}")
+    return mdl.sum(E[t] for t in sets_["T"])
 
+
+def working_capital_terms(mdl, vars_, sets_, params_):
+    """Per-period stock value, outstanding receivables and payables (€), with
+    cyclic (steady-state) accounting: the plan repeats, so invoices of the
+    last periods are still outstanding at the start of the next cycle.
+
+    AR_t: invoices issued at delivery in the last L_S periods.
+    AP_t: supplier invoices for orders received in the last L_P periods.
     """
-    x = vars_["x"]
-
-    A = sets_["A"]
-    T = sets_["T"]
-    M = sets_["M"]
-
-    d = params_["d"]
-    v = params_["v"]
-
-    return mdl.sum(
-        x[i, j, t, k] * d[i, j] / v[k]
-        for (i, j) in A for t in T for k in M
-    )
+    T, clients = sets_["T"], sets_["clients"]
+    P_pur, P_sale = params_["P_purchase"], params_["P_sale"]
+    stock, recv, pay = {}, {}, {}
+    for t in T:
+        stock[t] = P_pur * (vars_["I_O_frigo"][t] + vars_["I_O_nonfrigo"][t])
+        recv[t] = mdl.sum(P_sale[l] * delivered(mdl, vars_, l, tp, T)
+                          for l in clients for tp in cyclic_window(t, params_["L_S"], T))
+        pay[t] = P_pur * mdl.sum(vars_["r"][p, tp]
+                                 for p in PRODUCT_CLASSES for tp in cyclic_window(t, params_["L_P"], T))
+    return stock, recv, pay
 
 
 def build_f4_working_capital(mdl, vars_, sets_, params_):
-    """
-    f4 -- Working capital requirement (BFR)
+    """f4 = W with (C18) W >= stock_t + AR_t - AP_t for every t (editor remark E3).
+    The epigraph is added here so W is always tied to WC when f4 exists."""
+    stock, recv, pay = working_capital_terms(mdl, vars_, sets_, params_)
+    W = vars_["W"]
+    for t in sets_["T"]:
+        mdl.add_constraint(W >= stock[t] + recv[t] - pay[t], ctname=f"C18_peak_wc_t{t}")
+    return W, {"stock_value": stock, "receivables": recv, "payables": pay}
 
-    BFR = inventory value + accounts receivable - accounts payable
-        = Σ I_var[O,t] * P_purchase[O] * (DIO/365)
-        + Σ q_prime[l,t] * P_sale[l] * (DSO/365)
-        - Σ q_prime[l,t] * P_purchase[O] * (DPO/365)
 
-    Returns
-    -------
-    f4_expr : docplex linear expression for f4
-    sub     : dict with the three sub-expressions for calibration reporting
-    """
-    I_O_frigo    = vars_["I_O_frigo"]
-    I_O_nonfrigo = vars_["I_O_nonfrigo"]
-    q_prime      = vars_["q_prime"]
+def peak_breakdown(f4_sub):
+    """After a solve: WC components at the peak period, as floats."""
+    best = None
+    for t in f4_sub["stock_value"]:
+        s = f4_sub["stock_value"][t].solution_value
+        r = f4_sub["receivables"][t].solution_value
+        p = f4_sub["payables"][t].solution_value
+        if best is None or s + r - p > best["stock"] + best["receivables"] - best["payables"]:
+            best = {"stock": s, "receivables": r, "payables": p, "peak_period": t}
+    return {k: (round(v, 4) if k != "peak_period" else v) for k, v in best.items()}
 
-    T       = sets_["T"]
-    clients = sets_["clients"]
-    O       = sets_["O"]
 
-    P_sale     = params_["P_sale"]
-    P_purchase = params_["P_purchase"]
-    DIO        = params_["DIO"]
-    DSO        = params_["DSO"]
-    DPO        = params_["DPO"]
-
-    stock_value = mdl.sum(
-        (I_O_frigo[t] + I_O_nonfrigo[t]) * P_purchase[O] * (DIO / 365)
-        for t in T
-    )
-
-    receivables = mdl.sum(
-        q_prime[l, t, td] * P_sale[l] * (DSO / 365)
-        for l in clients for t in T for td in T if t <= td
-    )
-
-    payables = mdl.sum(
-        q_prime[l, t, td] * P_purchase[O] * (DPO / 365)
-        for l in clients for t in T for td in T if t <= td
-    )
-
-    f4_expr = stock_value + receivables - payables
-
-    # Sub-expressions kept for calibration reporting
-    sub = {
-        "stock_value": stock_value,
-        "receivables": receivables,
-        "payables":    payables,
+def exact_objective_values(vars_, objectives, sets_, params_):
+    """Objective values recomputed from the solution itself (not from the
+    epigraph variables W and w1/w2, which are only lower-bounded and are exact
+    only when their objective is being minimised)."""
+    O, T, M, clients = sets_["O"], sets_["T"], sets_["M"], sets_["clients"]
+    x, a = vars_["x"], vars_["a"]
+    tw_epigraph = sum(params_["c1"] * vars_["w1"][l, t, k].solution_value
+                      + params_["c2"] * vars_["w2"][l, t, k].solution_value
+                      for l in clients for t in T for k in M)
+    tw_exact = 0.0
+    for t in T:
+        for k in M:
+            for l in clients:
+                visited = sum(x[i, l, t, k].solution_value for i in sets_["N"] if i != l) > 0.5
+                if visited:
+                    arr = a[l, t, k].solution_value
+                    tw_exact += (params_["c1"] * max(0.0, params_["ET"][l, t] - arr)
+                                 + params_["c2"] * max(0.0, arr - params_["LT"][l, t]))
+    pk = peak_breakdown(objectives["f4_sub"])
+    longest = 0.0
+    for t in T:
+        used = [vars_["e"][t, k].solution_value for k in M
+                if sum(x[O, j, t, k].solution_value for j in sets_["N"] if j != O) > 0.5]
+        longest += max(used, default=0.0)
+    return {
+        "f1": objectives["f1"].solution_value - tw_epigraph + tw_exact,
+        "f2": objectives["f2"].solution_value,
+        "f3": longest,
+        "f4": pk["stock"] + pk["receivables"] - pk["payables"],
     }
-
-    return f4_expr, sub
 
 
 def build_all_objectives(mdl, vars_, sets_, params_):
-    """
-    Single entry point: build all four objective functions.
-
-    Returns
-    -------
-    dict :
-        'f1'     : logistics cost expression
-        'f2'     : CO2 emissions expression
-        'f3'     : travel time expression
-        'f4'     : working capital expression
-        'f4_sub' : dict of BFR sub-expressions (stock_value, receivables, payables)
-    """
-    f1          = build_f1_logistics_cost(mdl, vars_, sets_, params_)
-    f2          = build_f2_co2_emissions(mdl, vars_, sets_, params_)
-    f3          = build_f3_travel_time(mdl, vars_, sets_, params_)
-    f4, f4_sub  = build_f4_working_capital(mdl, vars_, sets_, params_)
-
+    f4, f4_sub = build_f4_working_capital(mdl, vars_, sets_, params_)
     return {
-        "f1":     f1,
-        "f2":     f2,
-        "f3":     f3,
+        "f1":     build_f1_logistics_cost(mdl, vars_, sets_, params_),
+        "f2":     build_f2_co2_emissions(mdl, vars_, sets_, params_),
+        "f3":     build_f3_longest_route(mdl, vars_, sets_, params_),
         "f4":     f4,
         "f4_sub": f4_sub,
     }

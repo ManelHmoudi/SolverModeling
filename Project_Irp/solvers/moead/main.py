@@ -3,7 +3,7 @@ handled via Deb's feasibility rule (see _constrained_moead.py) and
 objective-range-normalized via a custom Tchebycheff decomposition (see
 _normalized_decomposition.py) -- both needed because vanilla pymoo MOEAD
 cannot run against IRPProblem unmodified. See
-docs/superpowers/specs/2026-08-19-moead-integration-design.md for the
+the earlier design notes (git history) for the
 full rationale.
 
 Usage (standalone):
@@ -38,6 +38,7 @@ from pymoo.optimize                import minimize
 from pymoo.termination             import get_termination
 
 from models.parameters            import load_instance
+from solvers.nsga3.decoder import n_genes
 from solvers.nsga3.problem        import IRPProblem
 from solvers.nsga3.report         import write_report, generate_and_open
 from solvers.nsga3.report_builder import _evaluate_pareto, _build_report_data
@@ -47,6 +48,7 @@ from ._normalized_decomposition   import NormalizedTchebycheff
 DEFAULT_REPORT_PATH = os.path.join(MODULE_DIR, "moead_report.html")
 _CHROM_CACHE_PATH   = os.path.join(MODULE_DIR, "moead_chromosomes.json")
 
+EVAL_POP       = 200  # = NSGA-III / QI-NSGA-III population: budget = EVAL_POP * n_gen evaluations
 N_GEN          = 300  # matches NSGA3/QINSGA3.N_GEN -- equal search budget for a fair comparison
 CROSSOVER_PROB = 0.9
 MUTATION_PROB  = None  # pm = 1/D, computed dynamically once the instance is loaded
@@ -54,7 +56,7 @@ MUTATION_PROB  = None  # pm = 1/D, computed dynamically once the instance is loa
 # NSGA3/QINSGA3's own N_PARTITIONS. Unlike those two, MOEA/D's population
 # size is NOT independently settable (pymoo's own MOEAD._setup(): one
 # individual per decomposed subproblem) -- this fixes it at 165, not the
-# 200 NSGA3/QINSGA3 use. See docs/superpowers/specs/
+# 200 NSGA3/QINSGA3 use. See the earlier design notes (git history)
 # 2026-08-19-moead-integration-design.md's population-size discussion for
 # why 200 is not reachable for MOEA/D at any Das-Dennis partition count.
 N_PARTITIONS = 8
@@ -75,13 +77,13 @@ def render_from_instance(data_path):
         cache = json.load(f)
 
     sets_, params_ = load_instance(data_path)
-    n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
+    n_genes_expected = n_genes(sets_)
 
     runs_data = []
     for i, run_cache in enumerate(cache.get("runs", [])):
         pareto_X = np.array(run_cache["chromosomes"])
         if pareto_X.shape[1] != n_genes_expected:
-            raise ValueError(
+            raise FileNotFoundError(  # stale cache (e.g. model v1): app.py re-runs
                 f"Run {i+1}: cached chromosomes have {pareto_X.shape[1]} genes but the "
                 f"current instance requires {n_genes_expected}. Re-run the algorithm."
             )
@@ -102,7 +104,7 @@ def run_moead(data_path=None, n_gen=N_GEN,
     (one individual per decomposed subproblem) -- it cannot be set
     independently. With the project's shared Das-Dennis N_PARTITIONS=8
     scheme (4 objectives), this is 165, not the 200 NSGA-III/QI-NSGA-III
-    use -- see docs/superpowers/specs/2026-08-19-moead-integration-design.md.
+    use -- see the earlier design notes (git history)
 
     repair_final_front (default True, matches NSGA-III/QI-NSGA-III): see
     run_nsga3's own docstring -- identical meaning here, same shared
@@ -118,9 +120,9 @@ def run_moead(data_path=None, n_gen=N_GEN,
     n_clients      = len(sets_["clients"])
 
     if mutation_prob is None:
-        n_genes       = n_clients * len(sets_["T"]) + n_clients
-        mutation_prob = 1.0 / n_genes
-        print(f"[MOEAD] mutation_prob = 1/D = 1/{n_genes} = {mutation_prob:.6f}", flush=True)
+        D = n_genes(sets_)
+        mutation_prob = 1.0 / D
+        print(f"[MOEAD] mutation_prob = 1/D = 1/{D} = {mutation_prob:.6f}", flush=True)
 
     problem  = IRPProblem(sets_, params_)
     ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=N_PARTITIONS)
@@ -161,13 +163,21 @@ def run_moead(data_path=None, n_gen=N_GEN,
             result  = minimize(
                 problem,
                 algorithm,
-                get_termination("n_gen", n_gen),
+                # Same EVALUATION budget as NSGA-III / QI-NSGA-III (EVAL_POP × n_gen):
+                # MOEA/D's population is fixed to the number of reference
+                # directions, so it runs more generations instead.
+                # pymoo stops after the first generation reaching the target; with
+                # this target MOEA/D ends within one generation BELOW the budget,
+                # never above it (actual count reported in meta["n_evals"]).
+                get_termination("n_eval", EVAL_POP * n_gen - len(ref_dirs) + 1),
                 verbose = True,
                 seed    = seed,
             )
             elapsed = time.time() - t_start
+            n_evals = int(result.algorithm.evaluator.n_eval)
 
-            pareto_X = result.X
+            from solvers.nsga3.main import _final_front
+            pareto_X = _final_front(result.pop)   # same final-front rule for every algorithm
 
             if pareto_X is None or len(pareto_X) == 0:
                 print(f"[MOEAD] Run {run_idx + 1}: no feasible solutions — skipping.", flush=True)
@@ -175,15 +185,15 @@ def run_moead(data_path=None, n_gen=N_GEN,
 
             print(f"[MOEAD] Run {run_idx + 1} done in {elapsed:.1f}s | "
                   f"Pareto front: {len(pareto_X)} solutions", flush=True)
-            raw_runs.append({"seed": seed, "elapsed": elapsed, "pareto_X": pareto_X})
+            raw_runs.append({"seed": seed, "elapsed": elapsed, "pareto_X": pareto_X, "n_evals": n_evals})
     finally:
         _run_lock.release()
 
     if not raw_runs:
         raise RuntimeError(
-            "[MOEAD] No feasible solutions found in any run — all solutions violate "
-            f"the hard constraint (tau_return > tau_max={params_['tau_max']}). "
-            "Check tau_max in the instance JSON or increase gen."
+            "[MOEAD] No feasible solutions found in any run (see the constraint vector "
+            "in solvers/nsga3/problem.py: shift length, lateness, depot stock, closed cycle). "
+            "Increase the budget or check the instance."
         )
 
     base_meta = {
@@ -205,6 +215,8 @@ def run_moead(data_path=None, n_gen=N_GEN,
             "run_id":    i + 1,
             "seed":      raw["seed"],
             "elapsed_s": round(raw["elapsed"], 1),
+            "n_evals":   raw["n_evals"],
+            "n_workers": 1,
         }
         runs_data.append(_evaluate_pareto(
             raw["pareto_X"], sets_, params_, per_run_meta, repair=repair_final_front,

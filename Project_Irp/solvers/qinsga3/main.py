@@ -29,6 +29,7 @@ import numpy as np
 from pymoo.util.ref_dirs import get_reference_directions
 
 from models.parameters              import load_instance
+from solvers.nsga3.decoder import n_genes
 from solvers.nsga3.report_builder    import _evaluate_pareto, _build_report_data
 from solvers.nsga3.report            import write_report, generate_and_open
 from .algorithm                      import run_qinsga3
@@ -44,7 +45,7 @@ ALPHA_MIN    = 0.001 * np.pi   # Vmin = ±0.001π [Li et al. ICNC 2008]
 # Matches NSGA3 for a fair algorithmic comparison.
 # Reducing to 6 (84 dirs) improves per-niche coverage but biases Spacing metrics.
 N_PARTITIONS = 8
-N_OBJ        = 4   # IRP objectives: f1 cost, f2 CO2, f3 time, f4 BFR
+N_OBJ        = 4   # IRP objectives: f1 cost, f2 CO2, f3 longest routes, f4 BFR
 
 SEEDS = [42, 137, 271, 491, 613, 733, 857, 977, 1009, 1123,
          1249, 1373, 1499, 1609, 1733, 1871, 1997, 2113, 2237, 2351]
@@ -67,6 +68,7 @@ def run_qinsga3_solver(
     n_runs:           int        = 1,
     rotation_type:    str        = "tanh",
     repair_final_front: bool     = True,
+    n_workers:        int        = 1,
 ) -> dict:
     """Run QINSGA-III and return structured report data.
 
@@ -83,9 +85,12 @@ def run_qinsga3_solver(
         migration_period: Every N generations, inject archive solutions into population.
         n_migrate:        Number of individuals updated per migration event.
         n_runs:           Independent runs (different seeds); results are merged.
-        repair_final_front: Post-decode 2-opt repair on the returned Pareto
-                             front only (Baldwinian -- see
-                             solvers/qinsga3/repair.py). Default True.
+        repair_final_front: Local-search repair of the returned Pareto front
+                             only (Baldwinian -- see solvers/qinsga3/repair.py),
+                             same as NSGA-III and MOEA/D. Default True.
+        n_workers:        Evaluation processes. Default 1 (serial, like NSGA-III
+                             and MOEA/D) so run times are comparable; >1 only for
+                             throughput, never for timing comparisons.
     """
     n_runs = max(1, min(20, int(n_runs)))
 
@@ -94,11 +99,11 @@ def run_qinsga3_solver(
 
     sets_, params_ = load_instance(data_path)
     n_clients      = len(sets_["clients"])
-    n_genes        = n_clients * len(sets_["T"]) + n_clients
+    D              = n_genes(sets_)
 
     if p_mut is None:
-        p_mut = 1.0 / n_genes
-        print(f"[QINSGA3] p_mut = 1/D = 1/{n_genes} = {p_mut:.6f}", flush=True)
+        p_mut = 1.0 / D
+        print(f"[QINSGA3] p_mut = 1/D = 1/{D} = {p_mut:.6f}", flush=True)
 
     ref_dirs = get_reference_directions("das-dennis", N_OBJ, n_partitions=N_PARTITIONS)
 
@@ -109,7 +114,7 @@ def run_qinsga3_solver(
 
     print(
         f"[QINSGA3] {n_clients} clients | {len(sets_['T'])} periods | "
-        f"{len(sets_['M'])} vehicles | {n_genes} genes | "
+        f"{len(sets_['M'])} vehicles | {D} genes | "
         f"pop={effective_pop} gen={n_gen} | α_max={alpha_max:.4f} | "
         f"p_cross={p_cross:.2f} | runs={n_runs}",
         flush=True,
@@ -136,6 +141,7 @@ def run_qinsga3_solver(
                 )
 
             t_start = time.time()
+            run_stats = {}
             pareto_X, pareto_F, pareto_G = run_qinsga3(
                 sets_               = sets_,
                 params_             = params_,
@@ -158,6 +164,14 @@ def run_qinsga3_solver(
                 # the returned pareto_F here is never used -- always skip the
                 # internal repair to avoid repairing the final front twice.
                 repair_final_front  = False,
+                # Fair comparison with NSGA-III / MOEA/D (see run_qinsga3's docstring):
+                # same evaluation budget, same final-front rule, same duplicate
+                # elimination, same serial execution unless n_workers > 1.
+                max_evals            = effective_pop * n_gen,
+                archive_final_front  = False,
+                eliminate_duplicates = True,
+                n_workers            = n_workers,
+                stats                = run_stats,
             )
             elapsed = time.time() - t_start
 
@@ -171,7 +185,7 @@ def run_qinsga3_solver(
                 flush=True,
             )
             raw_runs.append({"seed": seed, "elapsed": elapsed,
-                              "pareto_X": pareto_X})
+                              "pareto_X": pareto_X, "n_evals": run_stats.get("n_evals")})
     finally:
         _run_lock.release()
 
@@ -204,6 +218,8 @@ def run_qinsga3_solver(
             "run_id":    i + 1,
             "seed":      raw["seed"],
             "elapsed_s": round(raw["elapsed"], 1),
+            "n_evals":   raw["n_evals"],
+            "n_workers": n_workers,
         }
         runs_data.append(_evaluate_pareto(
             raw["pareto_X"], sets_, params_, per_run_meta, repair=repair_final_front,
@@ -237,13 +253,13 @@ def render_from_instance(data_path: str) -> dict:
         cache = json.load(f)
 
     sets_, params_ = load_instance(data_path)
-    n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
+    n_genes_expected = n_genes(sets_)
 
     runs_data = []
     for i, run_cache in enumerate(cache.get("runs", [])):
         pareto_X = np.array(run_cache["chromosomes"])
         if pareto_X.shape[1] != n_genes_expected:
-            raise ValueError(
+            raise FileNotFoundError(  # stale cache (e.g. model v1): app.py re-runs
                 f"Run {i+1}: cached chromosomes have {pareto_X.shape[1]} genes but "
                 f"current instance requires {n_genes_expected}. Re-run the algorithm."
             )
@@ -269,6 +285,7 @@ def run_qinsga3_report(
     n_runs:           int        = 1,
     rotation_type:    str        = "tanh",
     repair_final_front: bool     = True,
+    n_workers:        int        = 1,
 ) -> str:
     data = run_qinsga3_solver(
         data_path, pop_size, n_gen, alpha_max, alpha_min,
@@ -278,6 +295,7 @@ def run_qinsga3_report(
         n_runs=n_runs,
         rotation_type=rotation_type,
         repair_final_front=repair_final_front,
+        n_workers=n_workers,
     )
     return write_report(data, output_path, algo_label="QI-NSGA-III")
 

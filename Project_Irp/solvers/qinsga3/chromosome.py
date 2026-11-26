@@ -99,7 +99,7 @@ class QuantumPopulation:
         It was originally added (tuned to 0.02) to prevent nearby θ values
         from collapsing to identical integer routes after the IRP decoder
         rounds to integers. An ablation campaign
-        (sensitivity/2opt_fairness_100clients_20seed_noisezero_campaign_log.txt)
+        (the earlier sensitivity campaigns (git history))
         found it measurably hurt HV/GD/Spacing without a compensating
         benefit, so noise_scale now defaults to 0.0 (disabled) — kept as a
         parameter for callers that want to re-enable it.
@@ -152,7 +152,7 @@ class QuantumPopulation:
         of collapsing to ~0x. Floored rather than left unbounded so the step
         cannot diverge exactly at the boundary. Tests whether this closes
         part of the residual HV/IGD gap vs NSGA-III -- see
-        sensitivity/compare_2opt_fairness.py's own --compensate-dx-dtheta
+        the earlier sensitivity campaigns (git history)'s own --compensate-dx-dtheta
         flag for the comparison campaign.
         """
         diff = guides_theta - self.theta

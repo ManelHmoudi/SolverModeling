@@ -34,6 +34,7 @@ from pymoo.termination             import get_termination
 from pymoo.util.archive            import MultiObjectiveArchive, SurvivalTruncation
 
 from models.parameters  import load_instance
+from solvers.nsga3.decoder import n_genes
 from .problem           import IRPProblem
 from .report            import write_report, generate_and_open
 from .report_builder    import _evaluate_pareto, _build_report_data
@@ -59,6 +60,18 @@ _run_lock = threading.Lock()
 
 
 
+def _final_front(pop):
+    """Feasible, non-dominated members of a pymoo population (X array)."""
+    from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+    F, G, X = pop.get("F"), pop.get("G"), pop.get("X")
+    feasible = np.maximum(G, 0).sum(axis=1) <= 1e-9 if G is not None and len(G) else np.ones(len(F), bool)
+    if not feasible.any():
+        return None
+    idx = np.where(feasible)[0]
+    front = NonDominatedSorting().do(F[idx], only_non_dominated_front=True)
+    return X[idx[front]]
+
+
 def render_from_instance(data_path):
     """Re-evaluate cached NSGA-III chromosomes with the current instance JSON.
     Supports both old single-run cache and new multi-run cache formats.
@@ -71,7 +84,7 @@ def render_from_instance(data_path):
         cache = json.load(f)
 
     sets_, params_ = load_instance(data_path)
-    n_genes_expected = len(sets_["clients"]) * len(sets_["T"]) + len(sets_["clients"])
+    n_genes_expected = n_genes(sets_)
 
     if "runs" in cache:
         runs_cache = cache["runs"]
@@ -82,7 +95,7 @@ def render_from_instance(data_path):
     for i, run_cache in enumerate(runs_cache):
         pareto_X = np.array(run_cache["chromosomes"])
         if pareto_X.shape[1] != n_genes_expected:
-            raise ValueError(
+            raise FileNotFoundError(  # stale cache (e.g. model v1): app.py re-runs
                 f"Run {i+1}: cached chromosomes have {pareto_X.shape[1]} genes but the "
                 f"current instance requires {n_genes_expected}. Re-run the algorithm."
             )
@@ -104,7 +117,7 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     repair_final_front, via _evaluate_pareto(repair=True). Kept symmetric
     with QINSGA3 so the app doesn't silently favour one algorithm with
     post-processing the other doesn't get -- see
-    sensitivity/compare_2opt_fairness.py for the campaign that surfaced
+    the earlier sensitivity campaigns (git history) for the campaign that surfaced
     this asymmetry.
 
     use_archive (default False -- NOT the production default, ablation-only
@@ -126,7 +139,7 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     QINSGA3's crowding-distance trim, so the archive stays true to NSGA-III's
     own niching principle rather than importing QINSGA3's. Set
     use_archive=True to test whether this symmetry changes the HV/GD/IGD/
-    Spacing verdict -- see sensitivity/compare_2opt_fairness.py's own
+    Spacing verdict -- see the earlier sensitivity campaigns (git history)'s own
     --use-archive flag for the comparison campaign.
     """
     n_runs = max(1, min(20, int(n_runs)))
@@ -140,9 +153,9 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
     # pm = 1/D where D = total number of decision variables in the chromosome
     # D = n_clients * n_periods (quantity genes) + n_clients (priority genes)
     if mutation_prob is None:
-        n_genes       = n_clients * len(sets_["T"]) + n_clients
-        mutation_prob = 1.0 / n_genes
-        print(f"[NSGA3] mutation_prob = 1/D = 1/{n_genes} = {mutation_prob:.6f}", flush=True)
+        D = n_genes(sets_)
+        mutation_prob = 1.0 / D
+        print(f"[NSGA3] mutation_prob = 1/D = 1/{D} = {mutation_prob:.6f}", flush=True)
 
     problem  = IRPProblem(sets_, params_)
     ref_dirs = get_reference_directions("das-dennis", problem.n_obj, n_partitions=N_PARTITIONS)
@@ -218,11 +231,14 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
             result  = minimize(
                 problem,
                 algorithm,
-                get_termination("n_gen", n_gen),
+                # Budget in EVALUATIONS (pymoo counts the initial population),
+                # identical for NSGA-III, QI-NSGA-III and MOEA/D.
+                get_termination("n_eval", effective_pop * n_gen),
                 verbose = True,
                 seed    = seed,
             )
             elapsed = time.time() - t_start
+            n_evals = int(result.algorithm.evaluator.n_eval)
 
             if use_archive and result.archive is not None and len(result.archive) > 0:
                 # Final trim to effective_pop, matching QINSGA3's own
@@ -236,7 +252,10 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
                     )
                 pareto_X = arch_pop.get("X")
             else:
-                pareto_X = result.X
+                # Feasible non-dominated set of the final population -- the same
+                # final-front rule as QI-NSGA-III and MOEA/D. (pymoo's result.X
+                # for NSGA3 keeps only the niche representatives, a smaller set.)
+                pareto_X = _final_front(result.pop)
 
             if pareto_X is None or len(pareto_X) == 0:
                 print(f"[NSGA3] Run {run_idx + 1}: no feasible solutions — skipping.", flush=True)
@@ -244,15 +263,15 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
 
             print(f"[NSGA3] Run {run_idx + 1} done in {elapsed:.1f}s | "
                   f"Pareto front: {len(pareto_X)} solutions", flush=True)
-            raw_runs.append({"seed": seed, "elapsed": elapsed, "pareto_X": pareto_X})
+            raw_runs.append({"seed": seed, "elapsed": elapsed, "pareto_X": pareto_X, "n_evals": n_evals})
     finally:
         _run_lock.release()
 
     if not raw_runs:
         raise RuntimeError(
-            "[NSGA3] No feasible solutions found in any run — all solutions violate "
-            f"the hard constraint (tau_return > tau_max={params_['tau_max']}). "
-            "Check tau_max in the instance JSON or increase pop/gen."
+            "[NSGA3] No feasible solutions found in any run (see the constraint vector "
+            "in solvers/nsga3/problem.py: shift length, lateness, depot stock, closed cycle). "
+            "Increase the budget or check the instance."
         )
 
     base_meta = {
@@ -273,6 +292,8 @@ def run_nsga3(data_path=None, pop_size=POP_SIZE, n_gen=N_GEN,
             "run_id":    i + 1,
             "seed":      raw["seed"],
             "elapsed_s": round(raw["elapsed"], 1),
+            "n_evals":   raw["n_evals"],
+            "n_workers": 1,
         }
         runs_data.append(_evaluate_pareto(
             raw["pareto_X"], sets_, params_, per_run_meta, repair=repair_final_front,

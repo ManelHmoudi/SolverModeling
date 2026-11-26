@@ -201,7 +201,7 @@ function renderKPIs(){
   const defs = [
     {cls:'f1', label:'f1 — Logistics cost',   val:o.f1, unit:'cost units'},
     {cls:'f2', label:'f2 — CO₂ emissions',    val:o.f2, unit:'kg CO₂'},
-    {cls:'f3', label:'f3 — Travel time',      val:o.f3, unit:'hours'},
+    {cls:'f3', label:'f3 — Longest routes',   val:o.f3, unit:'hours'},
     {cls:'f4', label:'f4 — Working capital',  val:o.f4, unit:'currency'},
     {cls:'cx', label:'Composite  f1+f2+f3+f4',val:o.composite, unit:'scalarised objective'},
   ];
@@ -447,22 +447,22 @@ function renderBFR(){
     </div>
     <div class="bfr-row">
       <span class="bfr-col-label">Stock value</span>
-      <span class="bfr-col-formula bfr-formula-text">I × P<sub>purchase</sub> × DIO / 365</span>
+      <span class="bfr-col-formula bfr-formula-text">P<sub>purchase</sub> × Σ<sub>p</sub> I<sub>p,t*</sub> (peak period t*)</span>
       <span class="bfr-col-value">${b.stock}</span>
     </div>
     <div class="bfr-row">
       <span class="bfr-col-label">+ Accounts receivable</span>
-      <span class="bfr-col-formula bfr-formula-text">q × P<sub>sale</sub> × DSO / 365</span>
+      <span class="bfr-col-formula bfr-formula-text">invoices at delivery, last L<sub>S</sub> periods (DSO)</span>
       <span class="bfr-col-value">${b.receivables}</span>
     </div>
     <div class="bfr-row">
       <span class="bfr-col-label">− Accounts payable</span>
-      <span class="bfr-col-formula bfr-formula-text">q × P<sub>purchase</sub> × DPO / 365</span>
+      <span class="bfr-col-formula bfr-formula-text">supplier orders, last L<sub>P</sub> periods (DPO)</span>
       <span class="bfr-col-value">−${b.payables}</span>
     </div>
     <div class="bfr-row bfr-total-row">
       <span class="bfr-col-label">f4 = BFR</span>
-      <span class="bfr-col-formula bfr-formula-text">Stock + Receivables − Payables</span>
+      <span class="bfr-col-formula bfr-formula-text">max<sub>t</sub> (Stock + Receivables − Payables)</span>
       <span class="bfr-col-value">${net}</span>
     </div>
     <p class="formula">Scalarization: minimize f1 + f2 + f3 + f4</p>`;

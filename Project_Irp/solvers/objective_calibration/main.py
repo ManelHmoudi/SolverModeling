@@ -15,7 +15,7 @@ if PROJECT_DIR not in sys.path:
 
 from models.parameters import load_instance
 from models.constraints import add_all_constraints
-from models.objectives import build_all_objectives
+from models.objectives import build_all_objectives, peak_breakdown, exact_objective_values
 from models.variables import build_variables
 
 try:
@@ -49,14 +49,7 @@ def _get_ordered_path(arcs):
 def _build_model(sets_, params_, timelimit=600):
     mdl  = Model(name="IRP_ManyObjective")
     mdl.parameters.timelimit = timelimit
-    vars_ = build_variables(
-        mdl,
-        sets_["N"],
-        sets_["A"],
-        sets_["T"],
-        sets_["M"],
-        sets_["clients"],
-    )
+    vars_ = build_variables(mdl, sets_, params_)
     objectives = build_all_objectives(mdl, vars_, sets_, params_)
     add_all_constraints(mdl, vars_, sets_, params_)
     return mdl, vars_, objectives
@@ -110,10 +103,15 @@ def _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params
             4,
         )
         routes[str(t)] = {
-            "R":          params_["R"].get(t, 0.0),
-            "R_frigo":    params_["R_frigo"].get(t, 0.0),
-            "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
-            "tau_return": round(vars_["tau_return"][t].solution_value, 4),
+            # supplier orders received in t (v2: decision variables)
+            "R":          round(vars_["r"]["frigo", t].solution_value + vars_["r"]["nonfrigo", t].solution_value, 4),
+            "R_frigo":    round(vars_["r"]["frigo", t].solution_value, 4),
+            "R_nonfrigo": round(vars_["r"]["nonfrigo", t].solution_value, 4),
+            # latest return among the vehicles used in t (return times are per vehicle in v2)
+            "tau_return": round(max(
+                [vars_["e"][t, k].solution_value for k in sets_["M"]
+                 if sum(vars_["x"][sets_["O"], j, t, k].solution_value for j in sets_["clients"]) > 0.5]
+                or [0.0]), 4),
             "trucks":     trucks,
             "shipped":    shipped_t,
         }
@@ -144,19 +142,16 @@ def _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params
 
     bfr_sub = None
     if "f4" in label:
-        sub = objectives["f4_sub"]
-        bfr_sub = {
-            "stock":       round(sub["stock_value"].solution_value, 4),
-            "receivables": round(sub["receivables"].solution_value, 4),
-            "payables":    round(sub["payables"].solution_value, 4),
-        }
+        bfr_sub = peak_breakdown(objectives["f4_sub"])   # WC components at the peak period
 
-    value = expr.solution_value
+    exact = exact_objective_values(vars_, objectives, sets_, params_)
+    value = exact[param_name]
     return value, {
         "label":        label,
         "value":        round(value, 4),
         "solve_status": solve_status,
         "budget_key":   param_name,
+        "payoff":       {k: round(v, 4) for k, v in exact.items()},
         "routes":       routes,
         "deliveries":   deliveries,
         "depot_stock":  depot_stock,
@@ -174,25 +169,37 @@ def build_report_data(data_path=None, timelimit=600):
     sets_, params_ = load_instance(data_path)
     mdl, vars_, objectives = _build_model(sets_, params_, timelimit=timelimit)
     calibration = [
-        ("f1  Logistics cost",        objectives["f1"], "C_max"),
-        ("f2  CO2 emissions",         objectives["f2"], "E_max"),
-        ("f3  Total travel time",     objectives["f3"], "T_max"),
-        ("f4  Working capital (BFR)", objectives["f4"], "B"),
+        ("f1  Logistics cost",        objectives["f1"], "f1"),
+        ("f2  CO2 emissions",         objectives["f2"], "f2"),
+        ("f3  Longest routes",        objectives["f3"], "f3"),
+        ("f4  Peak working capital",  objectives["f4"], "f4"),
     ]
 
-    calib_results = {}
-    objs_data     = []
-
+    # Payoff table: minimise each objective alone, record all four (exact
+    # values). Ideal = diagonal, nadir estimate = worst value in each column.
+    # Phase 1: ideal value of each objective (each minimised alone).
+    ideal = {}
     for label, expr, param_name in calibration:
-        value, obj_data = _solve_single(label, expr, param_name, mdl, vars_, objectives, sets_, params_)
+        mdl.minimize(expr)
+        if mdl.solve(log_output=False):
+            ideal[param_name] = exact_objective_values(vars_, objectives, sets_, params_)[param_name]
+    # Phase 2: keep objective i at its ideal and minimise the SUM of the other
+    # objectives, each divided by its own ideal (a normalised weighted sum, not
+    # a lexicographic order), so every payoff row is Pareto-optimal and the
+    # nadir estimate is not an arbitrary tie-break of the solver.
+    objs_data = []
+    for label, expr, param_name in calibration:
+        if param_name not in ideal:
+            continue
+        tol = 1e-6 * max(1.0, abs(ideal[param_name]))
+        ct = mdl.add_constraint(expr <= ideal[param_name] + tol, ctname=f"lex_{param_name}")
+        others = mdl.sum(objectives[k] / max(1.0, abs(ideal[k])) for k in ideal if k != param_name)
+        value, obj_data = _solve_single(label, others, param_name, mdl, vars_, objectives, sets_, params_)
+        mdl.remove_constraint(ct)
         if value is not None:
-            # Upper bound = ideal + 20% margin. Additive-on-|value| (not a plain
-            # x1.2) so a negative ideal (possible for f4/BFR) still yields a
-            # bound *larger* than the ideal -- x1.2 alone would flip it smaller
-            # (1.2 * -100 = -120 < -100), inverting the C15-C18 budget direction.
-            margin = 0.2 * abs(value) if value != 0 else 1.0
-            calib_results[param_name] = round(value + margin, 4)
+            obj_data["mip_gap"] = round(mdl.solve_details.mip_relative_gap, 6)
             objs_data.append(obj_data)
+    nadir = {k: max(o["payoff"][k] for o in objs_data) for k in ideal} if objs_data else {}
 
     return {
         "meta": {
@@ -207,7 +214,9 @@ def build_report_data(data_path=None, timelimit=600):
             "node_positions":    compute_node_positions(sets_["N"]),
         },
         "objs":   objs_data,
-        "bounds": calib_results,
+        "ideal":  ideal,
+        "nadir":  nadir,
+        "bounds": nadir,          # displayed in the report next to each ideal
     }
 
 

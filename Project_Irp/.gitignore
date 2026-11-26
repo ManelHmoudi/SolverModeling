@@ -2,10 +2,10 @@
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
 # Generated reports (re-created on each run)
 *.html
-!deliverables/**/*.html
 
 # Solver run artefacts / caches
 *_chromosomes.json

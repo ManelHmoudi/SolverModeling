@@ -26,19 +26,15 @@ Project_Irp/
 │   ├── qinsga3/
 │   └── moead/
 ├── data/                        Problem instances (instance_{N}_clients.json)
-├── scripts/                     Utility scripts (synthetic instance generator)
-├── benchmarks/                  DTLZ/MaF benchmark results (IGD CSVs) shown by the UI
-│   ├── dtlz/{nsga3,qinsga3,moead}/igd_<problem>_M<m>.csv
-│   └── maf/{nsga3,qinsga3,moead}/igd_<problem>_M<m>.csv
-└── deliverables/                Deliverables (Colab notebooks + HTML result reports)
-    ├── irp_100_clients/
-    │   ├── nsga3_vs_qinsga3_colab.ipynb
-    │   ├── results.html
-    │   ├── results_30_seeds.html
-    │   └── results_delivery_shift.html
-    └── benchmarks_dtlz_maf/
-        ├── nsga3_vs_qinsga3_colab.ipynb
-        └── results.html
+│   └── replicates/              Independent replicates per size (instance_{N}_clients_r{r}.json)
+├── docs/
+│   ├── model_formulation.md     Full formulation (C1–C19, f1–f4) + answers to the editor's remarks
+│   └── modele_IRP_corrige.docx  The same model in French, with Word equations (for the paper)
+├── tests/                       Independent solution checker + model tests (pytest)
+├── scripts/                     Instance generator (+ --migrate, --replicates), ablation, plan export
+└── benchmarks/                  DTLZ/MaF benchmark results (IGD CSVs) shown by the UI
+    ├── dtlz/{nsga3,qinsga3,moead}/igd_<problem>_M<m>.csv
+    └── maf/{nsga3,qinsga3,moead}/igd_<problem>_M<m>.csv
 ```
 
 **Naming convention:** every folder and file name is English, lowercase,
@@ -52,10 +48,15 @@ routing constraints. Four conflicting objectives are optimised jointly:
 
 | Objective | Description |
 |---|---|
-| **f1** | Logistics cost (transport + depot holding + time-window penalties) |
-| **f2** | CO₂ emissions (CMEM model, Bektas & Laporte 2011) |
-| **f3** | Total travel time |
-| **f4** | Working capital / BFR (stock + receivables − payables) |
+| **f1** | Logistics cost (€): dispatch + distance per vehicle-km (empty return included) + load term + depot holding + time-window penalties + supplier ordering |
+| **f2** | CO₂ emissions (kg), linearised CMEM (Bektas & Laporte 2011) |
+| **f3** | Longest route of each period, summed over the periods (h): workload of the most loaded driver |
+| **f4** | Peak net working capital (€): stock value + receivables − payables per period, cyclic accounting |
+
+Supplier orders are decisions of the model. The full formulation, with the editor's
+remarks and the audit findings it answers, is in
+[`docs/model_formulation.md`](docs/model_formulation.md). It is checked by
+`python -m pytest tests -q`.
 
 `models/` defines the shared problem data model: `parameters.py` loads an
 instance JSON into `sets_`/`params_` dicts; `constraints.py`, `objectives.py`

@@ -1,216 +1,168 @@
-"""Chromosome → feasible IRP routes (greedy nearest-neighbour decoder).
+"""Chromosome → IRP solution (routes + supplier orders), greedy decoder.
+
+Implements docs/model_formulation.md §8.
 
 Chromosome layout:
-  [0 … n_clients*n_periods - 1]  quantity genes  — q(l,t) for each (client, period)
-  [n_clients*n_periods … end]     priority genes  — p(l) ∈ [0,1] per client
+  [0 … nC*nT - 1]               quantity genes — q(l,t) for each (client, period)
+  [nC*nT … nC*nT + nC - 1]      priority genes — p(l) ∈ [0,1] per client
+  [nC*nT + nC … end]            order genes    — g(p,t) ∈ [0,1] per (class, period),
+                                                 ordered frigo t1..tn, nonfrigo t1..tn
+
+Search-space restrictions of the decoder (subsets of the model's feasible set,
+stated in §8 of the formulation; one truck per client, period and class is
+a constraint of the model itself, C11):
+  * a client receives goods early only in periods whose own demand has the same class;
+  * optional (anticipated) deliveries below MIN_OPTIONAL_DELIVERY units are dropped;
+  * routes are built truck after truck by nearest neighbour, ordered by the priority genes.
 """
+
+PRODUCT_CLASSES = ("frigo", "nonfrigo")
+
+# Heuristic of the decoder, not a model parameter: an anticipated delivery
+# smaller than this is not worth a stop. Mandatory deliveries are never dropped.
+MIN_OPTIONAL_DELIVERY = 5
+
+
+def n_genes(sets_):
+    """Chromosome length for an instance."""
+    nC, nT = len(sets_["clients"]), len(sets_["T"])
+    return nC * nT + nC + len(PRODUCT_CLASSES) * nT
 
 
 def decode_chromosome(chromosome, sets_):
-    """Flat numpy array → ({(l,t): quantity}, {l: priority}) tuple."""
-    clients = sets_["clients"]
-    T       = sets_["T"]
-    n_qty   = len(clients) * len(T)
-
-    quantities = {
-        (l, t): float(chromosome[l_idx * len(T) + t_idx])
-        for l_idx, l in enumerate(clients)
-        for t_idx, t in enumerate(T)
-    }
-    priorities = {
-        l: float(chromosome[n_qty + l_idx])
-        for l_idx, l in enumerate(clients)
-    }
-    return quantities, priorities
+    """Flat array → ({(l,t): quantity}, {l: priority}, {(p,t): order gene})."""
+    clients, T = sets_["clients"], sets_["T"]
+    if len(chromosome) != n_genes(sets_):
+        raise ValueError(f"chromosome has {len(chromosome)} genes, the instance needs {n_genes(sets_)}")
+    nT, n_qty = len(T), len(clients) * len(T)
+    quantities = {(l, t): float(chromosome[li * nT + ti])
+                  for li, l in enumerate(clients) for ti, t in enumerate(T)}
+    priorities = {l: float(chromosome[n_qty + li]) for li, l in enumerate(clients)}
+    base = n_qty + len(clients)
+    order_genes = {(p, t): float(chromosome[base + pi * nT + ti])
+                   for pi, p in enumerate(PRODUCT_CLASSES) for ti, t in enumerate(T)}
+    return quantities, priorities, order_genes
 
 
-def build_routes(quantities, sets_, params_, priorities=None):
-    """Decode quantities into vehicle routes, enforcing all hard constraints.
+def decide_order(gene, I_prev, shipped, I_min, I_max, end_target=None, cap_after=None):
+    """Supplier order for one class in one period (§8 step 3), integer units.
 
-    Returns dict: x, f, depot_stock, arrival_times, truck_assign,
-                  actual_qty, routes_data, tau_return.
+      r_min: stock at the end of the period >= I_min (C5)
+      r_max: stock at the end of the period <= I_max (C5) and, if given,
+             <= cap_after (keeps the closed cycle reachable)
+    The gene interpolates between r_min and r_max. In the last period the
+    order is forced to close the cycle exactly.
     """
-    clients          = sets_["clients"]
-    T                = sets_["T"]
-    M                = sets_["M"]
-    O                = sets_["O"]
-    Q                = params_["Q"]
-    d                = params_["d"]
-    v                = params_["v"]
-    s                = params_["s"]
-    requires_cold    = params_["requires_cold"]
-    frigo_trucks     = params_["frigo_trucks"]
-    non_frigo_trucks = [k for k in M if k not in frigo_trucks]
-    frigo_list       = sorted(frigo_trucks)
-    q_lt             = params_["q_lt"]
-    min_delivery     = params_.get("min_delivery_threshold", 5)
+    after = I_prev - shipped
+    if end_target is not None:                       # last period: close the cycle (C7)
+        return float(max(0, int(round(end_target - after))))
+    r_min = max(0, int(-(-(I_min - after) // 1)))     # ceil
+    r_max = int((I_max - after) // 1)
+    if cap_after is not None:
+        r_max = min(r_max, int((cap_after - after) // 1))
+    if r_max < r_min:
+        return float(r_min)
+    g = min(max(float(gene), 0.0), 1.0)
+    return float(int(round(r_min + g * (r_max - r_min))))
 
-    I_frigo    = float(params_["I_O_init_frigo"])
-    I_nonfrigo = float(params_["I_O_init_nonfrigo"])
-    I_min_f    = params_["I_O_min_frigo"]
-    I_max_f    = params_["I_O_max_frigo"]
-    I_min_nf   = params_["I_O_min_nonfrigo"]
-    I_max_nf   = params_["I_O_max_nonfrigo"]
-    R_frigo    = params_["R_frigo"]
-    R_nonfrigo = params_["R_nonfrigo"]
 
-    frigo_total    = {l: sum(q_lt[l, t] for t in T if     requires_cold[l, t]) for l in clients}
-    nonfrigo_total = {l: sum(q_lt[l, t] for t in T if not requires_cold[l, t]) for l in clients}
+def build_routes(quantities, sets_, params_, priorities=None, order_genes=None):
+    """Decode quantities into vehicle routes and supplier orders.
 
-    cum_frigo_demand = {
-        (l, t): sum(q_lt[l, td] for td in T if td <= t and     requires_cold[l, td])
-        for l in clients for t in T
-    }
-    cum_nonfrigo_demand = {
-        (l, t): sum(q_lt[l, td] for td in T if td <= t and not requires_cold[l, td])
-        for l in clients for t in T
-    }
+    Returns dict: x, f, depot_stock, orders, arrival_times (keyed (l,t,k)),
+                  truck_assign, actual_qty, routes_data, tau_return (max per period).
+    """
+    clients, T, M, O = sets_["clients"], sets_["T"], sets_["M"], sets_["O"]
+    Q, d, v, s = params_["Q"], params_["d"], params_["v"], params_["s"]
+    cold, q_lt = params_["requires_cold"], params_["q_lt"]
+    frigo_list = sorted(k for k in M if k in params_["frigo_trucks"])
+    ambient_list = sorted(k for k in M if k not in params_["frigo_trucks"])
+    order_genes = order_genes or {}
+    tau_max = params_["tau_max"]
 
-    frigo_dlv    = {l: 0 for l in clients}
-    nonfrigo_dlv = {l: 0 for l in clients}
+    stock = {p: float(params_[f"I_O_init_{p}"]) for p in PRODUCT_CLASSES}
+    total = {(l, p): sum(q_lt[l, t] for t in T if cold[l, t] == (p == "frigo"))
+             for l in clients for p in PRODUCT_CLASSES}
+    cum_dem = {(l, t, p): sum(q_lt[l, td] for td in T if td <= t and cold[l, td] == (p == "frigo"))
+               for l in clients for t in T for p in PRODUCT_CLASSES}
+    dlv = {(l, p): 0 for l in clients for p in PRODUCT_CLASSES}
 
-    x_vars        = {}
-    f_vars        = {}
-    arrival_times = {}
-    truck_assign  = {}
-    actual_qty    = {}
-    depot_stock   = {}
-    routes_data   = {}
-    T_last        = T[-1]
+    x_vars, f_vars, arrival_times, truck_assign = {}, {}, {}, {}
+    actual_qty, depot_stock, orders, routes_data = {}, {}, {}, {}
+    T_last = T[-1]
 
-    for t in T:
-        if t == T_last:
-            frigo_desired = {
-                l: max(0, frigo_total[l] - frigo_dlv[l])
-                for l in clients if frigo_total[l] - frigo_dlv[l] > 0
-            }
-            nonfrigo_desired = {
-                l: max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
-                for l in clients if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
-            }
-            frigo_floor    = dict(frigo_desired)
-            nonfrigo_floor = dict(nonfrigo_desired)
-        else:
-            frigo_desired    = {}
-            nonfrigo_desired = {}
-            frigo_floor      = {}
-            nonfrigo_floor   = {}
-            for l in clients:
-                qty = max(0, int(round(quantities[l, t])))
-                if requires_cold[l, t]:
-                    remaining  = max(0, frigo_total[l] - frigo_dlv[l])
-                    min_needed = max(0, cum_frigo_demand[l, t] - frigo_dlv[l])
-                    actual     = max(min_needed, min(qty, remaining))
-                    if actual > 0 and (min_needed > 0 or actual >= min_delivery):
-                        frigo_desired[l] = actual
-                        frigo_floor[l]   = min_needed
+    for ti, t in enumerate(T):
+        desired = {p: {} for p in PRODUCT_CLASSES}
+        floor = {p: {} for p in PRODUCT_CLASSES}
+        for l in clients:
+            if t == T_last:
+                classes = PRODUCT_CLASSES                         # everything still due
+            else:
+                classes = ("frigo",) if cold[l, t] else ("nonfrigo",)
+            for p in classes:
+                remaining = max(0, total[l, p] - dlv[l, p])
+                needed = max(0, cum_dem[l, t, p] - dlv[l, p])
+                if t == T_last:
+                    qty = remaining
                 else:
-                    remaining  = max(0, nonfrigo_total[l] - nonfrigo_dlv[l])
-                    min_needed = max(0, cum_nonfrigo_demand[l, t] - nonfrigo_dlv[l])
-                    actual     = max(min_needed, min(qty, remaining))
-                    if actual > 0 and (min_needed > 0 or actual >= min_delivery):
-                        nonfrigo_desired[l] = actual
-                        nonfrigo_floor[l]   = min_needed
-
-        max_rel_f  = max(0, int(I_frigo    + R_frigo[t]    - I_min_f))
-        max_rel_nf = max(0, int(I_nonfrigo + R_nonfrigo[t] - I_min_nf))
-
-        frigo_cap_total = sum(Q[k] for k in frigo_list)
-        nf_cap_total    = sum(Q[k] for k in non_frigo_trucks) if non_frigo_trucks else 0
-
-        # Stock ceiling (C6 upper bound) is a hard constraint: force enough
-        # shipment this period so depot stock cannot exceed I_max_f/I_max_nf.
-        # Under-requested clients are bumped up to cover the deficit, capped
-        # at their own remaining demand so the no-over-delivery guarantee (C8)
-        # still holds — mirrors the existing floor mechanism for I_min.
-        # Also capped at total truck capacity: _clamp_to_integer_budget never
-        # cuts below floor[l], so an uncapped floor total above frigo_cap_total
-        # would make frigo_qty structurally unshippable this period. When
-        # capacity truly can't cover the required release, the residual excess
-        # is left for problem.py's C6 G-constraint to penalise, rather than
-        # silently producing an inconsistent floor here.
-        min_rel_f  = min(max(0, int(I_frigo    + R_frigo[t]    - I_max_f)), frigo_cap_total)
-        min_rel_nf = min(max(0, int(I_nonfrigo + R_nonfrigo[t] - I_max_nf)), nf_cap_total)
-        frigo_remaining = {
-            l: frigo_total[l] - frigo_dlv[l]
-            for l in clients if frigo_total[l] - frigo_dlv[l] > 0
-        }
-        nonfrigo_remaining = {
-            l: nonfrigo_total[l] - nonfrigo_dlv[l]
-            for l in clients if nonfrigo_total[l] - nonfrigo_dlv[l] > 0
-        }
-        _force_min_release(frigo_desired,    frigo_floor,    frigo_remaining,    min_rel_f)
-        _force_min_release(nonfrigo_desired, nonfrigo_floor, nonfrigo_remaining, min_rel_nf)
-
-        frigo_qty    = _clamp_to_integer_budget(
-            frigo_desired,    min(max_rel_f,  frigo_cap_total), frigo_floor)
-        nonfrigo_qty = _clamp_to_integer_budget(
-            nonfrigo_desired, min(max_rel_nf, nf_cap_total),    nonfrigo_floor)
+                    qty = max(needed, min(max(0, int(round(quantities[l, t]))), remaining))
+                if qty > 0 and (needed > 0 or qty >= MIN_OPTIONAL_DELIVERY):
+                    desired[p][l] = qty
+                    floor[p][l] = needed if t != T_last else qty
 
         routes_data[t] = {}
-        tau_max = params_.get("tau_max", float("inf"))
-        for qty_group, trucks, floor_group in [
-            (frigo_qty,    frigo_list,       frigo_floor),
-            (nonfrigo_qty, non_frigo_trucks, nonfrigo_floor),
-        ]:
-            if not qty_group or not trucks:
+        for p, trucks in (("frigo", frigo_list), ("nonfrigo", ambient_list)):
+            if not desired[p] or not trucks:
                 continue
-            r, tx, tf, ta, tassign = _nearest_neighbour(
-                qty_group, trucks, t, d, v, s, Q, O, tau_max, floor_group,
-                priorities=priorities,
-            )
+            # shipments limited by the fleet (the supplier order covers the rest)
+            capped = _clamp_to_integer_budget(desired[p], sum(Q[k] for k in trucks), floor[p])
+            r, tx, tf, ta, tassign = _nearest_neighbour(capped, trucks, t, d, v, s, Q, O, tau_max,
+                                                        floor[p], priorities=priorities)
             routes_data[t].update(r)
             x_vars.update(tx)
             f_vars.update(tf)
             arrival_times.update(ta)
             truck_assign.update(tassign)
 
-        actually_served_frigo    = {}
-        actually_served_nonfrigo = {}
+        served = {(l, p): 0 for l in clients for p in PRODUCT_CLASSES}
         for k, info in routes_data[t].items():
-            is_frigo = k in frigo_trucks
+            p = "frigo" if k in params_["frigo_trucks"] else "nonfrigo"
             for l_str, q in info["qty"].items():
-                l_int = int(l_str)
-                if is_frigo:
-                    actually_served_frigo[l_int]    = actually_served_frigo.get(l_int, 0)    + q
-                else:
-                    actually_served_nonfrigo[l_int] = actually_served_nonfrigo.get(l_int, 0) + q
-
-        shipped_f = shipped_nf = 0
+                served[int(l_str), p] += q
+        shipped = {p: 0 for p in PRODUCT_CLASSES}
         for l in clients:
-            f  = actually_served_frigo.get(l, 0)
-            nf = actually_served_nonfrigo.get(l, 0)
-            actual_qty[l, t]  = f + nf
-            frigo_dlv[l]    += f
-            nonfrigo_dlv[l] += nf
-            shipped_f += f
-            shipped_nf += nf
+            actual_qty[l, t] = served[l, "frigo"] + served[l, "nonfrigo"]
+            for p in PRODUCT_CLASSES:
+                dlv[l, p] += served[l, p]
+                shipped[p] += served[l, p]
 
-        I_frigo    = I_frigo    + R_frigo[t]    - shipped_f
-        I_nonfrigo = I_nonfrigo + R_nonfrigo[t] - shipped_nf
-
-        depot_stock[t] = {
-            "frigo":    round(I_frigo,    4),
-            "nonfrigo": round(I_nonfrigo, 4),
-        }
+        # Supplier orders. At every period the stock must not exceed
+        # I_init + everything still to ship (all remaining demand must be
+        # delivered later), so that the stock can always come back to I_init
+        # at the end of the horizon (closed cycle, C7).
+        orders[t] = {}
+        for p in PRODUCT_CLASSES:
+            cap_after = None
+            if t != T_last:
+                cap_after = params_[f"I_O_init_{p}"] + sum(max(0, total[l, p] - dlv[l, p]) for l in clients)
+            r = decide_order(order_genes.get((p, t), 0.0), stock[p], shipped[p],
+                             params_[f"I_O_min_{p}"], params_[f"I_O_max_{p}"],
+                             params_[f"I_O_init_{p}"] if t == T_last else None, cap_after)
+            orders[t][p] = r
+            stock[p] = stock[p] + r - shipped[p]
+        depot_stock[t] = {p: round(stock[p], 4) for p in PRODUCT_CLASSES}
 
     tau_return = {}
     for t in T:
-        max_ret = 0.0
-        for k, info in routes_data.get(t, {}).items():
-            path  = info["path"]
-            speed = v[k]
-            total = sum(
-                s.get(path[idx], 0.0) + d[path[idx], path[idx + 1]] / speed
-                for idx in range(len(path) - 1)
-            )
-            max_ret = max(max_ret, total)
-        tau_return[t] = max_ret
+        tau_return[t] = max(
+            [sum(s[path[i]] + d[path[i], path[i + 1]] / v[k] for i in range(len(path) - 1))
+             for k, info in routes_data[t].items() for path in [info["path"]]] or [0.0])
 
     return {
         "x":             x_vars,
         "f":             f_vars,
         "depot_stock":   depot_stock,
+        "orders":        orders,
         "arrival_times": arrival_times,
         "truck_assign":  truck_assign,
         "actual_qty":    actual_qty,
@@ -219,154 +171,87 @@ def build_routes(quantities, sets_, params_, priorities=None):
     }
 
 
-def _force_min_release(desired, floor, remaining, min_release):
-    """Bump desired/floor so their sum reaches at least min_release.
-
-    Never pushes a client beyond its own remaining demand, so the
-    no-over-delivery guarantee (C8) is preserved. Used to keep the depot
-    stock ceiling (I_O_max) a hard constraint: enough must ship out this
-    period to prevent stock from exceeding the cap.
-    """
-    deficit = min_release - sum(desired.values())
-    if deficit <= 0:
-        return
-
-    for l, room in sorted(remaining.items(), key=lambda kv: -kv[1]):
-        if deficit <= 0:
-            break
-        already  = desired.get(l, 0)
-        headroom = room - already
-        if headroom <= 0:
-            continue
-        add        = min(headroom, deficit)
-        desired[l] = already + add
-        floor[l]   = desired[l]
-        deficit   -= add
-
-
 def _clamp_to_integer_budget(qty_dict, max_total, min_required=None):
     """Trim allocations until total fits within max_total, never cutting below min_required."""
     if not qty_dict:
         return {}
-
     result = dict(qty_dict)
     floors = min_required or {}
-    total  = sum(result.values())
-
-    if total <= max_total:
+    excess = sum(result.values()) - max_total
+    if excess <= 0:
         return result
-
-    excess = total - max_total
-    for l in sorted(result, key=lambda l: result[l] - floors.get(l, 0), reverse=True):
+    for l in sorted(result, key=lambda c: result[c] - floors.get(c, 0), reverse=True):
         if excess <= 0:
             break
-        floor   = floors.get(l, 0)
-        surplus = result[l] - floor
-        if surplus <= 0:
-            continue
-        cut        = min(surplus, excess)
-        result[l] -= cut
-        excess     -= cut
-
+        cut = min(result[l] - floors.get(l, 0), excess)
+        if cut > 0:
+            result[l] -= cut
+            excess -= cut
     return {l: q for l, q in result.items() if q > 0}
 
 
-def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max=None, floors=None,
-                        priorities=None):
-    """Build routes for one truck group using greedy nearest-neighbour.
+def _nearest_neighbour(qty_dict, trucks, t, d, v, s, Q, O, tau_max, floors, priorities=None):
+    """Build routes for one truck group, truck after truck, by nearest neighbour.
 
-    Mandatory clients (floor > 0) bypass the tau_max check to preserve delivery deadlines.
-    Priority genes produce diverse visit orders, widening the Pareto front.
+    Mandatory clients (floor > 0) are served first. Every client must fit in
+    the shift (tau_max) of the current truck; when none fits, the next truck
+    is opened. Only on the LAST truck of the group may a mandatory client
+    exceed tau_max (otherwise it would be late), and G then reports it.
+    Priority genes bias the visit order: score = distance / (0.5 + priority).
     """
-    x_vars   = {}
-    f_vars   = {}
-    arrivals = {}
-    assign   = {}
-    routes   = {}
+    x_vars, f_vars, arrivals, assign, routes = {}, {}, {}, {}, {}
+    prios = priorities or {}
+    pending = dict(qty_dict)
 
-    prios     = priorities or {}
-    pending   = dict(qty_dict)
-    truck_idx = 0
-
-    while pending and truck_idx < len(trucks):
-        k     = trucks[truck_idx]
-        cap   = Q[k]
-        speed = v[k]
-
-        path         = [O]
-        qty_on_route = {}
-        load         = 0
-        current_time = 0.0
-        current      = O
+    for truck_idx, k in enumerate(trucks):
+        if not pending:
+            break
+        last_truck = truck_idx == len(trucks) - 1
+        cap, speed = Q[k], v[k]
+        path, qty_on_route, load, now, current = [O], {}, 0, 0.0, O
 
         while True:
+            mandatory_left = any(floors.get(l, 0) > 0 for l in pending)
             best, best_score, best_qty = None, float("inf"), 0
-            has_mandatory = False
-
-            any_mandatory_pending = any((floors or {}).get(l2, 0) > 0 for l2 in pending)
-
             for l, q in pending.items():
-                floor_l      = (floors or {}).get(l, 0)
+                floor_l = floors.get(l, 0)
                 is_mandatory = floor_l > 0
-
-                if not is_mandatory and any_mandatory_pending:
+                if mandatory_left and not is_mandatory:
                     continue
-
                 if load + q <= cap:
-                    q_effective = q
+                    q_eff = q
                 elif is_mandatory and load + floor_l <= cap:
-                    q_effective = floor_l
+                    q_eff = floor_l
                 else:
                     continue
-
-                dist = d[current, l]
-
-                if tau_max is not None and not is_mandatory:
-                    projected = (current_time
-                                 + s.get(current, 0.0) + dist / speed
-                                 + s.get(l, 0.0) + d[l, O] / speed)
-                    if projected > tau_max:
-                        continue
-
-                score = dist / (0.5 + prios.get(l, 0.5))
-                if is_mandatory:
-                    if not has_mandatory or score < best_score:
-                        best_score, best, best_qty = score, l, q_effective
-                        has_mandatory = True
-                elif not has_mandatory and score < best_score:
-                    best_score, best, best_qty = score, l, q_effective
-
+                projected = now + s[current] + d[current, l] / speed + s[l] + d[l, O] / speed
+                if projected > tau_max and not (is_mandatory and last_truck):
+                    continue
+                score = d[current, l] / (0.5 + prios.get(l, 0.5))
+                if score < best_score:
+                    best, best_score, best_qty = l, score, q_eff
             if best is None:
                 break
-
-            current_time      += s.get(current, 0.0) + d[current, best] / speed
+            now += s[current] + d[current, best] / speed
             path.append(best)
             pending.pop(best)
             qty_on_route[best] = best_qty
-            load              += qty_on_route[best]
-            arrivals[best, t]  = current_time
-            assign[best, t]    = k
-            current            = best
+            load += best_qty
+            arrivals[best, t, k] = now
+            assign[best, t] = k
+            current = best
 
         path.append(O)
-
         if len(path) > 2:
-            n   = len(path)
-            suf = [0] * (n + 1)
-            for idx in range(n - 2, -1, -1):
-                node    = path[idx + 1]
-                suf[idx] = suf[idx + 1] + (qty_on_route.get(node, 0) if node != O else 0)
-
-            for idx in range(n - 1):
-                i, j               = path[idx], path[idx + 1]
-                x_vars[i, j, t, k] = 1
-                f_vars[i, j, t, k] = suf[idx]
-
-            routes[k] = {
-                "path": path,
-                "qty":  {str(l): q for l, q in qty_on_route.items()},
-            }
-
-        truck_idx += 1
+            suffix = 0
+            loads = []
+            for node in reversed(path[1:]):
+                suffix += qty_on_route.get(node, 0) if node != O else 0
+                loads.append(suffix)
+            loads = list(reversed(loads))            # loads[i] = load on arc path[i] -> path[i+1]
+            for i in range(len(path) - 1):
+                x_vars[path[i], path[i + 1], t, k] = 1
+                f_vars[path[i], path[i + 1], t, k] = loads[i]
+            routes[k] = {"path": path, "qty": {str(l): q for l, q in qty_on_route.items()}}
 
     return routes, x_vars, f_vars, arrivals, assign

@@ -233,7 +233,7 @@ tr:nth-child(even) td{background:var(--row-bg)}
 
 <!-- BFR -->
 <div class="card">
-  <div class="ct">Working capital breakdown (f4)</div>
+  <div class="ct">Peak working capital breakdown (f4)</div>
   <div id="bfrBlock"></div>
 </div>
 
@@ -382,7 +382,7 @@ function renderRunsComparison(){
 function renderPareto(){
   const W=860, H=380, MT=58, MB=36, ML=28, MR=50;
   const CH = H - MT - MB;
-  const AXES = ['f1  Logistics','f2  CO₂','f3  Travel time','f4  BFR (min)'];
+  const AXES = ['f1  Logistics','f2  CO₂','f3  Longest routes','f4  Peak BFR'];
   const AX = [0,1,2,3].map(i => ML + i*(W-ML-MR)/3);
 
   const keys=['f1','f2','f3','f4'];
@@ -452,8 +452,8 @@ function renderKPIs(){
   const defs=[
     {cls:'f1',label:'f1 — Logistics cost',  val:o.f1, unit:'cost units'},
     {cls:'f2',label:'f2 — CO₂ emissions',   val:o.f2, unit:'kg CO₂'},
-    {cls:'f3',label:'f3 — Travel time',     val:o.f3, unit:'hours'},
-    {cls:'f4',label:'f4 — Working capital', val:o.f4, unit:'currency  (↓ min)'},
+    {cls:'f3',label:'f3 — Longest routes',  val:o.f3, unit:'hours'},
+    {cls:'f4',label:'f4 — Peak working capital', val:o.f4, unit:'€  (↓ min)'},
   ];
   document.getElementById('kpiRow').innerHTML=defs.map(d=>
     `<div class="kpi ${d.cls}">
@@ -677,31 +677,34 @@ function renderDeliveries(){
 function renderBFR(){
   const b=SOLS[selectedIdx].bfr_sub;
   if(!b){ document.getElementById('bfrBlock').innerHTML=''; return; }
-  const net=(b.stock+b.receivables-b.payables).toFixed(4);
+  const net=(b.stock+b.receivables-b.payables).toFixed(2);
+  const tp=b.peak_period!==undefined?b.peak_period:'?';
+  const series=b.series?Object.entries(b.series).map(([t,v])=>`t${t}: ${v}`).join(' &middot; '):'';
   document.getElementById('bfrBlock').innerHTML=`
     <div class="bfr-row bfr-header">
-      <span>Component</span><span>Formula</span><span style="text-align:right">Value</span>
+      <span>Component (at peak period t*=${tp})</span><span>Formula</span><span style="text-align:right">Value</span>
     </div>
     <div class="bfr-row">
       <span>Stock value</span>
-      <span class="bfr-formula">I &times; P<sub>purchase</sub> &times; DIO / 365</span>
+      <span class="bfr-formula">P<sub>purchase</sub> &times; &Sigma;<sub>p</sub> I<sub>p,t*</sub></span>
       <span class="bfr-val">${b.stock}</span>
     </div>
     <div class="bfr-row">
       <span>+ Accounts receivable</span>
-      <span class="bfr-formula">q &times; P<sub>sale</sub> &times; DSO / 365</span>
+      <span class="bfr-formula">invoices at delivery, last L<sub>S</sub> periods (DSO)</span>
       <span class="bfr-val">${b.receivables}</span>
     </div>
     <div class="bfr-row">
       <span>&#8722; Accounts payable</span>
-      <span class="bfr-formula">q &times; P<sub>purchase</sub> &times; DPO / 365</span>
+      <span class="bfr-formula">supplier orders, last L<sub>P</sub> periods (DPO)</span>
       <span class="bfr-val">&#8722;${b.payables}</span>
     </div>
     <div class="bfr-row bfr-total">
-      <span>f4 = BFR</span>
-      <span class="bfr-formula">Stock + Receivables &#8722; Payables</span>
+      <span>f4 = peak net working capital</span>
+      <span class="bfr-formula">max<sub>t</sub> (Stock + AR &#8722; AP)</span>
       <span class="bfr-val">${net}</span>
-    </div>`;
+    </div>
+    ${series?`<div class="bfr-row"><span>WC per period</span><span class="bfr-formula">${series}</span><span></span></div>`:''}`;
 }
 
 /* ── Select a solution ──────────────────────────────────── */

@@ -1,12 +1,12 @@
 """Tchebycheff decomposition normalized by a running nadir estimate --
 closes a gap in pymoo's own MOEAD found while integrating it into this
-project (see docs/superpowers/specs/2026-08-19-moead-integration-design.md,
+project (see the earlier design notes (git history),
 "Objective normalization in decomposition"): MOEAD._replace() only ever
 passes ideal_point to the decomposition, never nadir_point, and none of
 pymoo's built-in decomposition variants (Tchebicheff, PBI, ASF) normalize
 by objective range -- all operate on raw F magnitudes after only
 subtracting the ideal/utopian point. Left unfixed, the IRP's raw cost
-scale (~15000-25000 DNT) would dominate every replacement decision
+scale (tens of thousands of €) would dominate every replacement decision
 regardless of the reference-direction weights, collapsing MOEA/D's
 decomposition to a cost-only comparison.
 

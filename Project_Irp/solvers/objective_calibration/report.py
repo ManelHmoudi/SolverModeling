@@ -201,11 +201,11 @@ OBJS.forEach(function(o,i){
   var isOptimal = statusLower.indexOf('optimal')!==-1;
   var statusBadge = isOptimal ? '' :
     '<div class="kb" style="color:#a32d2d;font-weight:600;margin-top:3px">'+
-    '⚠ not proven optimal ('+(o.solve_status||'unknown status')+') — budget threshold may be looser than intended</div>';
+    '⚠ not proven optimal ('+(o.solve_status||'unknown status')+') — the ideal value may be over-estimated</div>';
   document.getElementById('kpi-grid').innerHTML+=
     '<div class="kpi"><div class="kl">'+o.label+'</div>'+
     '<div class="kv" style="color:'+OC[i]+'">'+o.value.toFixed(4)+'</div>'+
-    '<div class="kb">Budget '+bk+' = '+BOUNDS[bk].toFixed(4)+'</div>'+statusBadge+'</div>';
+    '<div class="kb">Nadir (payoff table) = '+BOUNDS[bk].toFixed(4)+'</div>'+statusBadge+'</div>';
 });
 
 // ── State ─────────────────────────────────────────────────────────────────────

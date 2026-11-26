@@ -1,3 +1,7 @@
 docplex==2.32.264
+cplex==22.2.0.0
 Flask==3.1.1
-cplex==22.1.2.1
+numpy==2.4.6
+pymoo==0.6.1.6
+scipy==1.17.1
+pytest==9.1.1

@@ -1,14 +1,11 @@
-"""FunctionMerge — Combined multi-objective IRP solve.
+"""FunctionMerge — weighted-sum scalarisation of the IRP (exact, CPLEX).
 
-Scalarization: minimize a normalized weighted sum of f1..f4,
-    F = sum_m w_m * (f_m - f_m_ideal) / (f_m_bound - f_m_ideal),
-ideal/bound taken from ObjectiveCalibration's single-objective solves
-(bound = ideal + 20% margin, same convention as the C_max/E_max/T_max/B
-budgets). This is a calibrated upper bound / tolerance threshold, not a
-true nadir point (which would require a payoff table across all
-single-objective optima, not just a margin around each ideal).
-Raw f1+f2+f3+f4 would add DT + kg CO2 + hours + DT with no dimensional
-meaning and would favor whichever objective has the largest raw magnitude.
+    F = sum_m w_m * (f_m - ideal_m) / (nadir_m - ideal_m)
+
+ideal / nadir come from ObjectiveCalibration's payoff table (each objective
+minimised alone; nadir = worst value of each objective over those solutions).
+A single compromise solution, used as a baseline -- not a Pareto front.
+Reported objective values are recomputed exactly from the solution.
 Called from app.py via run_function_merge().
 """
 
@@ -27,8 +24,8 @@ if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
 from models.parameters import load_instance
-from models.constraints import add_all_constraints, add_budget_constraints
-from models.objectives  import build_all_objectives
+from models.constraints import add_all_constraints
+from models.objectives  import build_all_objectives, peak_breakdown, exact_objective_values
 from models.variables   import build_variables
 
 try:
@@ -129,16 +126,9 @@ def _get_ordered_path(arcs):
 
 def _build_model(sets_, params_):
     mdl   = Model(name="IRP_FunctionMerge")
-    vars_ = build_variables(mdl, sets_["N"], sets_["A"], sets_["T"], sets_["M"], sets_["clients"])
+    vars_ = build_variables(mdl, sets_, params_)
     objectives = build_all_objectives(mdl, vars_, sets_, params_)
     add_all_constraints(mdl, vars_, sets_, params_)
-    add_budget_constraints(
-        mdl,
-        objectives["f1"], objectives["f2"],
-        objectives["f3"], objectives["f4"],
-        params_["C_max"], params_["E_max"],
-        params_["T_max"], params_["B"],
-    )
     return mdl, vars_, objectives
 
 
@@ -147,14 +137,11 @@ def run_combined_solve(data_path=None, weights=None):
     normalized weighted sum below (defaults to equal weights 0.25 each)."""
     sets_, params_ = load_instance(data_path)
 
-    # Ideal / calibrated-upper-bound values for normalization -- reuses the
-    # single-objective solves already performed by ObjectiveCalibration for
-    # the C_max/E_max/T_max/B budget thresholds (bound = ideal + 20% margin,
-    # same convention as those budgets), instead of re-solving f1..f4
-    # individually here. Not a true nadir point (see module docstring).
+    # Ideal and nadir from ObjectiveCalibration's payoff table (each objective
+    # minimised alone; nadir = worst value of each objective over those solutions).
     calib = _build_calibration_data(data_path)
-    ideal = {row["budget_key"]: row["value"] for row in calib["objs"]}
-    bound = calib["bounds"]
+    ideal = calib["ideal"]
+    bound = calib["nadir"]
 
     mdl, vars_, objectives = _build_model(sets_, params_)
 
@@ -166,8 +153,7 @@ def run_combined_solve(data_path=None, weights=None):
     if weights is None:
         weights = {"f1": 0.25, "f2": 0.25, "f3": 0.25, "f4": 0.25}
 
-    _terms = [("f1", f1, "C_max"), ("f2", f2, "E_max"),
-              ("f3", f3, "T_max"), ("f4", f4, "B")]
+    _terms = [("f1", f1, "f1"), ("f2", f2, "f2"), ("f3", f3, "f3"), ("f4", f4, "f4")]
 
     def _denom(key):
         d = bound[key] - ideal[key]
@@ -262,10 +248,15 @@ def run_combined_solve(data_path=None, weights=None):
             sum(vars_["f"][0, j, t, k].solution_value for j in clients for k in vehicles), 4
         )
         routes[str(t)] = {
-            "R":          params_["R"].get(t, 0.0),
-            "R_frigo":    params_["R_frigo"].get(t, 0.0),
-            "R_nonfrigo": params_["R_nonfrigo"].get(t, 0.0),
-            "tau_return": round(vars_["tau_return"][t].solution_value, 4),
+            # supplier orders received in t (v2: decision variables)
+            "R":          round(vars_["r"]["frigo", t].solution_value + vars_["r"]["nonfrigo", t].solution_value, 4),
+            "R_frigo":    round(vars_["r"]["frigo", t].solution_value, 4),
+            "R_nonfrigo": round(vars_["r"]["nonfrigo", t].solution_value, 4),
+            # latest return among the vehicles used in t (return times are per vehicle in v2)
+            "tau_return": round(max(
+                [vars_["e"][t, k].solution_value for k in sets_["M"]
+                 if sum(vars_["x"][sets_["O"], j, t, k].solution_value for j in sets_["clients"]) > 0.5]
+                or [0.0]), 4),
             "trucks":     trucks,
             "shipped":    shipped_t,
         }
@@ -290,11 +281,8 @@ def run_combined_solve(data_path=None, weights=None):
     }
 
     f4_sub  = objectives["f4_sub"]
-    bfr_sub = {
-        "stock":       round(f4_sub["stock_value"].solution_value, 4),
-        "receivables": round(f4_sub["receivables"].solution_value, 4),
-        "payables":    round(f4_sub["payables"].solution_value, 4),
-    }
+    exact = exact_objective_values(vars_, objectives, sets_, params_)
+    bfr_sub = peak_breakdown(f4_sub)   # WC components at the peak period
 
     return {
         "meta": {
@@ -307,10 +295,10 @@ def run_combined_solve(data_path=None, weights=None):
             "node_positions":    compute_node_positions(sets_["N"]),
         },
         "objectives": {
-            "f1":        round(f1.solution_value, 4),
-            "f2":        round(f2.solution_value, 4),
-            "f3":        round(f3.solution_value, 4),
-            "f4":        round(f4.solution_value, 4),
+            "f1":        round(exact["f1"], 4),
+            "f2":        round(exact["f2"], 4),
+            "f3":        round(exact["f3"], 4),
+            "f4":        round(exact["f4"], 4),
             "composite": round(composite.solution_value, 4),
         },
         "routes":      routes,

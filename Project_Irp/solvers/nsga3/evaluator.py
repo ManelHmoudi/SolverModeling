@@ -1,96 +1,129 @@
-"""Objective functions for the many-objective IRP (no docplex dependency)."""
+"""Objective functions computed from a decoded solution (no docplex).
+
+Implements exactly docs/model_formulation.md §6 -- the same formulas as
+models/objectives.py.
+"""
+
+PRODUCT_CLASSES = ("frigo", "nonfrigo")
+
+
+# ── Route-level helpers (shared with solvers/qinsga3/repair.py) ──────────────
+
+def route_arrivals(path, k, params_):
+    """[(client, arrival time)] in visit order (no idle waiting)."""
+    d, v, s = params_["d"], params_["v"], params_["s"]
+    out, now = [], 0.0
+    for i in range(1, len(path) - 1):
+        now += s[path[i - 1]] + d[path[i - 1], path[i]] / v[k]
+        out.append((path[i], now))
+    return out
+
+
+def route_duration(path, k, params_):
+    """Depot-to-depot duration of one route (h)."""
+    d, v, s = params_["d"], params_["v"], params_["s"]
+    return sum(s[path[i]] + d[path[i], path[i + 1]] / v[k] for i in range(len(path) - 1))
+
+
+def route_loads(path, f_vars, t, k):
+    return [f_vars.get((path[i], path[i + 1], t, k), 0.0) for i in range(len(path) - 1)]
+
+
+def route_transport_cost(path, loads, k, params_):
+    """F_veh + c_km_k·distance (every arc, empty return leg included) + c_load·Σ d·load."""
+    if len(path) <= 2:
+        return 0.0
+    d = params_["d"]
+    dist = sum(d[path[i], path[i + 1]] for i in range(len(path) - 1))
+    load_km = sum(d[path[i], path[i + 1]] * loads[i] for i in range(len(path) - 1))
+    return params_["F_veh"] + params_["c_km_k"][k] * dist + params_["c_load"] * load_km
+
+
+def route_co2(path, loads, k, params_):
+    """CO2 (kg) of one route, linearised CMEM (Bektas & Laporte 2011):
+    e_co2 / fuel_to_joules · Σ d_m [alpha (w + kg·load) + beta v²]."""
+    d_m, v_ms = params_["d_m"], params_["v_ms"][k]
+    alpha, beta = params_["alpha_co2"], params_["beta_co2"]
+    energy = sum(
+        d_m[path[i], path[i + 1]] * (alpha * (params_["w"] + params_["kg_per_unit"] * loads[i])
+                                     + beta * v_ms ** 2)
+        for i in range(len(path) - 1))
+    return params_["e_co2"] * energy / params_["fuel_to_joules"]
+
+
+def time_window_penalty(l, t, arrival, params_):
+    return (params_["c1"] * max(0.0, params_["ET"][l, t] - arrival)
+            + params_["c2"] * max(0.0, arrival - params_["LT"][l, t]))
+
+
+def cyclic_window(t, L, T):
+    n, pos = len(T), T.index(t)
+    return [T[(pos - j) % n] for j in range(L)]
+
+
+# ── Objectives ────────────────────────────────────────────────────────────────
+
+def compute_f1_detail(route_result, sets_, params_):
+    T = sets_["T"]
+    f_vars = route_result["f"]
+    transport = tw = 0.0
+    for t, routes in route_result["routes_data"].items():
+        for k, info in routes.items():
+            path = info["path"]
+            transport += route_transport_cost(path, route_loads(path, f_vars, t, k), k, params_)
+            for node, arr in route_arrivals(path, k, params_):
+                tw += time_window_penalty(node, t, arr, params_)
+    stock, orders = route_result["depot_stock"], route_result["orders"]
+    depot_holding = sum(params_["h_frigo"] * stock[t]["frigo"]
+                        + params_["h_nonfrigo"] * stock[t]["nonfrigo"] for t in T)
+    ordering = params_["F_order"] * sum(1 for t in T for p in PRODUCT_CLASSES if orders[t][p] > 0)
+    total = transport + depot_holding + tw + ordering
+    return total, {"transport": round(transport, 4), "depot_holding": round(depot_holding, 4),
+                   "time_windows": round(tw, 4), "ordering": round(ordering, 4)}
 
 
 def compute_f1(route_result, sets_, params_):
-    """Logistics cost = transport (y1) + depot holding (y2) + time-window penalties (y3)."""
-    f_vars        = route_result["f"]
-    depot_stock   = route_result["depot_stock"]
-    arrival_times = route_result["arrival_times"]
-    c_ijk   = params_["c_ijk"]
-    d       = params_["d"]
-    h_O     = params_["h_O"]
-    c1      = params_["c1"]
-    c2      = params_["c2"]
-    ET      = params_["ET"]
-    LT      = params_["LT"]
-    clients = sets_["clients"]
-    T       = sets_["T"]
-
-    y1 = sum(c_ijk[i, j, k] * d[i, j] * flow for (i, j, t, k), flow in f_vars.items())
-    y2 = sum(h_O * (depot_stock[t]["frigo"] + depot_stock[t]["nonfrigo"]) for t in T)
-
-    y3 = 0.0
-    for l in clients:
-        for t in T:
-            arr = arrival_times.get((l, t), 0.0)
-            if arr > 0.0:
-                y3 += c1 * max(0.0, ET[l, t] - arr)
-                y3 += c2 * max(0.0, arr - LT[l, t])
-
-    return y1 + y2 + y3
+    return compute_f1_detail(route_result, sets_, params_)[0]
 
 
 def compute_f2(route_result, sets_, params_):
-    """CO2 emissions — linearised CMEM model (Bektas & Laporte 2011)."""
-    x_vars         = route_result["x"]
-    f_vars         = route_result["f"]
-    e_co2          = params_["e_co2"]
-    fuel_to_joules = params_["fuel_to_joules"]
-    d_m            = params_["d_m"]
-    alpha_co2      = params_["alpha_co2"]
-    beta_co2       = params_["beta_co2"]
-    v2             = params_["v2"]
-    w              = params_["w"]
-    kg_per_unit    = params_["kg_per_unit"]
-
-    total = sum(
-        d_m[i, j] * (alpha_co2[i, j] * (w + kg_per_unit * f_vars.get((i, j, t, k), 0.0))
-                     + beta_co2 * v2[k])
-        for (i, j, t, k) in x_vars
-    )
-    return (e_co2 / fuel_to_joules) * total
+    f_vars = route_result["f"]
+    return sum(route_co2(info["path"], route_loads(info["path"], f_vars, t, k), k, params_)
+               for t, routes in route_result["routes_data"].items()
+               for k, info in routes.items() if len(info["path"]) > 2)
 
 
 def compute_f3(route_result, sets_, params_):
-    """Total arc travel time across all trucks and periods."""
-    x_vars = route_result["x"]
-    d      = params_["d"]
-    v      = params_["v"]
-    return sum(d[i, j] / v[k] for (i, j, t, k) in x_vars)
+    """Σ over periods of the longest route duration (depot to depot, h)."""
+    return sum(max((route_duration(info["path"], k, params_) for k, info in routes.items()
+                    if len(info["path"]) > 2), default=0.0)
+               for routes in route_result["routes_data"].values())
 
 
-def _f4_components(route_result, sets_, params_):
-    actual_qty  = route_result["actual_qty"]
-    depot_stock = route_result["depot_stock"]
-    T           = sets_["T"]
-    clients     = sets_["clients"]
-    O           = sets_["O"]
-    P_sale      = params_["P_sale"]
-    P_purchase  = params_["P_purchase"]
-    DIO         = params_["DIO"]
-    DSO         = params_["DSO"]
-    DPO         = params_["DPO"]
-
-    stock = sum(
-        (depot_stock[t]["frigo"] + depot_stock[t]["nonfrigo"]) * P_purchase[O] * (DIO / 365)
-        for t in T
-    )
-    recv = sum(actual_qty[l, t] * P_sale[l]    * (DSO / 365) for l in clients for t in T)
-    pay  = sum(actual_qty[l, t] * P_purchase[O] * (DPO / 365) for l in clients for t in T)
-    return stock, recv, pay
+def working_capital_series(route_result, sets_, params_):
+    """{t: (stock value, receivables, payables)} with cyclic accounting (€)."""
+    T, clients = sets_["T"], sets_["clients"]
+    P_pur, P_sale = params_["P_purchase"], params_["P_sale"]
+    actual, stock, orders = route_result["actual_qty"], route_result["depot_stock"], route_result["orders"]
+    invoiced = {t: sum(P_sale[l] * actual.get((l, t), 0) for l in clients) for t in T}
+    purchased = {t: P_pur * sum(orders[t][p] for p in PRODUCT_CLASSES) for t in T}
+    return {t: (P_pur * (stock[t]["frigo"] + stock[t]["nonfrigo"]),
+                sum(invoiced[tp] for tp in cyclic_window(t, params_["L_S"], T)),
+                sum(purchased[tp] for tp in cyclic_window(t, params_["L_P"], T)))
+            for t in T}
 
 
 def compute_f4(route_result, sets_, params_):
-    """Working capital (BFR) scalar — used during optimization."""
-    stock, recv, pay = _f4_components(route_result, sets_, params_)
-    return stock + recv - pay
+    """Peak net working capital (€)."""
+    return max(s + r - p for s, r, p in working_capital_series(route_result, sets_, params_).values())
 
 
 def compute_f4_detail(route_result, sets_, params_):
-    """Working capital with sub-component breakdown — used in reporting."""
-    stock, recv, pay = _f4_components(route_result, sets_, params_)
-    return stock + recv - pay, {
-        "stock":       round(stock, 4),
-        "receivables": round(recv,  4),
-        "payables":    round(pay,   4),
+    series = working_capital_series(route_result, sets_, params_)
+    t_peak = max(series, key=lambda t: series[t][0] + series[t][1] - series[t][2])
+    s, r, p = series[t_peak]
+    return s + r - p, {
+        "stock": round(s, 4), "receivables": round(r, 4), "payables": round(p, 4),
+        "peak_period": t_peak,
+        "series": {str(t): round(a + b - c, 4) for t, (a, b, c) in series.items()},
     }
