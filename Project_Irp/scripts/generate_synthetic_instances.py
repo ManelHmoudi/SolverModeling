@@ -58,8 +58,9 @@ CONSTANTS = {
     "p5": 3.0,              # €/h, groupe frigorifique
     "c_load": 0.002,        # €/(unité·km)
     # stocks
-    "h_cold": 0.305,        # €/(unité·période), dépôt, produits froids
-    "h_ambient": 0.3,       # €/(unité·période), dépôt, produits ambiants
+    # coût de possession = taux annuel × P_purchase × 15/365 (période de 15 jours)
+    "h_cold": 0.06,         # €/(unité·période), froid : 30 %/an (stockage frigorifique)
+    "h_ambient": 0.05,      # €/(unité·période), ambiant : 25 %/an
     "F_order": 50.0,        # €/commande fournisseur
     # finance
     "P_purchase": 5.0,      # €/unité

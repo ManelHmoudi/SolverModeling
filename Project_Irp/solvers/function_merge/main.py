@@ -160,7 +160,7 @@ def run_combined_solve(data_path=None, weights=None):
         return d if abs(d) > 1e-6 else 1.0
 
     # Normalized weighted sum (Deb-style min-max normalization), replacing
-    # the raw f1+f2+f3+f4 sum: additioning DT + kg CO2 + hours + DT with no
+    # the raw f1+f2+f3+f4 sum: adding € + kg CO2 + hours + € with no
     # normalization favored whichever objective had the largest raw
     # magnitude and had no dimensional meaning.
     composite = mdl.sum(
